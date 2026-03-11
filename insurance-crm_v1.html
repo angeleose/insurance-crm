@@ -682,6 +682,7 @@
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-enrolled" placeholder="이름 또는 전화번호 검색..." oninput="enrolledPage=1;renderEnrolled()"></div>
       <button class="btn btn-ghost btn-sm" onclick="openUploadModal('가입')" style="display:flex;align-items:center;gap:6px;">📂 고객 업로드</button>
       <button class="btn btn-ghost btn-sm" onclick="openContractImportModal()" style="display:flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;">📋 계약조회 업로드</button>
+      <button class="btn btn-ghost btn-sm" id="enrolled-delete-btn" onclick="deleteSelectedEnrolled()" style="display:none;color:var(--red);border-color:#fca5a5;background:#fff1f2;">🗑️ 선택 삭제 (<span id="enrolled-sel-count">0</span>)</button>
       <button class="btn btn-primary" onclick="openAddModal('가입')">+ 가입 고객 추가</button>
     </div>
     <div class="filters" id="tag-filters-enrolled"></div>
@@ -690,7 +691,7 @@
       <div id="enrolled-pagination-top" style="display:flex;gap:4px;align-items:center;"></div>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="enrolled-table-wrap">
-      <table><thead><tr><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>계약</th><th>월 보험료</th><th>태그</th><th>가입일</th><th>최근 상담</th></tr></thead>
+      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="enroll-check-all" onchange="toggleAllEnrolled(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>계약</th><th>월 보험료</th><th>태그</th><th>가입일</th><th>최근 상담</th></tr></thead>
       <tbody id="enrolled-tbody"></tbody></table>
     </div>
     <div id="enrolled-list-wrap" style="display:none;"></div>
@@ -706,11 +707,12 @@
     <div class="toolbar">
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-prospect" placeholder="이름 또는 전화번호 검색..." oninput="renderProspects()"></div>
       <button class="btn btn-ghost btn-sm" onclick="openUploadModal('가망')" style="display:flex;align-items:center;gap:6px;">📂 엑셀 업로드</button>
+      <button class="btn btn-ghost btn-sm" id="prospect-delete-btn" onclick="deleteSelectedProspects()" style="display:none;color:var(--red);border-color:#fca5a5;background:#fff1f2;">🗑️ 선택 삭제 (<span id="prospect-sel-count">0</span>)</button>
       <button class="btn btn-purple" onclick="openAddModal('가망')">+ 가망 고객 추가</button>
     </div>
     <div class="filters" id="stage-filters"></div>
     <div class="card" style="padding:0;overflow:hidden;" id="prospect-table-wrap">
-      <table><thead><tr><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>관심 상품</th><th>상담 단계</th><th>등록일</th><th>최근 상담</th><th>다음 팔로업</th></tr></thead>
+      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="prospect-check-all" onchange="toggleAllProspects(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>관심 상품</th><th>상담 단계</th><th>등록일</th><th>최근 상담</th><th>다음 팔로업</th></tr></thead>
       <tbody id="prospect-tbody"></tbody></table>
     </div>
     <div id="prospect-list-wrap" style="display:none;"></div>
@@ -2137,7 +2139,7 @@ function renderEnrolled(resetPage){
     const enrolledContainer = document.getElementById("enrolled-tbody");
     enrolledContainer.innerHTML=!list.length
       ?`<tr><td colspan="8"><div class="empty"><span>🔍</span>결과 없음</div></td></tr>`
-      :pagedList.map(c=>{const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
+      :pagedList.map(c=>{const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="enroll-check" data-id="${c.id}" onchange="updateEnrolledSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></td><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
   }
 
   // 페이지네이션 렌더
@@ -2221,7 +2223,7 @@ function renderProspects(){
     }
   } else {
     document.getElementById("prospect-tbody").innerHTML=!list.length?`<tr><td colspan="8"><div class="empty"><span>🌱</span>가망 고객 없음</div></td></tr>`:
-      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
+      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
   }
 }
 
@@ -2776,6 +2778,61 @@ function updateStage(){
 
 // ─── 이재사항 빠른 파싱 ───────────────────────────────────────
 
+
+
+// ─── 선택 삭제 ────────────────────────────────────────────
+function updateEnrolledSelCount() {
+  const checked = document.querySelectorAll(".enroll-check:checked");
+  const n = checked.length;
+  const btn = document.getElementById("enrolled-delete-btn");
+  const span = document.getElementById("enrolled-sel-count");
+  if(btn) btn.style.display = n > 0 ? "" : "none";
+  if(span) span.textContent = n;
+  const all = document.getElementById("enroll-check-all");
+  const total = document.querySelectorAll(".enroll-check").length;
+  if(all) all.indeterminate = n > 0 && n < total;
+  if(all) all.checked = n > 0 && n === total;
+}
+function toggleAllEnrolled(el) {
+  document.querySelectorAll(".enroll-check").forEach(cb => { cb.checked = el.checked; });
+  updateEnrolledSelCount();
+}
+function deleteSelectedEnrolled() {
+  const ids = [...document.querySelectorAll(".enroll-check:checked")].map(cb => parseInt(cb.dataset.id));
+  if(!ids.length) return;
+  if(!confirm(`선택한 가입 고객 ${ids.length}명을 삭제하시겠습니까?`)) return;
+  customers = customers.filter(c => !ids.includes(c.id));
+  renderEnrolled();
+  renderDashboard();
+  autoSave();
+}
+
+function updateProspectSelCount() {
+  const checked = document.querySelectorAll(".prospect-check:checked");
+  const n = checked.length;
+  const btn = document.getElementById("prospect-delete-btn");
+  const span = document.getElementById("prospect-sel-count");
+  if(btn) btn.style.display = n > 0 ? "" : "none";
+  if(span) span.textContent = n;
+  const all = document.getElementById("prospect-check-all");
+  const total = document.querySelectorAll(".prospect-check").length;
+  if(all) all.indeterminate = n > 0 && n < total;
+  if(all) all.checked = n > 0 && n === total;
+}
+function toggleAllProspects(el) {
+  document.querySelectorAll(".prospect-check").forEach(cb => { cb.checked = el.checked; });
+  updateProspectSelCount();
+}
+function deleteSelectedProspects() {
+  const ids = [...document.querySelectorAll(".prospect-check:checked")].map(cb => parseInt(cb.dataset.id));
+  if(!ids.length) return;
+  if(!confirm(`선택한 가망 고객 ${ids.length}명을 삭제하시겠습니까?`)) return;
+  customers = customers.filter(c => !ids.includes(c.id));
+  renderProspects();
+  renderDashboard();
+  autoSave();
+}
+// ──────────────────────────────────────────────────────────
 
 // ─── 캘린더 ───────────────────────────────────────────────
 let calEvents = [];
