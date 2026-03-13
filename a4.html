@@ -628,22 +628,24 @@
     <!-- KPI 카드 -->
     <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
       <div class="stat-card blue" style="cursor:pointer;" onclick="showPage('enrolled')">
-        <div class="sc-icon">✅</div><div class="sc-label">가입 고객</div>
+        <div class="sc-icon">✅</div><div class="sc-label" id="kpi-label-enrolled">가입 고객</div>
         <div class="sc-value" id="stat-enrolled">0</div>
         <div id="stat-enrolled-month" style="font-size:11px;font-weight:600;opacity:.75;margin-top:2px;"></div>
       </div>
       <div class="stat-card purple" style="cursor:pointer;" onclick="showPage('prospects')">
-        <div class="sc-icon">🌱</div><div class="sc-label">가망 고객</div>
+        <div class="sc-icon">🌱</div><div class="sc-label" id="kpi-label-prospect">가망 고객</div>
         <div class="sc-value" id="stat-prospect">0</div>
         <div id="stat-prospect-month" style="font-size:11px;font-weight:600;opacity:.75;margin-top:2px;"></div>
       </div>
       <div class="stat-card green">
-        <div class="sc-icon">💰</div><div class="sc-label">월 총 보험료</div>
+        <div class="sc-icon">💰</div><div class="sc-label" id="kpi-label-premium">신규 보험료</div>
         <div class="sc-value" id="stat-premium">0</div>
+        <div id="stat-premium-sub" style="font-size:11px;font-weight:600;opacity:.75;margin-top:2px;"></div>
       </div>
       <div class="stat-card amber" style="cursor:pointer;" onclick="showPage('expiring')">
-        <div class="sc-icon">⏰</div><div class="sc-label">만기 예정</div>
+        <div class="sc-icon">⏰</div><div class="sc-label" id="kpi-label-expire">만기 예정</div>
         <div class="sc-value" id="stat-expire">0</div>
+        <div id="stat-expire-sub" style="font-size:11px;font-weight:600;opacity:.75;margin-top:2px;"></div>
       </div>
     </div>
 
@@ -712,9 +714,18 @@
       <button class="btn btn-primary" onclick="openAddModal('가입')">+ 가입 고객 추가</button>
     </div>
     <div class="filters" id="tag-filters-enrolled"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
       <span id="enrolled-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
-      <div id="enrolled-pagination-top" style="display:flex;gap:4px;align-items:center;"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <select id="enrolled-sort-select" onchange="enrolledSort=this.value;enrolledPage=1;renderEnrolled()"
+          style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+          <option value="joinDate_desc">가입일 최신순</option>
+          <option value="joinDate_asc">가입일 오래된순</option>
+          <option value="name_asc">이름순</option>
+          <option value="premium_desc">보험료 높은순</option>
+        </select>
+        <div id="enrolled-pagination-top" style="display:flex;gap:4px;align-items:center;"></div>
+      </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="enrolled-table-wrap">
       <table><thead><tr><th style="width:36px;"><input type="checkbox" id="enroll-check-all" onchange="toggleAllEnrolled(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>계약</th><th>월 보험료</th><th>태그</th><th>가입일</th><th>최근 상담</th></tr></thead>
@@ -737,6 +748,15 @@
       <button class="btn btn-purple" onclick="openAddModal('가망')">+ 가망 고객 추가</button>
     </div>
     <div class="filters" id="stage-filters"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <select id="prospect-sort-select" onchange="prospectSort=this.value;renderProspects()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="regDate_desc">등록일 최신순</option>
+        <option value="regDate_asc">등록일 오래된순</option>
+        <option value="name_asc">이름순</option>
+        <option value="stage">상담 단계순</option>
+      </select>
+    </div>
     <div class="card" style="padding:0;overflow:hidden;" id="prospect-table-wrap">
       <table><thead><tr><th style="width:36px;"><input type="checkbox" id="prospect-check-all" onchange="toggleAllProspects(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>관심 상품</th><th>상담 단계</th><th>등록일</th><th>최근 상담</th><th>다음 팔로업</th></tr></thead>
       <tbody id="prospect-tbody"></tbody></table>
@@ -1438,11 +1458,8 @@
     </div>
     <div class="form-group">
       <label>주민번호</label>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="nc-ssn1" placeholder="앞 6자리" maxlength="6" style="width:120px;" oninput="this.value=this.value.replace(/\D/g,'')">
-        <span style="color:var(--text2);font-weight:700;">-</span>
-        <input type="text" id="nc-ssn2" placeholder="뒤 7자리" maxlength="7" style="width:130px;" oninput="this.value=this.value.replace(/\D/g,'')">
-      </div>
+      <input type="text" id="nc-ssn" placeholder="예: 800315-1234567" maxlength="15"
+        oninput="formatSsnInput(this,'nc-birth')" style="font-family:monospace;letter-spacing:1px;">
     </div>
     <div class="form-group"><label>주소</label><input type="text" id="nc-address"></div>
     <div class="form-row">
@@ -1758,11 +1775,8 @@
     </div>
     <div class="form-group">
       <label>주민번호</label>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="ei-ssn1" placeholder="앞 6자리" maxlength="6" style="width:120px;" oninput="this.value=this.value.replace(/\D/g,'')">
-        <span style="color:var(--text2);font-weight:700;">-</span>
-        <input type="text" id="ei-ssn2" placeholder="뒤 7자리" maxlength="7" style="width:130px;" oninput="this.value=this.value.replace(/\D/g,'')">
-      </div>
+      <input type="text" id="ei-ssn" placeholder="예: 800315-1234567" maxlength="15"
+        oninput="formatSsnInput(this,'ei-birth')" style="font-family:monospace;letter-spacing:1px;">
     </div>
     <div class="form-group"><label>주소</label><input type="text" id="ei-address"></div>
     <div class="form-row">
@@ -2135,6 +2149,8 @@ let customAlerts = [];
 let boardPosts = [];
 let boardEditId = null;
 let activeMsgTag = null;
+let enrolledSort = 'joinDate_desc';
+let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
 
@@ -2372,111 +2388,182 @@ function confirmDeleteTaskPage(btn, src, cid, tId) {
 }
 
 function renderDashboard(){
-  const en = customers.filter(c=>c.type==="가입");
-  const pr = customers.filter(c=>c.type==="가망");
   const today = new Date(); today.setHours(0,0,0,0);
   const realY = today.getFullYear();
   const realM = today.getMonth()+1;
-  // 필터 UI 초기화
   updateDashFilterUI();
   const nowY = dashFilterYear;
-  // nowM: 필터 모드에 따라 다름 (월별=선택월, 분기/연도=실제월)
   const selSubEl = document.getElementById("df-sub-select");
   const nowM = dashFilterMode==="monthly" ? (parseInt(selSubEl?.value)||realM) : realM;
+  const nowQ = dashFilterMode==="quarterly" ? (parseInt(selSubEl?.value)||Math.ceil(realM/3)) : null;
 
-  // 날짜 표시
+  // ── 기간 범위 헬퍼 ──
+  // 필터 모드에 따라 날짜 문자열(YYYY-MM-DD)이 기간 내인지 판별
+  function inPeriod(dateStr) {
+    if(!dateStr) return false;
+    const [y,m] = dateStr.slice(0,7).split("-").map(Number);
+    if(y !== nowY) return false;
+    if(dashFilterMode==="monthly")   return m === nowM;
+    if(dashFilterMode==="quarterly") return Math.ceil(m/3) === nowQ;
+    return true; // yearly
+  }
+  // 기간 라벨
+  const periodLabel = dashFilterMode==="monthly"
+    ? `${nowY}년 ${nowM}월`
+    : dashFilterMode==="quarterly"
+    ? `${nowY}년 ${nowQ}분기`
+    : `${nowY}년`;
+
+  // ── 날짜 표시 ──
   const dateLabel = document.getElementById("dash-date-label");
   if(dateLabel) dateLabel.textContent = `${realY}년 ${realM}월 ${today.getDate()}일 · ${["일","월","화","수","목","금","토"][today.getDay()]}요일`;
 
-  // KPI
-  const exp = en.reduce((s,c)=>s+c.contracts.filter(ct=>getDday(ct.end)<=180).length,0);
-  const prem = en.reduce((s,c)=>s+c.contracts.reduce((ss,ct)=>ss+ct.premium,0),0);
-  document.getElementById("stat-enrolled").textContent = en.length+"명";
-  document.getElementById("stat-prospect").textContent = pr.length+"명";
+  const en = customers.filter(c=>c.type==="가입");
+  const pr = customers.filter(c=>c.type==="가망");
 
-  // 이번달 가입/가망 카운트
-  const thisM = nowY+"-"+String(nowM).padStart(2,"0");
-  const enThisM = en.filter(c=>{const d=c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0];return d&&d.startsWith(thisM);}).length;
-  const prThisM = pr.filter(c=>c.regDate&&c.regDate.startsWith(thisM)).length;
+  // ── KPI: 기간 내 신규 가입/가망 ──
+  const enInPeriod = en.filter(c=>{
+    const d = c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0];
+    return inPeriod(d);
+  });
+  const prInPeriod = pr.filter(c=>inPeriod(c.regDate));
+
+  // 가입고객 KPI: 기간 내 신규 가입 수
+  document.getElementById("stat-enrolled").textContent = enInPeriod.length+"명";
   const enMonthEl = document.getElementById("stat-enrolled-month");
+  if(enMonthEl) enMonthEl.textContent = `전체 ${en.length}명`;
+  const kpiLabelEn = document.getElementById("kpi-label-enrolled");
+  if(kpiLabelEn) kpiLabelEn.textContent = `신규 가입 (${periodLabel})`;
+
+  // 가망고객 KPI: 기간 내 신규 가망 수
+  document.getElementById("stat-prospect").textContent = prInPeriod.length+"명";
   const prMonthEl = document.getElementById("stat-prospect-month");
-  if(enMonthEl) enMonthEl.textContent = enThisM ? `이번달 +${enThisM}명` : "";
-  if(prMonthEl) prMonthEl.textContent = prThisM ? `이번달 +${prThisM}명` : "";
-  document.getElementById("stat-expire").textContent = exp+"건";
-  document.getElementById("stat-premium").textContent = fmtW(prem)+"원";
+  if(prMonthEl) prMonthEl.textContent = `전체 ${pr.length}명`;
+  const kpiLabelPr = document.getElementById("kpi-label-prospect");
+  if(kpiLabelPr) kpiLabelPr.textContent = `신규 가망 (${periodLabel})`;
+
+  // 월 총 보험료 KPI: 기간 내 신규 계약 보험료 합계
+  const premInPeriod = enInPeriod.reduce((s,c)=>s+c.contracts.filter(ct=>inPeriod(ct.start)).reduce((ss,ct)=>ss+ct.premium,0),0);
+  const allPrem = en.reduce((s,c)=>s+c.contracts.reduce((ss,ct)=>ss+ct.premium,0),0);
+  document.getElementById("stat-premium").textContent = fmtW(premInPeriod)+"원";
+  const kpiLabelPrem = document.getElementById("kpi-label-premium");
+  if(kpiLabelPrem) kpiLabelPrem.textContent = `신규 보험료 (${periodLabel})`;
+  const premSubEl = document.getElementById("stat-premium-sub");
+  if(premSubEl) premSubEl.textContent = `전체 월납 ${fmtW(allPrem)}원`;
+
+  // 만기 예정 KPI: 항상 앞으로 180일 이내
+  const expFallback = en.reduce((s,c)=>s+c.contracts.filter(ct=>getDday(ct.end)<=180&&getDday(ct.end)>=0).length,0);
+  document.getElementById("stat-expire").textContent = expFallback+"건";
+  const kpiLabelExp = document.getElementById("kpi-label-expire");
+  if(kpiLabelExp) kpiLabelExp.textContent = "만기 예정 (180일)";
+  const expSubEl = document.getElementById("stat-expire-sub");
+  if(expSubEl) expSubEl.textContent = "";
   updateSidebar();
 
-  // ── 월별 보험료 차트 (12개월) ──
+  // ── 차트용 구간 목록 생성 ──
+  // segments: [{label, ym배열}] — 차트 막대 하나에 해당
+  let segments = [];
+  if(dashFilterMode==="monthly"){
+    // 선택 월의 주차별 (4~5주)
+    const daysInMonth = new Date(nowY, nowM, 0).getDate();
+    const weeks = [
+      {label:"1주", days:[]}, {label:"2주", days:[]},
+      {label:"3주", days:[]}, {label:"4주", days:[]}, {label:"5주", days:[]}
+    ];
+    for(let d=1;d<=daysInMonth;d++){
+      const w = Math.ceil(d/7)-1;
+      const ds = `${nowY}-${String(nowM).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      if(w<5) weeks[w].days.push(ds);
+    }
+    segments = weeks.filter(w=>w.days.length).map(w=>({label:w.label, dates:w.days}));
+  } else if(dashFilterMode==="quarterly"){
+    const qStart = (nowQ-1)*3+1;
+    for(let m=qStart;m<qStart+3;m++){
+      segments.push({label:`${m}월`, ym:`${nowY}-${String(m).padStart(2,"0")}`});
+    }
+  } else {
+    for(let m=1;m<=12;m++){
+      segments.push({label:`${m}월`, ym:`${nowY}-${String(m).padStart(2,"0")}`});
+    }
+  }
+
+  // 현재 구간 인덱스 (강조용)
+  const todayYM = `${realY}-${String(realM).padStart(2,"0")}`;
+  const todayDateStr = today.toISOString().slice(0,10);
+  function isCurrentSeg(seg, i){
+    if(dashFilterMode==="monthly") return i===Math.floor((today.getDate()-1)/7)&&nowY===realY&&nowM===realM;
+    if(dashFilterMode==="quarterly") return seg.ym===todayYM;
+    return seg.ym===todayYM;
+  }
+  function segContains(seg, dateStr){
+    if(!dateStr) return false;
+    if(seg.dates) return seg.dates.includes(dateStr);
+    return dateStr.startsWith(seg.ym);
+  }
+
+  // ── 보험료 차트 ──
   const premYear = document.getElementById("dash-premium-year");
-  if(premYear) premYear.textContent = nowY+"년";
-  const months = Array.from({length:12},(_,i)=>i+1);
-  // 해당 월에 신규 계약된 보험료 합계 (계약일 기준)
-  const monthPrem = months.map(m => {
-    const ym = `${nowY}-${String(m).padStart(2,"0")}`;
-    return en.reduce((s,c) => s + c.contracts.filter(ct => {
-      if(!ct.start) return false;
-      return ct.start.startsWith(ym);
-    }).reduce((ss,ct)=>ss+ct.premium,0), 0);
-  });
-  const maxPrem = Math.max(...monthPrem, 1);
-  const annualPrem = monthPrem.reduce((s,v)=>s+v,0);
+  if(premYear) premYear.textContent = periodLabel;
+  const segPrem = segments.map(seg =>
+    en.reduce((s,c)=>s+c.contracts.filter(ct=>ct.start&&segContains(seg,ct.start)).reduce((ss,ct)=>ss+ct.premium,0),0)
+  );
+  const maxPrem = Math.max(...segPrem, 1);
+  const totalPrem = segPrem.reduce((s,v)=>s+v,0);
   const premChartEl = document.getElementById("dash-premium-chart");
   const premLabelEl = document.getElementById("dash-premium-labels");
   const annualEl = document.getElementById("dash-annual-premium");
-  if(annualEl) annualEl.textContent = annualPrem.toLocaleString()+"원";
-  if(premChartEl) premChartEl.innerHTML = months.map((m,i)=>{
-    const h = Math.round(monthPrem[i]/maxPrem*90);
-    const isNow = m === nowM;
+  if(annualEl) annualEl.textContent = totalPrem.toLocaleString()+"원";
+  if(premChartEl) premChartEl.innerHTML = segments.map((seg,i)=>{
+    const h = Math.round(segPrem[i]/maxPrem*90);
+    const cur = isCurrentSeg(seg,i);
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
-      <div title="${monthPrem[i].toLocaleString()}원" style="width:100%;background:${isNow?"var(--green)":"#d1fae5"};border-radius:4px 4px 0 0;height:${h}px;min-height:${monthPrem[i]?3:0}px;transition:height .4s;"></div>
+      <div style="font-size:8px;font-weight:700;color:${cur?"var(--green)":"#94a3b8"};margin-bottom:1px;">${segPrem[i]?Math.round(segPrem[i]/10000)+"만":""}</div>
+      <div title="${segPrem[i].toLocaleString()}원" style="width:100%;background:${cur?"var(--green)":"#d1fae5"};border-radius:4px 4px 0 0;height:${h}px;min-height:${segPrem[i]?3:0}px;transition:height .4s;"></div>
     </div>`;
   }).join("");
-  if(premLabelEl) premLabelEl.innerHTML = months.map((m,i)=>{
-    const isNow = m === nowM;
-    return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isNow?700:400};color:${isNow?"var(--green)":"var(--text2)"};">${m}월</div>`;
+  if(premLabelEl) premLabelEl.innerHTML = segments.map((seg,i)=>{
+    const cur = isCurrentSeg(seg,i);
+    return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${cur?700:400};color:${cur?"var(--green)":"var(--text2)"};">${seg.label}</div>`;
   }).join("");
 
-  // ── 월별 고객 현황 차트 — 해당 월 신규 등록 고객 수 ──
-  // 가입: 첫 계약일 기준 / 가망: regDate 기준
-  const monthEnrolled = months.map(m => {
-    const ym = `${nowY}-${String(m).padStart(2,"0")}`;
-    return en.filter(c => {
-      const ref = c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0];
-      return ref && ref.startsWith(ym);
-    }).length;
-  });
-  const monthProspect = months.map(m => {
-    const ym = `${nowY}-${String(m).padStart(2,"0")}`;
-    return pr.filter(c => c.regDate && c.regDate.startsWith(ym)).length;
-  });
-  const maxCust = Math.max(...monthEnrolled, ...monthProspect, 1);
+  // ── 신규 고객 차트 ──
+  const segEn = segments.map(seg =>
+    en.filter(c=>{ const d=c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]; return segContains(seg,d); }).length
+  );
+  const segPr = segments.map(seg =>
+    pr.filter(c=>segContains(seg,c.regDate)).length
+  );
+  const maxCust = Math.max(...segEn,...segPr,1);
   const custChartEl = document.getElementById("dash-customer-chart");
   const custLabelEl = document.getElementById("dash-customer-labels");
-  if(custChartEl) custChartEl.innerHTML = months.map((m,i)=>{
-    const enH = Math.round(monthEnrolled[i]/maxCust*80);
-    const prH = Math.round(monthProspect[i]/maxCust*80);
-    const isNow = m===nowM;
-    const total = monthEnrolled[i] + monthProspect[i];
+  if(custChartEl) custChartEl.innerHTML = segments.map((seg,i)=>{
+    const enH = Math.round(segEn[i]/maxCust*80);
+    const prH = Math.round(segPr[i]/maxCust*80);
+    const cur = isCurrentSeg(seg,i);
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;">
       <div style="display:flex;gap:1px;width:100%;margin-bottom:2px;">
-        <div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:${isNow?"#3b82f6":"#93c5fd"};">${monthEnrolled[i]>0?monthEnrolled[i]:""}</div>
-        <div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:${isNow?"#8b5cf6":"#c4b5fd"};">${monthProspect[i]>0?monthProspect[i]:""}</div>
+        <div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:${cur?"#3b82f6":"#93c5fd"};">${segEn[i]>0?segEn[i]:""}</div>
+        <div style="flex:1;text-align:center;font-size:9px;font-weight:700;color:${cur?"#8b5cf6":"#c4b5fd"};">${segPr[i]>0?segPr[i]:""}</div>
       </div>
       <div style="display:flex;align-items:flex-end;gap:1px;width:100%;">
-        <div title="가입 ${monthEnrolled[i]}명" style="flex:1;background:${isNow?"#3b82f6":"#bfdbfe"};border-radius:3px 3px 0 0;height:${enH}px;min-height:${monthEnrolled[i]?2:0}px;"></div>
-        <div title="가망 ${monthProspect[i]}명" style="flex:1;background:${isNow?"#8b5cf6":"#ddd6fe"};border-radius:3px 3px 0 0;height:${prH}px;min-height:${monthProspect[i]?2:0}px;"></div>
+        <div style="flex:1;background:${cur?"#3b82f6":"#bfdbfe"};border-radius:3px 3px 0 0;height:${enH}px;min-height:${segEn[i]?2:0}px;"></div>
+        <div style="flex:1;background:${cur?"#8b5cf6":"#ddd6fe"};border-radius:3px 3px 0 0;height:${prH}px;min-height:${segPr[i]?2:0}px;"></div>
       </div>
     </div>`;
   }).join("");
-  if(custLabelEl) custLabelEl.innerHTML = months.map((m,i)=>{
-    const isNow = m===nowM;
-    return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${isNow?700:400};color:${isNow?"#3b82f6":"var(--text2)"};">${m}월</div>`;
+  if(custLabelEl) custLabelEl.innerHTML = segments.map((seg,i)=>{
+    const cur = isCurrentSeg(seg,i);
+    return `<div style="flex:1;text-align:center;font-size:9px;font-weight:${cur?700:400};color:${cur?"#3b82f6":"var(--text2)"};">${seg.label}</div>`;
   }).join("");
 
-  // ── 이번 달 수익/지출 ──
-  const mIn  = incomeRecords.filter(r=>r.type==="수익"&&new Date(r.date).getFullYear()===nowY&&new Date(r.date).getMonth()+1===nowM).reduce((s,r)=>s+r.amount,0);
-  const mOut = incomeRecords.filter(r=>r.type==="지출"&&new Date(r.date).getFullYear()===nowY&&new Date(r.date).getMonth()+1===nowM).reduce((s,r)=>s+r.amount,0);
+  // ── 수익/지출 (기간 필터 적용) ──
+  const mIn  = incomeRecords.filter(r=>r.type==="수익"&&inPeriod(r.date)).reduce((s,r)=>s+r.amount,0);
+  const mOut = incomeRecords.filter(r=>r.type==="지출"&&inPeriod(r.date)).reduce((s,r)=>s+r.amount,0);
   const net = mIn - mOut;
+  const incLabel = dashFilterMode==="monthly" ? `${periodLabel} 수익/지출`
+    : dashFilterMode==="quarterly" ? `${periodLabel} 수익/지출` : `${nowY}년 수익/지출`;
+  const incTitleEl = document.querySelector("#dash-income-summary")?.closest(".card")?.querySelector(".card-title");
+  if(incTitleEl) incTitleEl.textContent = `💰 ${incLabel}`;
   const incEl = document.getElementById("dash-income-summary");
   if(incEl) incEl.innerHTML = `
     <div style="margin-bottom:8px;">
@@ -2495,38 +2582,38 @@ function renderDashboard(){
     </div>
     <button class="btn btn-ghost" onclick="showPage('income')" style="width:100%;font-size:12px;margin-top:4px;">수익 관리 보기 →</button>`;
 
-  // ── 계약 전환율 ──
-  const totalEver = en.length + pr.length;
-  const convRate = totalEver ? Math.round(en.length/totalEver*100) : 0;
+  // ── 계약 전환율 (기간 내 신규 기준) ──
+  const totalPeriod = enInPeriod.length + prInPeriod.length;
+  const convRate = totalPeriod ? Math.round(enInPeriod.length/totalPeriod*100) : 0;
   const convEl = document.getElementById("dash-conversion");
   if(convEl) convEl.innerHTML = `
     <div style="text-align:center;padding:8px 0;">
       <div style="font-size:36px;font-weight:800;color:var(--green);">${convRate}%</div>
-      <div style="font-size:12px;color:var(--text2);margin-top:4px;">가망 → 가입 전환율</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:2px;">가입 ${en.length}명 / 전체 ${totalEver}명</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">${periodLabel} 가망→가입 전환율</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">신규가입 ${enInPeriod.length}명 / 신규유입 ${totalPeriod}명</div>
     </div>
     <div style="background:#f1f5f9;border-radius:8px;height:10px;margin-top:12px;overflow:hidden;">
       <div style="height:100%;width:${convRate}%;background:var(--green);border-radius:8px;transition:width .6s;"></div>
     </div>`;
 
-  // ── 오늘 할 일 (Task) ──
+  // ── Task: 기간 내 마감 ──
   let allTasks = [];
   customers.forEach(c=>(c.tasks||[]).forEach(t=>allTasks.push({...t,cname:c.name})));
   standaloneTasks.forEach(t=>allTasks.push({...t,cname:""}));
-  const todayStr = today.toISOString().slice(0,10);
+  const todayStr = todayDateStr;
   const incompleteTasks = allTasks.filter(t=>!t.done);
+  const periodTasks = incompleteTasks.filter(t=>t.due&&inPeriod(t.due));
   const overdueTasks = incompleteTasks.filter(t=>t.due&&t.due<todayStr);
-  const todayTasks = incompleteTasks.filter(t=>t.due===todayStr);
   const taskEl = document.getElementById("dash-tasks-summary");
   if(taskEl) taskEl.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#eff6ff;border-radius:8px;">
-        <span style="font-size:13px;font-weight:600;color:#1d4ed8;">📋 미완료</span>
+        <span style="font-size:13px;font-weight:600;color:#1d4ed8;">📋 전체 미완료</span>
         <strong style="font-size:18px;color:#1d4ed8;">${incompleteTasks.length}건</strong>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:${todayTasks.length?"#fef9c3":"#f8fafc"};border-radius:8px;">
-        <span style="font-size:13px;font-weight:600;color:${todayTasks.length?"#92400e":"#94a3b8"};">📅 오늘 마감</span>
-        <strong style="font-size:18px;color:${todayTasks.length?"#d97706":"#94a3b8"};">${todayTasks.length}건</strong>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:${periodTasks.length?"#fef9c3":"#f8fafc"};border-radius:8px;">
+        <span style="font-size:13px;font-weight:600;color:${periodTasks.length?"#92400e":"#94a3b8"};">📅 ${periodLabel} 마감</span>
+        <strong style="font-size:18px;color:${periodTasks.length?"#d97706":"#94a3b8"};">${periodTasks.length}건</strong>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:${overdueTasks.length?"#fff1f2":"#f8fafc"};border-radius:8px;">
         <span style="font-size:13px;font-weight:600;color:${overdueTasks.length?"#dc2626":"#94a3b8"};">🚨 기한 초과</span>
@@ -2534,36 +2621,41 @@ function renderDashboard(){
       </div>
     </div>`;
 
-  // ── 만기 임박 ──
-  const exList = en.flatMap(c=>c.contracts.filter(ct=>getDday(ct.end)<=180).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4);
+  // ── 만기 임박 (기간 내 만기되는 계약) ──
+  const exList = dashFilterMode==="yearly"&&nowY!==realY
+    ? en.flatMap(c=>c.contracts.filter(ct=>ct.end&&ct.end.startsWith(String(nowY))).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4)
+    : en.flatMap(c=>c.contracts.filter(ct=>getDday(ct.end)<=180&&getDday(ct.end)>=0).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4);
   document.getElementById("dash-expiring").innerHTML = !exList.length
     ? '<div class="empty"><span>✅</span>만기 예정 없음</div>'
-    : exList.map(ct=>{const d=getDday(ct.end);return`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${ct.cid})">${ct.cname}</h4><p>${ct.product} · ${ct.end}</p></div><span class="badge-dday ${d<=90?"badge-urgent":"badge-warn"}">D-${d}</span></div>`;}).join("");
+    : exList.map(ct=>{const d=getDday(ct.end);return`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${ct.cid})">${ct.cname}</h4><p>${ct.product} · ${ct.end}</p></div><span class="badge-dday ${d<=90?"badge-urgent":"badge-warn"}">${d>=0?"D-"+d:"D+"+Math.abs(d)}</span></div>`;}).join("");
 
-  // ── 이번 달 생일 고객 ──
-  const birthdayList = customers.filter(c => {
+  // ── 생일 고객 (기간 내 생월 기준) ──
+  const bdMonths = dashFilterMode==="monthly" ? [nowM]
+    : dashFilterMode==="quarterly" ? [(nowQ-1)*3+1,(nowQ-1)*3+2,(nowQ-1)*3+3]
+    : Array.from({length:12},(_,i)=>i+1);
+  const birthdayList = customers.filter(c=>{
     if(!c.birth) return false;
+    return bdMonths.includes(parseInt(c.birth.slice(5,7)));
+  }).map(c=>{
     const bm = parseInt(c.birth.slice(5,7));
-    return bm === nowM;
-  }).map(c => {
     const bd = parseInt(c.birth.slice(8,10));
-    const dday = bd - today.getDate();
-    return {...c, bd, dday};
-  }).sort((a,b)=>a.bd-b.bd);
+    const dday = (bm===realM) ? bd - today.getDate() : null;
+    return {...c, bm, bd, dday};
+  }).sort((a,b)=>a.bm!==b.bm?a.bm-b.bm:a.bd-b.bd);
+  const bdTitle = dashFilterMode==="monthly"?`🎂 ${nowM}월 생일 고객`
+    :dashFilterMode==="quarterly"?`🎂 ${nowQ}분기 생일 고객`:`🎂 올해 생일 고객`;
+  document.querySelector("#dash-birthday")?.closest(".card")?.querySelector(".card-title") &&
+    (document.querySelector("#dash-birthday").closest(".card").querySelector(".card-title").textContent = bdTitle);
   const bdEl = document.getElementById("dash-birthday");
   if(bdEl) bdEl.innerHTML = !birthdayList.length
-    ? '<div class="empty"><span>🎂</span>이번 달 생일 고객 없음</div>'
-    : birthdayList.map(c=>`<div class="dash-item">
-        <div class="dash-item-left">
-          <h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4>
-          <p>${c.birth} · ${c.type}</p>
-        </div>
-        <span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:${c.dday<0?"#f1f5f9":c.dday===0?"#fef9c3":"#fce7f3"};color:${c.dday<0?"#94a3b8":c.dday===0?"#d97706":"#be185d"};">
-          ${c.dday<0?"지남":c.dday===0?"🎂 오늘!":"D-"+c.dday}
-        </span>
-      </div>`).join("");
+    ? `<div class="empty"><span>🎂</span>생일 고객 없음</div>`
+    : birthdayList.map(c=>{
+        const badge = c.dday===null ? `<span style="font-size:11px;color:var(--text2);">${c.bm}월 ${c.bd}일</span>`
+          : `<span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:${c.dday<0?"#f1f5f9":c.dday===0?"#fef9c3":"#fce7f3"};color:${c.dday<0?"#94a3b8":c.dday===0?"#d97706":"#be185d"};">${c.dday<0?"지남":c.dday===0?"🎂 오늘!":"D-"+c.dday}</span>`;
+        return `<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.birth} · ${c.type}</p></div>${badge}</div>`;
+      }).join("");
 
-  // ── 출생예정일 임박 ──
+  // ── 출생예정일 (기간 무관 — 14일 이내) ──
   const dashDue = customers.flatMap(c=>c.contracts.filter(ct=>ct.type==="태아보험"&&ct.duedate).map(ct=>({...ct,cname:c.name,cid:c.id}))).filter(ct=>(new Date(ct.duedate)-today)/86400000<=14).sort((a,b)=>new Date(a.duedate)-new Date(b.duedate));
   const dashDueCard = document.getElementById("dash-duedate-card");
   const dashDueEl = document.getElementById("dash-duedate");
@@ -2574,10 +2666,14 @@ function renderDashboard(){
     } else { dashDueCard.style.display="none"; }
   }
 
-  // ── 가망 고객 현황 ──
-  document.getElementById("dash-prospects").innerHTML = !pr.length
+  // ── 가망 고객 현황 (기간 내 등록된 것 우선, 없으면 전체) ──
+  const prFiltered = prInPeriod.length ? prInPeriod : pr;
+  document.querySelector("#dash-prospects")?.closest(".card")?.querySelector(".card-title") &&
+    (document.querySelector("#dash-prospects").closest(".card").querySelector(".card-title").textContent =
+      `🌱 가망 고객 현황${prInPeriod.length?"  ("+periodLabel+" 신규)":""}`);
+  document.getElementById("dash-prospects").innerHTML = !prFiltered.length
     ? '<div class="empty"><span>🌱</span>가망 고객 없음</div>'
-    : pr.slice(0,5).map(c=>`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.interest||"-"}</p></div><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></div>`).join("");
+    : prFiltered.slice(0,5).map(c=>`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.regDate||""} · ${c.interest||"-"}</p></div><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></div>`).join("");
 }
 
 let enrolledPage = 1;
@@ -2598,6 +2694,20 @@ function renderEnrolled(resetPage){
     (activeTagFilter==="전체"||c.tags.includes(activeTagFilter))&&
     (activeEnrolledSourceFilter==="전체"||(c.source||"")===activeEnrolledSourceFilter)
   );
+  // 정렬
+  const getJoinDate = c => c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "0000-00-00";
+  const getPremium  = c => c.contracts.reduce((s,ct)=>s+ct.premium,0);
+  list.sort((a,b)=>{
+    switch(enrolledSort){
+      case "joinDate_asc":  return getJoinDate(a).localeCompare(getJoinDate(b));
+      case "name_asc":      return a.name.localeCompare(b.name,"ko");
+      case "premium_desc":  return getPremium(b)-getPremium(a);
+      default:              return getJoinDate(b).localeCompare(getJoinDate(a)); // joinDate_desc
+    }
+  });
+  // 셀렉트 현재값 동기화
+  const sortSel = document.getElementById("enrolled-sort-select");
+  if(sortSel) sortSel.value = enrolledSort;
 
   // 인원수 표시
   const countLabel = document.getElementById("enrolled-count-label");
@@ -2695,6 +2805,18 @@ function renderProspects(){
     (activeStageFilter==="전체"||(c.stage||"초기접촉")===activeStageFilter)&&
     (activeSourceFilter==="전체"||(c.source||"")=== activeSourceFilter)
   );
+  // 정렬
+  const stageOrder = {"초기접촉":1,"니즈파악":2,"설계중":3,"계약검토":4};
+  list.sort((a,b)=>{
+    switch(prospectSort){
+      case "regDate_asc": return (a.regDate||"").localeCompare(b.regDate||"");
+      case "name_asc":    return a.name.localeCompare(b.name,"ko");
+      case "stage":       return (stageOrder[b.stage||"초기접촉"]||0)-(stageOrder[a.stage||"초기접촉"]||0);
+      default:            return (b.regDate||"").localeCompare(a.regDate||""); // regDate_desc
+    }
+  });
+  const sortSel2 = document.getElementById("prospect-sort-select");
+  if(sortSel2) sortSel2.value = prospectSort;
   const srcBadge=s=>s?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#f0e6ff;color:var(--purple);">${s}</span>`:`<span style="color:var(--text2)">-</span>`;
   const isMobP = window.innerWidth <= 768;
   const ptw = document.getElementById("prospect-table-wrap");
@@ -3249,7 +3371,7 @@ function addCustomer(){
   const type=document.querySelector('input[name="nc-type"]:checked')?.value||"가입";
   const tags=[...document.querySelectorAll(".nc-tag:checked")].map(c=>c.value);
   const todayStr=new Date().toISOString().slice(0,10);
-  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,ssn:(document.getElementById("nc-ssn1").value+document.getElementById("nc-ssn2").value)||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?todayStr:"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
+  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,ssn:document.getElementById("nc-ssn").value.replace(/-/g,"")||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?todayStr:"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
   if(type==="가망"){obj.interest=document.getElementById("nc-interest").value;obj.stage=document.getElementById("nc-stage").value;obj.source=document.getElementById("nc-source").value;obj.memo=document.getElementById("nc-memo").value;}
   // 산모 정보
   obj.maternity = document.querySelector('input[name="nc-maternity"]:checked')?.value || "N";
@@ -3261,7 +3383,7 @@ function addCustomer(){
   }
   customers.push(obj);
   ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
-  document.getElementById("nc-ssn1").value=""; document.getElementById("nc-ssn2").value="";
+  document.getElementById("nc-ssn").value="";
   document.querySelectorAll(".nc-tag").forEach(cb=>cb.checked=false);
   closeModal("add-customer");
   type==="가망"?renderProspects():renderEnrolled();
@@ -3814,6 +3936,35 @@ function toggleFollowupDoneFromTab(cid, csId) {
   showToast(cs.followUpDone ? "✅ 팔로업 완료 처리됨" : "↩️ 완료 취소됨");
 }
 
+
+function formatSsnInput(el, birthId) {
+  // 숫자만 추출
+  let digits = el.value.replace(/\D/g,"");
+  // 최대 13자리
+  if(digits.length > 13) digits = digits.slice(0,13);
+  // 자동 하이픈 삽입
+  el.value = digits.length > 6 ? digits.slice(0,6)+"-"+digits.slice(6) : digits;
+  // 앞 6자리로 생년월일 자동완성
+  if(digits.length >= 6) {
+    const yy = digits.slice(0,2);
+    const mm = digits.slice(2,4);
+    const dd = digits.slice(4,6);
+    // 7번째 자리로 세기 판별 (1,2=1900 / 3,4=2000)
+    let century = "19";
+    if(digits.length >= 7) {
+      const g = parseInt(digits[6]);
+      if(g===3||g===4||g===7||g===8) century = "20";
+      else if(g===9||g===0) century = "18";
+    } else {
+      century = parseInt(yy) <= 24 ? "20" : "19";
+    }
+    const birthEl = document.getElementById(birthId);
+    if(birthEl && mm>="01"&&mm<="12"&&dd>="01"&&dd<="31") {
+      birthEl.value = `${century}${yy}-${mm}-${dd}`;
+    }
+  }
+}
+
 function toggleFollowupDone(csId) {
   const c = customers.find(x=>x.id===currentCustomerId);
   if(!c) return;
@@ -4257,8 +4408,8 @@ function openEditInfo() {
   document.getElementById("ei-address").value = c.address || "";
   document.getElementById("ei-job").value = c.job || "";
   document.getElementById("ei-source").value = c.source || "";
-  document.getElementById("ei-ssn1").value = (c.ssn||"").slice(0,6);
-  document.getElementById("ei-ssn2").value = (c.ssn||"").slice(6);
+  const ssnRaw = c.ssn||"";
+  document.getElementById("ei-ssn").value = ssnRaw.length>=7 ? ssnRaw.slice(0,6)+"-"+ssnRaw.slice(6) : ssnRaw;
   document.querySelectorAll(".ei-tag").forEach(cb => cb.checked = (c.tags||[]).includes(cb.value));
   const isPr = c.type === "가망";
   document.getElementById("ei-prospect-fields").style.display = isPr ? "block" : "none";
@@ -4292,7 +4443,7 @@ function saveEditInfo() {
   c.address = document.getElementById("ei-address").value;
   c.job = document.getElementById("ei-job").value;
   c.source = document.getElementById("ei-source").value;
-  c.ssn = (document.getElementById("ei-ssn1").value + document.getElementById("ei-ssn2").value) || c.ssn || "";
+  c.ssn = document.getElementById("ei-ssn").value.replace(/-/g,"") || c.ssn || "";
   const tags = [...document.querySelectorAll(".ei-tag:checked")].map(cb => cb.value);
   c.tags = tags.length ? tags : c.tags;
   if (c.type === "가망") {
@@ -5592,15 +5743,25 @@ function addCustomAlertFromModal() {
 
 // ─── 대시보드 필터 함수 ───────────────────────────────────
 function setDashFilter(mode) {
+  const changed = dashFilterMode !== mode;
   dashFilterMode = mode;
+  // 모드 바뀔 때 서브 셀렉트 값 초기화
+  if(changed) {
+    const sel = document.getElementById("df-sub-select");
+    if(sel) sel.value = "";
+  }
   renderDashboard();
 }
 function changeDashYear(delta) {
   dashFilterYear += delta;
+  // 연도 바뀌면 서브 셀렉트 값 초기화
+  const sel = document.getElementById("df-sub-select");
+  if(sel) sel.value = "";
   renderDashboard();
 }
 function updateDashFilterUI() {
   const realY = new Date().getFullYear();
+  const realM = new Date().getMonth()+1;
   // 버튼 스타일
   ["monthly","quarterly","yearly"].forEach(m => {
     const btn = document.getElementById("df-btn-"+m);
@@ -5616,18 +5777,21 @@ function updateDashFilterUI() {
   const sel = document.getElementById("df-sub-select");
   if(!sel) return;
   if(dashFilterMode === "monthly") {
+    const prevVal = sel.value;
     sel.style.display = "";
     sel.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}월</option>`).join("");
-    const curM = (dashFilterYear===realY) ? new Date().getMonth()+1 : 12;
-    sel.value = sel.value || curM;
+    const defaultM = (dashFilterYear===realY) ? realM : 12;
+    sel.value = prevVal && parseInt(prevVal) >= 1 && parseInt(prevVal) <= 12 ? prevVal : defaultM;
   } else if(dashFilterMode === "quarterly") {
+    const prevVal = sel.value;
     sel.style.display = "";
     sel.innerHTML = ["1분기 (1~3월)","2분기 (4~6월)","3분기 (7~9월)","4분기 (10~12월)"]
       .map((l,i)=>`<option value="${i+1}">${l}</option>`).join("");
-    const curQ = Math.ceil((new Date().getMonth()+1)/3);
-    sel.value = sel.value || curQ;
+    const defaultQ = Math.ceil(((dashFilterYear===realY)?realM:12)/3);
+    sel.value = prevVal && parseInt(prevVal) >= 1 && parseInt(prevVal) <= 4 ? prevVal : defaultQ;
   } else {
     sel.style.display = "none";
+    sel.value = "";
   }
 }
 
