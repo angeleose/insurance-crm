@@ -1132,7 +1132,7 @@
   <div class="page" id="page-board">
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
       <div><h2>📌 정보게시판</h2><p>상품 정보, 영업 팁, 공지사항을 공유하세요.</p></div>
-      <button class="btn btn-primary" onclick="openBoardWrite()" style="margin-top:4px;">✏️ 글쓰기</button>
+      <button class="btn btn-primary" id="board-write-btn" onclick="openBoardWrite()" style="margin-top:4px;">✏️ 글쓰기</button>
     </div>
     <!-- 필터/검색 -->
     <div class="toolbar" style="gap:10px;margin-bottom:12px;">
@@ -2348,6 +2348,7 @@ function toggleTaskPage(src, cid, tId) {
     if(currentCustomerId===cid) renderTasks(c);
   }
   renderTasksPage();
+  autoSave();
 }
 
 function openEditTaskPage(src, cid, tId) {
@@ -2368,6 +2369,7 @@ function deleteTaskPage(src, cid, tId) {
   }
   renderTasksPage();
   updateSidebar();
+  autoSave();
 }
 
 function confirmDeleteTaskPage(btn, src, cid, tId) {
@@ -2948,9 +2950,32 @@ function renderExpiring(){
 }
 
 function renderFollowup(){
-  const now=new Date();
-  const items=customers.flatMap(c=>c.consultations.filter(cs=>cs.followUp).map(cs=>({...cs,cname:c.name,ctype:c.type,cid:c.id}))).sort((a,b)=>new Date(a.followUp)-new Date(b.followUp));
-  document.getElementById("followup-tbody").innerHTML=!items.length?`<tr><td colspan="6"><div class="empty"><span>📞</span>팔로업 일정 없음</div></td></tr>`:items.map(f=>{const d=getDday(f.followUp);const cls=d<0?"badge-urgent":d<=7?"badge-urgent":d<=14?"badge-warn":"badge-ok";return`<tr class="clickable" onclick="goToDetail(${f.cid})"><td><strong>${f.followUp}</strong></td><td>${f.cname}</td><td><span class="type-badge ${f.ctype}" style="font-size:11px">${f.ctype}</span></td><td>${f.type}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.note}</td><td><span class="badge-dday ${cls}">${d<0?"지남":`D-${d}`}</span></td></tr>`;}).join("");
+  const items=customers.flatMap(c=>c.consultations.filter(cs=>cs.followUp).map(cs=>({...cs,cname:c.name,ctype:c.type,cid:c.id}))).sort((a,b)=>{
+    if(!!a.followUpDone !== !!b.followUpDone) return a.followUpDone ? 1 : -1;
+    return new Date(a.followUp)-new Date(b.followUp);
+  });
+  document.getElementById("followup-tbody").innerHTML = !items.length
+    ? `<tr><td colspan="7"><div class="empty"><span>📞</span>팔로업 일정 없음</div></td></tr>`
+    : items.map(f => {
+        const d = getDday(f.followUp);
+        const done = !!f.followUpDone;
+        const cls = done ? "badge-ok" : d<0 ? "badge-urgent" : d<=7 ? "badge-urgent" : d<=14 ? "badge-warn" : "badge-ok";
+        const dLabel = done ? `<span style="color:#10b981;font-weight:700;">✅ 완료</span>` : d<0 ? "지남" : `D-${d}`;
+        return `<tr style="${done?"opacity:.5":""}">
+          <td onclick="goToDetail(${f.cid})" style="cursor:pointer;"><strong>${f.followUp}</strong></td>
+          <td onclick="goToDetail(${f.cid})" style="cursor:pointer;">${f.cname}</td>
+          <td onclick="goToDetail(${f.cid})" style="cursor:pointer;"><span class="type-badge ${f.ctype}" style="font-size:11px">${f.ctype}</span></td>
+          <td onclick="goToDetail(${f.cid})" style="cursor:pointer;">${f.type}</td>
+          <td onclick="goToDetail(${f.cid})" style="cursor:pointer;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.note}</td>
+          <td><span class="badge-dday ${cls}">${dLabel}</span></td>
+          <td style="text-align:center;">
+            <button onclick="toggleFollowupDoneFromTab(${f.cid},${f.id})"
+              style="padding:3px 10px;border-radius:6px;border:1.5px solid ${done?"#10b981":"#d1d5db"};background:${done?"#ecfdf5":"#fff"};color:${done?"#065f46":"#94a3b8"};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
+              ${done?"✅ 완료":"완료"}
+            </button>
+          </td>
+        </tr>`;
+      }).join("");
 }
 
 function renderContracts(){
@@ -3187,6 +3212,7 @@ function quickAddTask() {
   input.value="";
   renderTasks(c);
   updateSidebar();
+  autoSave();
 }
 
 function quickAddTaskGlobal() {
@@ -3273,7 +3299,7 @@ function saveTask() {
       const c=customers.find(x=>x.id===taskEditCid); if(!c) return;
       if(!c.tasks)c.tasks=[];
       c.tasks.push(newTask);
-      closeModal("add-task"); renderTasks(c); updateSidebar(); return;
+      closeModal("add-task"); renderTasks(c); updateSidebar(); autoSave(); return;
     } else {
       if(selCid){ const c=customers.find(x=>x.id==selCid); if(c){if(!c.tasks)c.tasks=[];c.tasks.push(newTask);} }
       else { standaloneTasks.push({...newTask, id:String(newTask.id), cid:null, cname:""}); }
@@ -3282,6 +3308,7 @@ function saveTask() {
   closeModal("add-task");
   renderTasksPage();
   if(taskEditCid){const c=customers.find(x=>x.id===taskEditCid);if(c)renderTasks(c);}
+  autoSave();
 }
 
 function toggleTask(tId) {
@@ -3291,6 +3318,7 @@ function toggleTask(tId) {
   t.done = !t.done; if(t.done && !t.doneAt) t.doneAt = new Date().toISOString().slice(0,10); else if(!t.done) t.doneAt = null;
   renderTasks(c);
   updateSidebar();
+  autoSave();
 }
 
 function deleteTask(tId, cid) {
@@ -3388,6 +3416,7 @@ function addCustomer(){
   closeModal("add-customer");
   type==="가망"?renderProspects():renderEnrolled();
   renderDashboard();
+  autoSave();
 }
 
 function addContract(){
@@ -4362,6 +4391,7 @@ function deleteContract(ctId) {
   c.contracts = c.contracts.filter(x=>String(x.id)!==String(ctId));
   renderDetail(currentCustomerId);
   renderDashboard();
+  autoSave();
 }
 
 function openEditConsult(csId) {
@@ -4397,6 +4427,7 @@ function deleteConsult(csId) {
   c.consultations = c.consultations.filter(x=>String(x.id)!==String(csId));
   renderDetail(currentCustomerId);
   renderDashboard();
+  autoSave();
 }
 
 function openEditInfo() {
@@ -4473,6 +4504,7 @@ function convertToEnrolled(){
   c.type="가입";delete c.interest;delete c.stage;delete c.memo;
   closeModal("convert");prevPage="enrolled";
   renderDetail(currentCustomerId);renderDashboard();
+  autoSave();
   alert(`🎉 ${c.name} 고객이 가입 고객으로 전환되었습니다! 계약 정보를 추가해 주세요.`);
 }
 
@@ -5028,10 +5060,23 @@ function deleteBacklogItem(id) {
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzvcI5hPcogqvHolrDM-m6wjjYo7l0d8Gv98y40TXDB8-3ouDDbx8PziVpFqhUZmZGs6Q/exec";
 
 let _autoSaveTimer = null;
+function showToast(msg, duration=2000) {
+  let t = document.getElementById("_toast");
+  if(!t) {
+    t = document.createElement("div");
+    t.id = "_toast";
+    t.style.cssText = "position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity="0"; }, duration);
+}
+
 function autoSave() {
-  showSyncToast("💾 저장 중...");
   clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(() => saveToSheet(), 2000);
+  saveToSheet();
 }
 
 async function saveToSheet() {
@@ -5044,7 +5089,9 @@ async function saveToSheet() {
     backlogItems,
     calEvents,
     msgTemplates,
+    myContacts,
   };
+  showSyncToast("💾 저장 중...", false, true);
   try {
     const res = await fetch(GAS_URL, {
       method: "POST",
@@ -5069,6 +5116,7 @@ async function loadFromSheet() {
       if (p.standaloneTasks) standaloneTasks = p.standaloneTasks;
       if (p.incomeRecords)  incomeRecords  = p.incomeRecords;
       if (p.boardPosts)     boardPosts     = p.boardPosts;
+      if (p.myContacts)    myContacts    = p.myContacts;
       if (p.customAlerts)   customAlerts   = p.customAlerts;
       if (p.backlogItems)   backlogItems   = p.backlogItems;
       if (p.calEvents)     calEvents     = p.calEvents;
@@ -5083,7 +5131,7 @@ async function loadFromSheet() {
   }
 }
 
-function showSyncToast(msg, isErr = false) {
+function showSyncToast(msg, isErr = false, persist = false) {
   let t = document.getElementById("sync-toast");
   if (!t) {
     t = document.createElement("div");
@@ -5092,11 +5140,13 @@ function showSyncToast(msg, isErr = false) {
     document.body.appendChild(t);
   }
   t.textContent = msg;
-  t.style.background = isErr ? "#fee2e2" : "#d1fae5";
-  t.style.color = isErr ? "#991b1b" : "#065f46";
+  t.style.background = isErr ? "#fee2e2" : persist ? "#dbeafe" : "#d1fae5";
+  t.style.color = isErr ? "#991b1b" : persist ? "#1e40af" : "#065f46";
   t.style.opacity = "1";
   clearTimeout(t._hide);
-  t._hide = setTimeout(() => t.style.opacity = "0", 2500);
+  if (!persist) {
+    t._hide = setTimeout(() => t.style.opacity = "0", 3000);
+  }
 }
 // ──────────────────────────────────────────────────────────
 
@@ -5572,6 +5622,7 @@ function deleteCustomAlertById(id) {
   customAlerts = customAlerts.filter(a=>a.id!==id);
   renderMsgCenter();
   updateSidebar();
+  autoSave();
 }
 
 function deleteCustomAlert(idx) {
@@ -5579,6 +5630,7 @@ function deleteCustomAlert(idx) {
   renderCustomAlertsList();
   renderMsgCenter();
   updateSidebar();
+  autoSave();
 }
 // ──────────────────────────────────────────────────────────
 
@@ -5667,6 +5719,7 @@ function deleteRule(id) {
   if(!r || r.type==="builtin") return;
   alertRules = alertRules.filter(x=>x.id!==id);
   renderAlertRules(); renderMsgCenter(); updateSidebar();
+  autoSave();
 }
 
 function resetAlertRules() {
@@ -5712,6 +5765,7 @@ function saveNewRule() {
   if(inputType==="days") newRule.days = val;
   if(inputType==="years") newRule.years = val;
   alertRules.push(newRule);
+  autoSave();
   closeAddRuleModal();
   ["nr-label","nr-desc"].forEach(id=>document.getElementById(id).value="");
   renderAlertRules(); renderMsgCenter(); updateSidebar();
@@ -6745,15 +6799,168 @@ function clearTaskCust() {
 // ──────────────────────────────────────────────────────────
 
 // ─── 정보게시판 ───────────────────────────────────────────
-const boardCategories = ["전체","공지","상품정보","영업팁","법규/제도","기타"];
+const boardCategories = ["전체","공지","상품정보","영업팁","법규/제도","기타","📞 연락처 수첩"];
 const boardCatColor = {"공지":"#dc2626|#fee2e2","상품정보":"#0369a1|#dbeafe","영업팁":"#16a34a|#dcfce7","법규/제도":"#7c3aed|#f3e8ff","기타":"#64748b|#f1f5f9"};
 let activeBoardCat = "전체";
+
+// ── 연락처 수첩 데이터 ──
+const LIFE_INS = [
+  {n:"삼성생명",    cs:"1588-3114", fax:"콜센터 문의",       ag:"콜센터 문의"},
+  {n:"한화생명",    cs:"1588-6363", fax:"콜센터 가상팩스",   ag:"콜센터 가상팩스"},
+  {n:"교보생명",    cs:"1588-1001", fax:"02-721-3842",       ag:"콜센터 문의"},
+  {n:"신한라이프",  cs:"1588-5580", fax:"콜센터 가상팩스",   ag:"콜센터 가상팩스"},
+  {n:"NH농협생명",  cs:"1544-4000", fax:"02-6971-6040",      ag:"02-6971-6040"},
+  {n:"미래에셋생명",cs:"1588-0220", fax:"콜센터 문의",       ag:"콜센터 문의"},
+  {n:"동양생명",    cs:"1800-1004", fax:"콜센터 가상팩스",   ag:"콜센터 가상팩스"},
+  {n:"ABL생명",     cs:"1588-6500", fax:"02-3299-5544",      ag:"02-3299-5544"},
+  {n:"흥국생명",    cs:"1588-2288", fax:"02-2178-8400",      ag:"02-2178-8400"},
+  {n:"하나생명",    cs:"1577-1112", fax:"02-3709-8628",      ag:"02-3709-8628"},
+  {n:"KB생명",      cs:"1588-9922", fax:"02-6220-9912",      ag:"02-6220-9912"},
+  {n:"DB생명",      cs:"1588-3131", fax:"0505-129-3134",     ag:"0505-129-3134"},
+  {n:"KDB생명",     cs:"1588-4040", fax:"02-2669-6591",      ag:"콜센터 문의"},
+  {n:"푸본현대생명",cs:"1577-3311", fax:"0505-106-0311",     ag:"0505-106-0311"},
+  {n:"교보라이프플래닛",cs:"1566-0999",fax:"1566-9831",      ag:"1566-9831"},
+  {n:"IBK연금보험", cs:"1577-4117", fax:"콜센터 문의",       ag:"콜센터 문의"},
+];
+const NONLIFE_INS = [
+  {n:"DB손해보험",  cs:"1588-0100", fax:"0505-181-4861",  ag:"콜센터 문의"},
+  {n:"현대해상",    cs:"1588-5656", fax:"0507-774-6325",  ag:"콜센터 문의"},
+  {n:"메리츠화재",  cs:"1566-7711", fax:"0505-021-3400",  ag:"콜센터 문의"},
+  {n:"삼성화재",    cs:"1588-5114", fax:"0505-162-0777",  ag:"콜센터 문의"},
+  {n:"KB손해보험",  cs:"1544-0114", fax:"0505-136-6500",  ag:"콜센터 문의"},
+  {n:"한화손해보험",cs:"1566-8282", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"롯데손해보험",cs:"1588-3344", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"흥국화재",    cs:"1688-1688", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"하나손해보험",cs:"1566-3000", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"NH농협손보",  cs:"1644-9000", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"AXA손해보험", cs:"1566-1566", fax:"콜센터 문의",    ag:"콜센터 문의"},
+  {n:"MG손해보험",  cs:"1588-5959", fax:"콜센터 문의",    ag:"콜센터 문의"},
+];
+// 직접 편집 후 저장되는 나의 연락처 (총무/매니저)
+let myContacts = {admin:[], manager:[]};
+
+function renderContactBook() {
+  const cellStyle = (v, isCs) => {
+    const isNA = v.includes("문의")||v.includes("가상");
+    const color = isNA ? "#94a3b8" : (isCs ? "#1d4ed8" : "#065f46");
+    const style = `font-family:monospace;font-size:12px;color:${color};${isNA?"font-style:italic":""}`;
+    return `<span style="${style}" ondblclick="editInsCell(this)">${v}</span>`;
+  };
+
+  const insTable = (data) => `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="background:var(--bg2);">
+        <th style="padding:7px 10px;font-size:11px;font-weight:600;text-align:left;border-bottom:1px solid var(--border);width:110px;">보험사</th>
+        <th style="padding:7px 10px;font-size:11px;font-weight:600;text-align:left;border-bottom:1px solid var(--border);">📞 고객센터</th>
+        <th style="padding:7px 10px;font-size:11px;font-weight:600;text-align:left;border-bottom:1px solid var(--border);">📠 청구팩스</th>
+        <th style="padding:7px 10px;font-size:11px;font-weight:600;text-align:left;border-bottom:1px solid var(--border);">📄 동의팩스</th>
+      </tr></thead>
+      <tbody>${data.map(d=>`
+        <tr>
+          <td style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;">${d.n}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid var(--border);">${cellStyle(d.cs,true)}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid var(--border);">${cellStyle(d.fax,false)}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid var(--border);">${cellStyle(d.ag,false)}</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>`;
+
+  const mySection = (type, label) => {
+    const rows = myContacts[type];
+    const rowsHtml = rows.length ? rows.map((p,i)=>`
+      <div style="display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border);">
+        <div style="width:30px;height:30px;border-radius:50%;background:#EEF2FF;color:#3730a3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">${p.name[0]}</div>
+        <div>
+          <div contenteditable="true" style="font-size:13px;font-weight:600;outline:none;border-bottom:1px dashed transparent;cursor:text;" onfocus="this.style.borderBottomColor='#3b82f6'" onblur="myContacts['${type}'][${i}].name=this.textContent||'이름';this.style.borderBottomColor='transparent';autoSave()">${p.name}</div>
+          <div contenteditable="true" style="font-size:11px;color:var(--text2);margin-top:2px;outline:none;border-bottom:1px dashed transparent;cursor:text;" onfocus="this.style.borderBottomColor='#3b82f6'" onblur="myContacts['${type}'][${i}].sub=this.textContent||'소속';this.style.borderBottomColor='transparent';autoSave()">${p.sub||""}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span contenteditable="true" style="font-family:monospace;font-size:12px;color:#1d4ed8;outline:none;border-bottom:1px dashed transparent;cursor:text;" onfocus="this.style.borderBottomColor='#3b82f6'" onblur="myContacts['${type}'][${i}].phone=this.textContent||'';this.style.borderBottomColor='transparent';autoSave()">${p.phone||""}</span>
+          <button onclick="delMyContact('${type}',${i})" style="padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:none;font-size:11px;color:var(--text2);cursor:pointer;" onmouseover="this.style.color='#dc2626';this.style.borderColor='#fca5a5'" onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border)'">삭제</button>
+        </div>
+      </div>`).join("") : `<div style="padding:12px 14px;font-size:12px;color:var(--text2);">등록된 연락처가 없어요.</div>`;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg2);">
+        <span style="font-size:12px;font-weight:700;">${label}</span>
+        <button onclick="addMyContact('${type}')" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-size:12px;color:var(--primary);cursor:pointer;">+ 추가</button>
+      </div>
+      ${rowsHtml}`;
+  };
+
+  document.getElementById("board-list").innerHTML = `
+    <div style="margin-bottom:8px;font-size:11px;color:var(--text2);padding:8px 12px;background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;">
+      ⚠️ 팩스번호는 보험사 사정에 따라 변경될 수 있습니다. 번호를 <strong>더블클릭</strong>하면 직접 수정할 수 있습니다.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="card" style="padding:0;overflow:hidden;">${mySection("admin","👤 총무 명단")}</div>
+      <div class="card" style="padding:0;overflow:hidden;">${mySection("manager","🤝 보험사 담당 매니저")}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">🏢 손해보험사</div>
+        <div class="card" style="padding:0;overflow:hidden;" id="nonlife-ins-tbl">${insTable(NONLIFE_INS)}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">🏢 생명보험사</div>
+        <div class="card" style="padding:0;overflow:hidden;" id="life-ins-tbl">${insTable(LIFE_INS)}</div>
+      </div>
+    </div>`;
+}
+
+function editInsCell(span) {
+  if(span.parentNode.querySelector("input")) return;
+  const orig = span.textContent;
+  const isNA = orig.includes("문의")||orig.includes("가상");
+  const isCs = span.style.color === "rgb(29, 78, 216)";
+  const inp = document.createElement("input");
+  inp.value = orig;
+  inp.style.cssText = "font-family:monospace;font-size:12px;width:100%;border:1px solid #3b82f6;border-radius:4px;padding:1px 5px;outline:none;background:var(--bg);color:var(--text)";
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+  const done = () => {
+    const nv = inp.value.trim() || orig;
+    const naNew = nv.includes("문의")||nv.includes("가상");
+    const color = naNew ? "#94a3b8" : (isCs ? "#1d4ed8" : "#065f46");
+    const ns = document.createElement("span");
+    ns.style.cssText = `font-family:monospace;font-size:12px;color:${color};${naNew?"font-style:italic":""}`;
+    ns.textContent = nv;
+    ns.ondblclick = () => editInsCell(ns);
+    inp.replaceWith(ns);
+    showToast("✅ 수정됨");
+    autoSave();
+  };
+  inp.onblur = done;
+  inp.onkeydown = e => { if(e.key==="Enter") inp.blur(); if(e.key==="Escape"){ inp.value=orig; inp.blur(); } };
+}
+
+function addMyContact(type) {
+  myContacts[type].push({name:"이름",sub:"소속",phone:"010-0000-0000"});
+  renderContactBook();
+  autoSave();
+}
+function delMyContact(type, i) {
+  myContacts[type].splice(i,1);
+  renderContactBook();
+  autoSave();
+}
 
 function renderBoard() {
   // 카테고리 필터
   document.getElementById("board-cat-filters").innerHTML = boardCategories.map(c=>
     `<button class="filter-btn${activeBoardCat===c?" active":""}" onclick="setBoardCat('${c}')">${c}</button>`
   ).join("");
+
+  // 연락처 수첩 탭
+  if(activeBoardCat === "📞 연락처 수첩") {
+    document.getElementById("board-list").innerHTML = "";
+    document.getElementById("board-search").style.display = "none";
+    const _wb = document.getElementById("board-write-btn"); if(_wb) _wb.style.display="none";
+    renderContactBook();
+    return;
+  }
+  // 일반 게시판
+  document.getElementById("board-search").style.display = "";
+  const wbtn = document.getElementById("board-write-btn"); if(wbtn) wbtn.style.display = "";
 
   const q = (document.getElementById("board-search")?.value||"").trim().toLowerCase();
   let posts = [...boardPosts].sort((a,b)=>(b.pinned-a.pinned)||(b.id-a.id));
