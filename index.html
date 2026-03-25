@@ -719,9 +719,6 @@
       <span class="mmi-icon">⚙️</span>설정
     </button>
   </div>
-  <div style="display:flex;gap:8px;padding:12px 16px 4px;">
-    <button onclick="loadFromFirestore();toggleMoreSheet(false)" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
-  </div>
 </div>
 
 <div id="sidebar">
@@ -777,9 +774,6 @@
         <div class="sb-divider"></div>
         <div class="sb-mini"><div class="val purple" id="sb-prospect">0</div><div class="sub">가망</div></div>
       </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <button onclick="loadFromFirestore()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
     </div>
     <div style="margin-top:8px;">
       <button class="dark-toggle" id="sb-dark-btn" onclick="toggleDarkMode()">🌙 다크 모드</button>
@@ -1499,7 +1493,7 @@
       <div class="card-title" style="color:#0891b2;">🤖 AI 기능 설정 (Gemini)</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
         Google Gemini API 키를 입력하면 AI 기능을 무료로 사용할 수 있어요.<br>
-        키는 이 브라우저에만 저장되며 구글 시트에는 올라가지 않아요.<br>
+        키는 이 브라우저에만 저장됩니다.<br>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#0891b2;font-weight:600;">→ aistudio.google.com 에서 무료 발급</a>
       </p>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -1538,20 +1532,10 @@
       </div>
     </div>
 
-    <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #bbf7d0;background:#f0fdf4;">
-      <div class="card-title" style="color:#16a34a;">📦 구글 시트 → Firebase 마이그레이션</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
-        기존 구글 시트 데이터를 Firebase로 한 번만 이전하세요.<br>
-        이후에는 Firebase에 자동 저장됩니다.
-      </p>
-      <button class="btn btn-ghost btn-sm" onclick="migrateFromGoogleSheet()" style="color:#16a34a;border-color:#86efac;font-size:13px;padding:10px 16px;">
-        📥 구글 시트에서 가져오기
-      </button>
-    </div>
     <div class="card" style="border:1.5px solid #fca5a5;background:#fff1f2;max-width:520px;">
       <div class="card-title" style="color:var(--red);">🗑️ 데이터 초기화</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
-        모든 고객, 계약, 수익, 게시글 데이터를 삭제하고 구글 시트도 초기화합니다.<br>
+        모든 고객, 계약, 수익, 게시글 데이터를 삭제합니다.<br>
         <strong style="color:var(--red);">⚠️ 이 작업은 되돌릴 수 없습니다.</strong>
       </p>
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -6165,7 +6149,7 @@ function deleteBacklogItem(id) {
 
 // ─── Firebase 연동 ────────────────────────────────────────────
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzvcI5hPcogqvHolrDM-m6wjjYo7l0d8Gv98y40TXDB8-3ouDDbx8PziVpFqhUZmZGs6Q/exec"; // Gemini 프록시용 유지
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzvcI5hPcogqvHolrDM-m6wjjYo7l0d8Gv98y40TXDB8-3ouDDbx8PziVpFqhUZmZGs6Q/exec";
 
 let _dataLoaded = false;
 let _autoSaveTimer = null;
@@ -6293,33 +6277,7 @@ async function saveToFirestore() {
   }
 }
 
-// 구글 시트 수동 불러오기 버튼용 (마이그레이션용)
-async function loadFromSheet() {
-  showSyncToast("⏳ 구글 시트에서 불러오는 중...");
-  try {
-    const res = await fetch(GAS_URL + "?action=load");
-    const json = await res.json();
-    if (json.ok && json.payload) {
-      const p = json.payload;
-      if (p.customers)       customers       = p.customers;
-      if (p.standaloneTasks) standaloneTasks = p.standaloneTasks;
-      if (p.incomeRecords)   incomeRecords   = p.incomeRecords;
-      if (p.boardPosts)      boardPosts      = p.boardPosts;
-      if (p.myContacts)      myContacts      = p.myContacts;
-      if (p.customAlerts)    customAlerts    = p.customAlerts;
-      if (p.backlogItems)    backlogItems    = p.backlogItems;
-      if (p.calEvents)       calEvents       = p.calEvents;
-      if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
-      _dataLoaded = true;
-      renderDashboard(); renderEnrolled(); updateSidebar();
-      showSyncToast("✅ 구글 시트 불러오기 완료 — Firebase에 저장하세요!");
-    } else {
-      showSyncToast("⚠️ 구글 시트에 데이터 없음", true);
-    }
-  } catch(e) {
-    showSyncToast("❌ 네트워크 오류", true);
-  }
-}
+
 
 async function loadFromFirestore() {
   if(!_currentUser) return;
@@ -6344,7 +6302,7 @@ async function loadFromFirestore() {
     } else {
       // 신규 사용자 — 데이터 없음
       _dataLoaded = true;
-      showSyncToast("👋 처음 사용하시네요! 데이터를 입력하거나 구글 시트에서 가져오세요.");
+      showSyncToast("👋 처음 사용하시네요! 데이터를 입력해 주세요.");
     }
   } catch(e) {
     _dataLoaded = false;
@@ -6354,15 +6312,7 @@ async function loadFromFirestore() {
   }
 }
 
-// 구글 시트 → Firebase 마이그레이션
-async function migrateFromGoogleSheet() {
-  if(!confirm("구글 시트 데이터를 Firebase로 가져올까요?\n기존 Firebase 데이터는 덮어씌워집니다.")) return;
-  await loadFromSheet();
-  if(_dataLoaded && customers.length > 0) {
-    await saveToFirestore();
-    showToast("✅ 마이그레이션 완료! 구글 시트 데이터가 Firebase로 이전됐어요.");
-  }
-}
+
 
 function showSyncToast(msg, isErr = false, persist = false) {
   let t = document.getElementById("sync-toast");
