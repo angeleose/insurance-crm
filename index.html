@@ -720,7 +720,7 @@
     </button>
   </div>
   <div style="display:flex;gap:8px;padding:12px 16px 4px;">
-    <button onclick="loadFromSheet();toggleMoreSheet(false)" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
+    <button onclick="loadFromFirestore();toggleMoreSheet(false)" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
   </div>
 </div>
 
@@ -4758,14 +4758,14 @@ async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = [];
-  await saveToSheet();
+  await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 전체 데이터가 초기화되었습니다.");
 }
 async function resetCustomersOnly() {
   if(!confirm("고객 데이터(가입·가망 고객, 계약, 상담, 이재사항, Task)를 모두 삭제하시겠습니까?")) return;
   customers = []; calEvents = []; standaloneTasks = [];
-  await saveToSheet();
+  await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 고객 데이터가 초기화되었습니다.");
 }
