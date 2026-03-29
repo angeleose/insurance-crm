@@ -564,7 +564,6 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -578,10 +577,8 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    window._fbAuth = getAuth(app);
     window._fbDb = getFirestore(app);
-    window._fbGoogleProvider = new GoogleAuthProvider();
-    window._fbFunctions = { signInWithEmailAndPassword, signOut, onAuthStateChanged, signInWithPopup, doc, setDoc, getDoc, onSnapshot, collection, query, where };
+    window._fbFunctions = { doc, setDoc, getDoc, onSnapshot, collection, query, where };
     window._fbReady = true;
     window.dispatchEvent(new Event("firebase-ready"));
   </script>
@@ -1483,8 +1480,7 @@
     <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #e2e8f0;">
       <div class="card-title">🔐 계정 정보</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.8;">
-        <div style="margin-bottom:8px;">로그인 이메일: <strong id="setting-user-email" style="color:var(--text);">-</strong></div>
-        <div style="font-size:12px;color:#94a3b8;">비밀번호 변경은 Firebase Console에서 가능해요.<br>또는 로그아웃 후 구글 계정으로 로그인하세요.</div>
+        <div style="margin-bottom:8px;">로그인 아이디: <strong id="setting-user-email" style="color:var(--text);">-</strong></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="margin-top:12px;color:#dc2626;border-color:#fca5a5;">🚪 로그아웃</button>
     </div>
@@ -3041,7 +3037,7 @@ function showPage(name){
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     const emailEl = document.getElementById("setting-user-email");
-    if(emailEl && _currentUser) emailEl.textContent = _currentUser.email || _currentUser.displayName || "로그인됨";
+    if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
   }
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-"+name).classList.add("active");
@@ -6149,85 +6145,71 @@ function deleteBacklogItem(id) {
 
 // ─── Firebase 연동 ────────────────────────────────────────────
 
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzvcI5hPcogqvHolrDM-m6wjjYo7l0d8Gv98y40TXDB8-3ouDDbx8PziVpFqhUZmZGs6Q/exec";
-
 let _dataLoaded = false;
 let _autoSaveTimer = null;
-let _currentUser = null; // 현재 로그인 유저
-let _unsubscribe = null; // Firestore 실시간 리스너
 
-// ─── Firebase 로그인 ──────────────────────────────────────────
+// ─── 로컬 계정 로그인 ──────────────────────────────────────────
+
+// 기본 계정: id=rina / pw=rina2021!!
+const LOGIN_ACCOUNTS = [
+  {
+    id: "rina",
+    // SHA-256("rina2021!!")
+    pwHash: "467a9abdfba4d2a6e4d14d221c6c2b7c6c71772e0eaa910b100e38f2e1a3803f"
+  }
+];
 
 async function doLogin() {
-  const email = document.getElementById("login-email").value.trim();
-  const pw = document.getElementById("login-pw").value;
+  const inputId = document.getElementById("login-id").value.trim();
+  const inputPw = document.getElementById("login-pw").value;
   const errEl = document.getElementById("login-error");
   errEl.style.display = "none";
 
-  if(!email || !pw) {
-    errEl.textContent = "이메일과 비밀번호를 입력하세요.";
+  if(!inputId || !inputPw) {
+    errEl.textContent = "아이디와 비밀번호를 입력하세요.";
     errEl.style.display = "";
     return;
   }
 
-  try {
-    const { signInWithEmailAndPassword } = window._fbFunctions;
-    await signInWithEmailAndPassword(window._fbAuth, email, pw);
-    // onAuthStateChanged가 자동으로 처리
-  } catch(e) {
-    let msg = "로그인 실패. 이메일/비밀번호를 확인하세요.";
-    if(e.code === "auth/user-not-found") msg = "등록되지 않은 이메일이에요.";
-    if(e.code === "auth/wrong-password") msg = "비밀번호가 올바르지 않아요.";
-    if(e.code === "auth/invalid-email") msg = "이메일 형식이 올바르지 않아요.";
-    if(e.code === "auth/too-many-requests") msg = "로그인 시도가 너무 많아요. 잠시 후 다시 시도해주세요.";
-    errEl.textContent = msg;
+  const pwHash = await hashPassword(inputPw);
+  const account = LOGIN_ACCOUNTS.find(a => a.id === inputId && a.pwHash === pwHash);
+
+  if(account) {
+    sessionStorage.setItem("crm_auth", inputId);
+    document.getElementById("login-screen").style.display = "none";
+    const nameEl = document.getElementById("sb-user-name");
+    if(nameEl) nameEl.textContent = inputId;
+    await loadFromFirestore();
+  } else {
+    errEl.textContent = "아이디 또는 비밀번호가 올바르지 않아요.";
     errEl.style.display = "";
+    document.getElementById("login-pw").value = "";
+    document.getElementById("login-pw").focus();
   }
 }
 
-async function doGoogleLogin() {
-  try {
-    const { signInWithPopup } = window._fbFunctions;
-    await signInWithPopup(window._fbAuth, window._fbGoogleProvider);
-  } catch(e) {
-    const errEl = document.getElementById("login-error");
-    errEl.textContent = "구글 로그인 실패: " + e.message;
-    errEl.style.display = "";
+function checkLogin() {
+  const savedId = sessionStorage.getItem("crm_auth");
+  if(savedId) {
+    document.getElementById("login-screen").style.display = "none";
+    const nameEl = document.getElementById("sb-user-name");
+    if(nameEl) nameEl.textContent = savedId;
+    // Firebase 준비 후 데이터 불러오기
+    if(window._fbReady) {
+      loadFromFirestore();
+    } else {
+      window.addEventListener("firebase-ready", loadFromFirestore);
+    }
   }
 }
 
 function doLogout() {
-  const { signOut } = window._fbFunctions;
-  if(_unsubscribe) _unsubscribe();
-  signOut(window._fbAuth).then(() => location.reload());
+  sessionStorage.removeItem("crm_auth");
+  location.reload();
 }
 
-// 로그인 상태 변화 감지 — Firebase가 자동으로 로그인 상태 유지
-function initFirebaseAuth() {
-  const { onAuthStateChanged } = window._fbFunctions;
-  onAuthStateChanged(window._fbAuth, async (user) => {
-    if(user) {
-      _currentUser = user;
-      document.getElementById("login-screen").style.display = "none";
-      // 사용자 이름 표시
-      const nameEl = document.getElementById("sb-user-name");
-      if(nameEl) nameEl.textContent = user.displayName || user.email;
-      // Firestore에서 데이터 불러오기
-      await loadFromFirestore();
-    } else {
-      _currentUser = null;
-      _dataLoaded = false;
-      document.getElementById("login-screen").style.display = "flex";
-    }
-  });
-}
-
-// Firebase 준비 후 인증 초기화
-if(window._fbReady) {
-  initFirebaseAuth();
-} else {
-  window.addEventListener("firebase-ready", initFirebaseAuth);
-}
+// 페이지 로드 시 로그인 체크
+checkLogin();
 
 function showToast(msg, duration=2000) {
   let t = document.getElementById("_toast");
@@ -6245,13 +6227,13 @@ function showToast(msg, duration=2000) {
 
 function autoSave() {
   clearTimeout(_autoSaveTimer);
-  if(!_dataLoaded || !_currentUser) return;
+  if(!_dataLoaded) return;
   saveToFirestore();
 }
 
 async function saveToFirestore() {
-  if(!_dataLoaded || !_currentUser) {
-    showSyncToast("⚠️ 저장 불가 (로그인 필요)", true);
+  if(!_dataLoaded) {
+    showSyncToast("⚠️ 저장 불가 (데이터 로드 필요)", true);
     return;
   }
   const payload = {
@@ -6270,7 +6252,8 @@ async function saveToFirestore() {
   try {
     const { doc, setDoc } = window._fbFunctions;
     const db = window._fbDb;
-    await setDoc(doc(db, "users", _currentUser.uid, "data", "crm"), payload);
+    const userId = sessionStorage.getItem("crm_auth") || "rina";
+    await setDoc(doc(db, "users", userId, "data", "crm"), payload);
     showSyncToast("✅ 저장됨");
   } catch(e) {
     showSyncToast("❌ 저장 실패: " + e.message, true);
@@ -6280,12 +6263,12 @@ async function saveToFirestore() {
 
 
 async function loadFromFirestore() {
-  if(!_currentUser) return;
   showSyncToast("⏳ 데이터 불러오는 중...", false, true);
   try {
     const { doc, getDoc } = window._fbFunctions;
     const db = window._fbDb;
-    const snap = await getDoc(doc(db, "users", _currentUser.uid, "data", "crm"));
+    const userId = sessionStorage.getItem("crm_auth") || "rina";
+    const snap = await getDoc(doc(db, "users", userId, "data", "crm"));
     if(snap.exists()) {
       const p = snap.data();
       if (p.customers)       customers       = p.customers;
@@ -6335,8 +6318,6 @@ function showSyncToast(msg, isErr = false, persist = false) {
 
 toggleProspectFields();
 
-// Firebase Auth가 로그인 감지 후 자동으로 loadFromFirestore() 호출
-// (initFirebaseAuth 함수에서 처리)
 // 초기 렌더는 로그인 후 loadFromFirestore에서 실행됨
 </script>
 
