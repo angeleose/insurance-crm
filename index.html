@@ -800,7 +800,7 @@
     <div class="nav-item" data-page="income" onclick="closeMobileDrawer()"><span class="icon">💵</span> 수익 관리</div>
     <div class="sb-section" style="margin-top:6px">시스템</div>
     <div class="nav-item" data-page="settings" onclick="closeMobileDrawer()"><span class="icon">⚙️</span> 설정</div>
-    <div class="nav-item" data-page="backlog" onclick="closeMobileDrawer();openBacklogWithAuth()"><span class="icon">🔒</span> 개발 백로그</div>
+    <div class="nav-item" data-page="backlog" onclick="closeMobileDrawer();openBacklogWithAuth()"><span class="icon">🗂️</span> 개발 백로그</div>
   </nav>
 </div>
 
@@ -896,7 +896,7 @@
 
     <div class="sb-section" style="margin-top:6px">시스템</div>
     <div class="nav-item" data-page="settings"><span class="icon">⚙️</span> 설정</div>
-    <div class="nav-item" id="backlog-nav-item" data-page="backlog" onclick="openBacklogWithAuth()"><span class="icon">🔒</span> 개발 백로그</div>
+    <div class="nav-item" id="backlog-nav-item" data-page="backlog" onclick="openBacklogWithAuth()"><span class="icon">🗂️</span> 개발 백로그</div>
     <div class="nav-item" onclick="doLogout()" style="color:#dc2626;margin-top:4px;"><span class="icon">🚪</span> 로그아웃</div>
   </nav>
   <div class="sb-footer">
@@ -3303,7 +3303,6 @@ function showPage(name){
   if(name==="board")renderBoard();
   if(name==="income")renderIncomePage();
   if(name==="calendar")renderCalendar();
-  if(name==="backlog"&&!backlogUnlocked){showPage("dashboard");return;}
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
 }
@@ -6283,15 +6282,12 @@ const blPriColor  = {"높음":"#ef4444","보통":"#64748b","낮음":"#3b82f6"};
 const blStatusColor = {"대기중":"#94a3b8","진행중":"#f59e0b","완료됨":"#10b981"};
 
 function openBacklogWithAuth() {
-  if (backlogUnlocked) {
-    showPage("backlog");
-    renderBacklog();
-    return;
-  }
-  document.getElementById("backlog-pw-input").value = "";
-  document.getElementById("backlog-auth-msg").textContent = "";
-  openModal("backlog-auth");
-  setTimeout(() => document.getElementById("backlog-pw-input").focus(), 100);
+  backlogUnlocked = true;
+  showPage("backlog");
+  document.getElementById("backlog-list").style.display = "block";
+  document.getElementById("backlog-view-history").style.display = "none";
+  document.getElementById("backlog-view-system").style.display = "none";
+  renderBacklog();
 }
 
 async function confirmBacklogAuth() {
