@@ -564,14 +564,15 @@
   <!-- Microsoft MSAL SDK (동적 로드) -->
   <script>
     (function() {
-      const MSAL_CDN = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/msal-browser.min.js";
+      const MSAL_CDN = "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js";
       const CLIENT_ID = "1817ba47-a122-4fcd-a7e7-802c2fd0534a";
       const SCOPES = ["Files.ReadWrite"];
       let _msalApp = null;
 
       function initMsal() {
-        if(typeof msal === "undefined") return;
-        _msalApp = new msal.PublicClientApplication({
+        const msalLib = window.msal || window.msalBrowser;
+        if(!msalLib) { console.warn("MSAL 전역변수 없음"); return; }
+        _msalApp = new msalLib.PublicClientApplication({
           auth: {
             clientId: CLIENT_ID,
             authority: "https://login.microsoftonline.com/consumers",
