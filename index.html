@@ -561,90 +561,98 @@
 .tl-tag  { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; margin-right:5px; vertical-align:middle; }
 </style>
 
-  <!-- Microsoft MSAL SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/msal-browser.min.js"></script>
+  <!-- Microsoft MSAL SDK (동적 로드) -->
   <script>
-    const _msalConfig = {
-      auth: {
-        clientId: "1817ba47-a122-4fcd-a7e7-802c2fd0534a",
-        authority: "https://login.microsoftonline.com/consumers",
-        redirectUri: window.location.origin
-      }
-    };
-    const _msalApp = new msal.PublicClientApplication(_msalConfig);
-    const _msalScopes = ["Files.ReadWrite"];
+    (function() {
+      const MSAL_CDN = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/msal-browser.min.js";
+      const CLIENT_ID = "1817ba47-a122-4fcd-a7e7-802c2fd0534a";
+      const SCOPES = ["Files.ReadWrite"];
+      let _msalApp = null;
 
-    async function uploadToOneDrive(base64Data, mimeType, fileName) {
-      // 토큰 획득
-      let tokenRes;
-      try {
-        tokenRes = await _msalApp.acquireTokenSilent({ scopes: _msalScopes, account: _msalApp.getAllAccounts()[0] });
-      } catch(e) {
-        tokenRes = await _msalApp.acquireTokenPopup({ scopes: _msalScopes });
-      }
-      const token = tokenRes.accessToken;
-
-      // base64 → Blob 변환
-      const byteChars = atob(base64Data);
-      const byteArr = new Uint8Array(byteChars.length);
-      for(let i=0; i<byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-      const blob = new Blob([byteArr], { type: mimeType || "image/jpeg" });
-
-      // OneDrive 업로드 (insurance-crm 폴더)
-      const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/insurance-crm/${fileName}:/content`;
-      const res = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": mimeType || "image/jpeg" },
-        body: blob
-      });
-      if(!res.ok) throw new Error("OneDrive 업로드 실패: " + res.status);
-      const data = await res.json();
-      return data.webUrl; // 파일 URL 반환
-    }
-
-    window._uploadToOneDrive = uploadToOneDrive;
-
-    // 페이지 로드 시 리디렉션 처리 및 연결 상태 복원
-    _msalApp.handleRedirectPromise().catch(()=>{});
-
-    function updateOneDriveUI() {
-      const account = _msalApp.getAllAccounts()[0];
-      const btn = document.getElementById("onedrive-connect-btn");
-      const disconnectBtn = document.getElementById("onedrive-disconnect-btn");
-      const status = document.getElementById("onedrive-status");
-      if(!btn) return;
-      if(account) {
-        btn.textContent = "✅ 연결됨";
-        btn.disabled = true;
-        btn.style.background = "#16a34a";
-        btn.style.borderColor = "#16a34a";
-        if(disconnectBtn) disconnectBtn.style.display = "inline-block";
-        if(status) status.textContent = `연결 계정: ${account.username}`;
-      } else {
-        btn.textContent = "🔗 Microsoft 계정 연결";
-        btn.disabled = false;
-        btn.style.background = "#0078d4";
-        btn.style.borderColor = "#0078d4";
-        if(disconnectBtn) disconnectBtn.style.display = "none";
-        if(status) status.textContent = "연결되지 않음 — 사진 저장 시 로그인 팝업이 뜹니다.";
-      }
-    }
-
-    window.connectOneDrive = async function() {
-      try {
-        await _msalApp.acquireTokenPopup({ scopes: _msalScopes });
+      function initMsal() {
+        if(typeof msal === "undefined") return;
+        _msalApp = new msal.PublicClientApplication({
+          auth: {
+            clientId: CLIENT_ID,
+            authority: "https://login.microsoftonline.com/consumers",
+            redirectUri: window.location.origin
+          }
+        });
+        _msalApp.handleRedirectPromise().catch(()=>{});
         updateOneDriveUI();
-      } catch(e) { alert("연결 실패: " + e.message); }
-    };
+      }
 
-    window.disconnectOneDrive = function() {
-      const account = _msalApp.getAllAccounts()[0];
-      if(account) _msalApp.logoutPopup({ account });
-      setTimeout(updateOneDriveUI, 500);
-    };
+      function updateOneDriveUI() {
+        if(!_msalApp) return;
+        const account = _msalApp.getAllAccounts()[0];
+        const btn = document.getElementById("onedrive-connect-btn");
+        const disconnectBtn = document.getElementById("onedrive-disconnect-btn");
+        const status = document.getElementById("onedrive-status");
+        if(!btn) return;
+        if(account) {
+          btn.textContent = "✅ 연결됨";
+          btn.disabled = true;
+          btn.style.background = "#16a34a";
+          btn.style.borderColor = "#16a34a";
+          if(disconnectBtn) disconnectBtn.style.display = "inline-block";
+          if(status) status.textContent = `연결 계정: ${account.username}`;
+        } else {
+          btn.textContent = "🔗 Microsoft 계정 연결";
+          btn.disabled = false;
+          btn.style.background = "#0078d4";
+          btn.style.borderColor = "#0078d4";
+          if(disconnectBtn) disconnectBtn.style.display = "none";
+          if(status) status.textContent = "연결되지 않음";
+        }
+      }
 
-    // 설정 페이지 열릴 때 상태 갱신
-    document.addEventListener("DOMContentLoaded", () => setTimeout(updateOneDriveUI, 500));
+      window.connectOneDrive = async function() {
+        if(!_msalApp) { alert("MSAL 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요."); return; }
+        try {
+          await _msalApp.acquireTokenPopup({ scopes: SCOPES });
+          updateOneDriveUI();
+        } catch(e) { alert("연결 실패: " + e.message); }
+      };
+
+      window.disconnectOneDrive = function() {
+        if(!_msalApp) return;
+        const account = _msalApp.getAllAccounts()[0];
+        if(account) _msalApp.logoutPopup({ account });
+        setTimeout(updateOneDriveUI, 500);
+      };
+
+      window._uploadToOneDrive = async function(base64Data, mimeType, fileName) {
+        if(!_msalApp) throw new Error("MSAL 미초기화");
+        let tokenRes;
+        try {
+          tokenRes = await _msalApp.acquireTokenSilent({ scopes: SCOPES, account: _msalApp.getAllAccounts()[0] });
+        } catch(e) {
+          tokenRes = await _msalApp.acquireTokenPopup({ scopes: SCOPES });
+        }
+        const token = tokenRes.accessToken;
+        const byteChars = atob(base64Data);
+        const byteArr = new Uint8Array(byteChars.length);
+        for(let i=0; i<byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([byteArr], { type: mimeType || "image/jpeg" });
+        const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/insurance-crm/${fileName}:/content`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": mimeType || "image/jpeg" },
+          body: blob
+        });
+        if(!res.ok) throw new Error("OneDrive 업로드 실패: " + res.status);
+        return (await res.json()).webUrl;
+      };
+
+      // MSAL 스크립트 동적 로드
+      const s = document.createElement("script");
+      s.src = MSAL_CDN;
+      s.onload = initMsal;
+      s.onerror = () => console.warn("MSAL 로드 실패");
+      document.head.appendChild(s);
+
+      // DOM 준비 후 UI 갱신
+      document.addEventListener("DOMContentLoaded", () => setTimeout(updateOneDriveUI, 1000));
+    })();
   </script>
 
   <!-- Firebase SDK -->
