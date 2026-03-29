@@ -229,121 +229,6 @@
 
   ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
 
-  /* ── DARK MODE ── */
-  body.dark {
-    --bg:#111827;--card:#1f2937;--text:#f1f5f9;--text2:#94a3b8;--border:#374151;--sky:#1e3a5f;
-    --purple-light:#2d1f4e;
-  }
-  body.dark td { border-bottom-color: #374151; }
-  body.dark tr.clickable:hover td { background: #263041; }
-  body.dark .search-wrap input { background: var(--card); color: var(--text); }
-  body.dark .form-group input,
-  body.dark .form-group select,
-  body.dark .form-group textarea { background: var(--card); color: var(--text); }
-  body.dark .modal-box { background: var(--card); color: var(--text); }
-  body.dark .modal-box select,
-  body.dark .modal-box input { background: #111827; color: var(--text); }
-  body.dark .btn-ghost { background: #374151; color: var(--text); }
-  body.dark .filter-btn { background: #374151; color: var(--text2); }
-  body.dark .filter-btn.active { background: var(--navy2); }
-  body.dark #mobile-tabbar { background: #1f2937; border-top-color: #374151; }
-  body.dark .mob-tab { color: var(--text2); }
-  body.dark .mob-tab.active { color: var(--blue-light); }
-  body.dark #mob-more-sheet { background: #1f2937; border-top-color: #374151; }
-  body.dark .mob-more-item { background: #111827; color: var(--text2); }
-  body.dark .mob-more-item.active { background: #1e3a5f; color: var(--blue-light); }
-  body.dark .col-map { background: #111827; }
-  body.dark .col-map-item select { background: var(--card); color: var(--text); }
-  body.dark .upload-drop { background: #111827; }
-  body.dark .preview-table-wrap th { background: #111827; }
-  body.dark .consult-note { color: var(--text2); }
-  body.dark .stage-초기접촉{background:#14532d;color:#86efac;}
-  body.dark .stage-니즈파악{background:#713f12;color:#fde68a;}
-  body.dark .stage-설계중{background:#7c2d12;color:#fdba74;}
-  body.dark .stage-계약검토{background:#3b0764;color:#d8b4fe;}
-  body.dark .type-badge.가입{background:#1e3a5f;color:#93c5fd;}
-  body.dark .type-badge.가망{background:#2d1f4e;color:#c4b5fd;}
-  body.dark .tag-vip{background:#451a03;color:#fde68a;}
-  body.dark .tag-new{background:#052e16;color:#6ee7b7;}
-  body.dark .tag-renew{background:#1e3a5f;color:#93c5fd;}
-  body.dark .tag-convert{background:#4c0519;color:#fda4af;}
-  body.dark .badge-active{background:#052e16;color:#6ee7b7;}
-  body.dark .badge-expiring{background:#451a03;color:#fde68a;}
-  body.dark .badge-urgent{background:#4c0519;color:#fca5a5;}
-  body.dark .badge-warn{background:#451a03;color:#fde68a;}
-  body.dark .badge-ok{background:#052e16;color:#6ee7b7;}
-  body.dark .convert-banner{background:linear-gradient(135deg,#1e3a5f,#1e40af22);border-color:#1e40af;}
-  body.dark .convert-banner p{color:#93c5fd;}
-  body.dark .prospect-box{background:linear-gradient(135deg,#2d1f4e,#1f2937);border-color:#4c1d95;}
-  body.dark .dash-item{border-bottom-color:#374151;}
-  body.dark .consult-item{border-bottom-color:#374151;}
-
-  /* ── DARK MODE 강제 오버라이드 ── */
-  body.dark input,
-  body.dark select,
-  body.dark textarea {
-    background: #1f2937 !important;
-    color: #f1f5f9 !important;
-    border-color: #374151 !important;
-  }
-  body.dark button:not(.btn-primary):not(.btn-success):not(.btn-purple):not(.dark-toggle):not(.mob-dark-btn):not(.mob-tab):not(#mobile-menu-btn):not(.filter-btn.active) {
-    background: #1f2937 !important;
-    color: #f1f5f9 !important;
-    border-color: #374151 !important;
-  }
-  body.dark [style*="background:#fff"],
-  body.dark [style*="background: #fff"],
-  body.dark [style*="background:white"] {
-    background: #1f2937 !important;
-    color: #f1f5f9 !important;
-  }
-  body.dark [style*="color:#64748b"],
-  body.dark [style*="color: #64748b"],
-  body.dark [style*="color:#333"],
-  body.dark [style*="color:#334155"] {
-    color: #94a3b8 !important;
-  }
-  body.dark [style*="color:#0f1b35"],
-  body.dark [style*="color:#1e3a5f"] {
-    color: #f1f5f9 !important;
-  }
-  body.dark [style*="border:1.5px solid var(--border)"],
-  body.dark [style*="border: 1.5px solid var(--border)"] {
-    border-color: #374151 !important;
-  }
-  body.dark .tcf-btn {
-    background: #1f2937 !important;
-    color: #94a3b8 !important;
-    border-color: #374151 !important;
-  }
-  body.dark .tcf-btn.tcf-active {
-    background: var(--blue) !important;
-    color: #fff !important;
-  }
-
-  /* 다크모드 토글 버튼 */
-  .dark-toggle {
-    width: 100%;
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,.2);
-    background: rgba(255,255,255,.08);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background .2s;
-    font-family: inherit;
-  }
-  .dark-toggle:hover { background: rgba(255,255,255,.14); }
-  .mob-dark-btn {
-    width: 34px; height: 34px;
-    background: rgba(255,255,255,.1);
-    border: none; border-radius: 8px;
-    color: #fff; font-size: 16px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-  }
-
   .tcf-btn {
     padding: 5px 14px;
     border-radius: 20px;
@@ -560,164 +445,6 @@
 .tl-body { font-size:12px; color:var(--text); line-height:1.6; }
 .tl-tag  { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; margin-right:5px; vertical-align:middle; }
 </style>
-
-  <!-- Microsoft OneDrive 연동 (PKCE OAuth) -->
-  <script>
-    (function() {
-      const CLIENT_ID = "1817ba47-a122-4fcd-a7e7-802c2fd0534a";
-      const REDIRECT_URI = window.location.origin;
-      const SCOPES = "Files.ReadWrite offline_access";
-      const TOKEN_KEY = "ms_od_token";
-      const EXPIRY_KEY = "ms_od_expiry";
-
-      function getToken() { return localStorage.getItem(TOKEN_KEY); }
-      function isExpired() { const e = localStorage.getItem(EXPIRY_KEY); return !e || Date.now() > parseInt(e); }
-
-      function saveToken(token, expiresIn) {
-        localStorage.setItem(TOKEN_KEY, token);
-        localStorage.setItem(EXPIRY_KEY, Date.now() + (expiresIn - 60) * 1000);
-      }
-
-      function clearToken() {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(EXPIRY_KEY);
-        localStorage.removeItem("ms_od_user");
-      }
-
-      async function generatePKCE() {
-        const arr = new Uint8Array(32);
-        crypto.getRandomValues(arr);
-        const verifier = btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-        const data = new TextEncoder().encode(verifier);
-        const digest = await crypto.subtle.digest('SHA-256', data);
-        const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-        return { verifier, challenge };
-      }
-
-      // 페이지 로드 시 OAuth 콜백 처리
-      (async function handleCallback() {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const verifier = sessionStorage.getItem('od_pkce_verifier');
-        if(!code || !verifier) return;
-
-        // URL 정리
-        history.replaceState({}, '', window.location.pathname);
-
-        try {
-          const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: CLIENT_ID,
-              grant_type: 'authorization_code',
-              code,
-              redirect_uri: REDIRECT_URI,
-              code_verifier: verifier,
-              scope: SCOPES
-            })
-          });
-          const data = await res.json();
-          if(data.access_token) {
-            saveToken(data.access_token, data.expires_in || 3600);
-            // 사용자 정보 저장
-            const me = await fetch('https://graph.microsoft.com/v1.0/me', {
-              headers: { Authorization: `Bearer ${data.access_token}` }
-            }).then(r=>r.json());
-            localStorage.setItem("ms_od_user", me.userPrincipalName || me.mail || "연결됨");
-            sessionStorage.removeItem('od_pkce_verifier');
-            updateOneDriveUI();
-          }
-        } catch(e) { console.error("토큰 교환 실패:", e); }
-      })();
-
-      function updateOneDriveUI() {
-        const token = getToken();
-        const valid = token && !isExpired();
-        const btn = document.getElementById("onedrive-connect-btn");
-        const disconnectBtn = document.getElementById("onedrive-disconnect-btn");
-        const status = document.getElementById("onedrive-status");
-        if(!btn) return;
-        if(valid) {
-          btn.textContent = "✅ 연결됨";
-          btn.disabled = true;
-          btn.style.background = "#16a34a";
-          btn.style.borderColor = "#16a34a";
-          if(disconnectBtn) disconnectBtn.style.display = "inline-block";
-          if(status) status.textContent = `연결 계정: ${localStorage.getItem("ms_od_user") || ""}`;
-        } else {
-          btn.textContent = "🔗 Microsoft 계정 연결";
-          btn.disabled = false;
-          btn.style.background = "#0078d4";
-          btn.style.borderColor = "#0078d4";
-          if(disconnectBtn) disconnectBtn.style.display = "none";
-          if(status) status.textContent = "연결되지 않음";
-        }
-      }
-
-      window.connectOneDrive = async function() {
-        const { verifier, challenge } = await generatePKCE();
-        sessionStorage.setItem('od_pkce_verifier', verifier);
-        const url = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` + new URLSearchParams({
-          client_id: CLIENT_ID,
-          response_type: 'code',
-          redirect_uri: REDIRECT_URI,
-          scope: SCOPES,
-          code_challenge: challenge,
-          code_challenge_method: 'S256'
-        });
-        window.location.href = url;
-      };
-
-      window.disconnectOneDrive = function() {
-        clearToken();
-        updateOneDriveUI();
-      };
-
-      window._uploadToOneDrive = async function(base64Data, mimeType, fileName) {
-        if(!getToken() || isExpired()) throw new Error("OneDrive 연결 필요");
-        const token = getToken();
-        const byteChars = atob(base64Data);
-        const byteArr = new Uint8Array(byteChars.length);
-        for(let i=0; i<byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-        const blob = new Blob([byteArr], { type: mimeType || "image/jpeg" });
-        const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/insurance-crm/${fileName}:/content`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": mimeType || "image/jpeg" },
-          body: blob
-        });
-        if(!res.ok) throw new Error("OneDrive 업로드 실패: " + res.status);
-        return (await res.json()).webUrl;
-      };
-
-      document.addEventListener("DOMContentLoaded", updateOneDriveUI);
-    })();
-  </script>
-
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBuS-7fRBv_DsWjYV09FuKiti7W7uYkWX8",
-      authDomain: "insurance-crm-964bf.firebaseapp.com",
-      projectId: "insurance-crm-964bf",
-      storageBucket: "insurance-crm-964bf.firebasestorage.app",
-      messagingSenderId: "994416095331",
-      appId: "1:994416095331:web:6d250a429eb1be441ec856",
-      measurementId: "G-38BTRYP6NN"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    window._fbDb = getFirestore(app);
-    window._fbStorage = getStorage(app);
-    window._fbStorageFns = { ref, uploadString, getDownloadURL };
-    window._fbFunctions = { doc, setDoc, getDoc, onSnapshot, collection, query, where };
-    window._fbReady = true;
-    window.dispatchEvent(new Event("firebase-ready"));
-  </script>
 </head>
 <body>
 
@@ -764,10 +491,7 @@
 <!-- 모바일 상단 헤더 -->
 <div id="mobile-header">
   <div class="mh-logo"><span>🛡</span> 보험 CRM</div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button class="mob-dark-btn" id="mob-dark-btn" onclick="toggleDarkMode()" title="다크/라이트 모드">🌙</button>
-    <button id="mobile-menu-btn" onclick="toggleMobileDrawer()">☰</button>
-  </div>
+  <button id="mobile-menu-btn" onclick="toggleMobileDrawer()">☰</button>
 </div>
 
 <!-- 드로어 오버레이 -->
@@ -778,7 +502,7 @@
   <div class="sb-logo" style="padding:20px 18px 16px;">
     <div class="sb-logo-mark">
       <div class="sb-logo-icon">🛡</div>
-      <div class="sb-logo-text"><h1>보험 CRM</h1><p id="sb-user-name" style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">로그인 중...</p></div>
+      <div class="sb-logo-text"><h1>보험 CRM</h1><p>고객 관리 시스템</p></div>
     </div>
   </div>
   <nav class="sb-nav">
@@ -852,13 +576,16 @@
       <span class="mmi-icon">⚙️</span>설정
     </button>
   </div>
+  <div style="display:flex;gap:8px;padding:12px 16px 4px;">
+    <button onclick="loadFromSheet();toggleMoreSheet(false)" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;font-size:13px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
+  </div>
 </div>
 
 <div id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-mark">
       <div class="sb-logo-icon">🛡</div>
-      <div class="sb-logo-text"><h1>보험 CRM</h1><p id="sb-user-name" style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">로그인 중...</p></div>
+      <div class="sb-logo-text"><h1>보험 CRM</h1><p>고객 관리 시스템</p></div>
     </div>
   </div>
   <nav class="sb-nav">
@@ -908,8 +635,8 @@
         <div class="sb-mini"><div class="val purple" id="sb-prospect">0</div><div class="sub">가망</div></div>
       </div>
     </div>
-    <div style="margin-top:8px;">
-      <button class="dark-toggle" id="sb-dark-btn" onclick="toggleDarkMode()">🌙 다크 모드</button>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button onclick="loadFromSheet()" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:12px;font-weight:700;cursor:pointer;">⬇️ 데이터 불러오기</button>
     </div>
   </div>
 </div>
@@ -1608,43 +1335,44 @@
     </div>
 
     <div id="backlog-list"></div>
-
-    <!-- 업데이트 히스토리 -->
-    <div class="card" style="margin-top:24px;">
-      <div class="card-title">📋 업데이트 히스토리</div>
-      <div id="changelog-list" style="font-size:13px;line-height:1.8;">로딩 중...</div>
-    </div>
   </div>
   <div class="page" id="page-settings">
     <div class="page-header"><h2>⚙️ 설정</h2><p>시스템 환경을 설정하세요.</p></div>
 
     <!-- 계정 설정 -->
     <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #e2e8f0;">
-      <div class="card-title">🔐 계정 정보</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.8;">
-        <div style="margin-bottom:8px;">로그인 아이디: <strong id="setting-user-email" style="color:var(--text);">-</strong></div>
+      <div class="card-title">🔐 계정 설정</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block;">아이디 변경</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="setting-new-id" placeholder="새 아이디 입력"
+              style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+            <button class="btn btn-primary" onclick="saveNewId()" style="padding:9px 18px;font-size:13px;">변경</button>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:12px;">
+          <label style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;display:block;">비밀번호 변경</label>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="password" id="setting-cur-pw" placeholder="현재 비밀번호"
+              style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+            <input type="password" id="setting-new-pw" placeholder="새 비밀번호"
+              style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;">
+            <input type="password" id="setting-new-pw2" placeholder="새 비밀번호 확인"
+              style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;"
+              onkeydown="if(event.key==='Enter')saveNewPassword()">
+            <div id="setting-pw-msg" style="font-size:12px;display:none;padding:6px 10px;border-radius:6px;"></div>
+            <button class="btn btn-primary" onclick="saveNewPassword()" style="padding:9px 18px;font-size:13px;align-self:flex-end;">비밀번호 변경</button>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="margin-top:12px;color:#dc2626;border-color:#fca5a5;">🚪 로그아웃</button>
-    </div>
-
-    <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #0078d4;">
-      <div class="card-title" style="color:#0078d4;">☁️ OneDrive 연결 (고객데이터원본 사진 저장)</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
-        Microsoft 계정으로 한 번 연결하면 이후 사진이 자동으로 OneDrive에 저장됩니다.<br>
-        저장 위치: OneDrive → <strong>insurance-crm</strong> 폴더
-      </p>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button id="onedrive-connect-btn" class="btn btn-primary" onclick="connectOneDrive()" style="background:#0078d4;border-color:#0078d4;font-size:13px;">🔗 Microsoft 계정 연결</button>
-        <button id="onedrive-disconnect-btn" class="btn btn-ghost" onclick="disconnectOneDrive()" style="font-size:13px;color:#dc2626;display:none;">연결 해제</button>
-      </div>
-      <div id="onedrive-status" style="margin-top:8px;font-size:12px;color:var(--text2);"></div>
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #a5f3fc;">
       <div class="card-title" style="color:#0891b2;">🤖 AI 기능 설정 (Gemini)</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
         Google Gemini API 키를 입력하면 AI 기능을 무료로 사용할 수 있어요.<br>
-        키는 이 브라우저에만 저장됩니다.<br>
+        키는 이 브라우저에만 저장되며 구글 시트에는 올라가지 않아요.<br>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#0891b2;font-weight:600;">→ aistudio.google.com 에서 무료 발급</a>
       </p>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -1686,7 +1414,7 @@
     <div class="card" style="border:1.5px solid #fca5a5;background:#fff1f2;max-width:520px;">
       <div class="card-title" style="color:var(--red);">🗑️ 데이터 초기화</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
-        모든 고객, 계약, 수익, 게시글 데이터를 삭제합니다.<br>
+        모든 고객, 계약, 수익, 게시글 데이터를 삭제하고 구글 시트도 초기화합니다.<br>
         <strong style="color:var(--red);">⚠️ 이 작업은 되돌릴 수 없습니다.</strong>
       </p>
       <div style="display:flex;flex-direction:column;gap:10px;">
@@ -1772,20 +1500,6 @@
   </div>
 </div>
 
-
-<!-- MODAL: 고객데이터원본 이미지 뷰어 -->
-<div class="modal-overlay" id="modal-scan-viewer" onclick="if(event.target===this)closeModal('scan-viewer')">
-  <div class="modal-box" style="width:90%;max-width:700px;">
-    <h3>📄 고객데이터원본</h3>
-    <div style="text-align:center;margin:16px 0;">
-      <img id="scan-viewer-img" src="" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:70vh;object-fit:contain;">
-    </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;">
-      <a id="scan-viewer-download" href="" download="고객데이터원본.jpg" class="btn btn-ghost btn-sm" style="border-color:#a5f3fc;color:#0891b2;">⬇️ 다운로드</a>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('scan-viewer')">닫기</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL: 가족 관계 추가 -->
 <div class="modal-overlay" id="modal-family" onclick="if(event.target===this)closeModal('family')">
@@ -1957,8 +1671,6 @@
 <div class="modal-overlay" id="modal-add-customer">
   <div class="modal-box">
     <h3 id="modal-title">고객 추가</h3>
-
-    <!-- 고객 유형 -->
     <div class="form-group">
       <label>고객 유형</label>
       <div class="type-toggle">
@@ -1966,104 +1678,40 @@
         <label><input type="radio" name="nc-type" value="가망" onchange="toggleProspectFields()"><span class="tt-btn">🌱 가망 고객</span></label>
       </div>
     </div>
-
-    <!-- 필수 정보 -->
     <div class="form-row">
       <div class="form-group"><label>이름 *</label><input type="text" id="nc-name" placeholder="홍길동"></div>
-      <div class="form-group"><label>전화번호 *</label><input type="text" id="nc-phone" placeholder="010-0000-0000"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>주민번호</label>
-        <input type="text" id="nc-ssn" placeholder="800315-1234567" maxlength="15"
-          oninput="formatSsnInput(this,'nc-birth')" style="font-family:monospace;letter-spacing:1px;">
-      </div>
       <div class="form-group"><label>생년월일</label><input type="date" id="nc-birth"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>출처</label>
-        <select id="nc-source">
-          <option value="">-- 선택 --</option>
-          <option>펫박람회</option><option>태아박람회</option><option>DB</option>
-          <option>SNS</option><option>광고</option><option>산모교실</option><option>지인소개</option>
-        </select>
-      </div>
-      <div class="form-group"><label>직업</label><input type="text" id="nc-job" placeholder="회사원, 자영업 등"></div>
+      <div class="form-group"><label>전화번호 *</label><input type="text" id="nc-phone" placeholder="010-0000-0000"></div>
+      <div class="form-group"><label>이메일</label><input type="email" id="nc-email"></div>
     </div>
-
-    <!-- 계약 시작일 (가입 고객만) -->
-    <div id="nc-contract-date-wrap" class="form-row">
-      <div class="form-group"><label>계약 시작일</label><input type="date" id="nc-contract-start"></div>
-      <div class="form-group"><label>주소</label><input type="text" id="nc-address" placeholder="(선택)"></div>
+    <div class="form-group">
+      <label>주민번호</label>
+      <input type="text" id="nc-ssn" placeholder="예: 800315-1234567" maxlength="15"
+        oninput="formatSsnInput(this,'nc-birth')" style="font-family:monospace;letter-spacing:1px;">
     </div>
-
-    <!-- 더보기 토글 -->
-    <div style="margin:8px 0 4px;">
-      <button type="button" onclick="toggleNcExtra()" id="nc-extra-btn"
-        style="font-size:12px;color:var(--text2);background:none;border:none;cursor:pointer;padding:0;">
-        ▶ 태그 · 산모정보 · 이메일 더보기
-      </button>
+    <div class="form-group"><label>주소</label><input type="text" id="nc-address"></div>
+    <div class="form-row">
+      <div class="form-group"><label>직업</label><input type="text" id="nc-job" placeholder="예: 교사, 자영업, 회사원"></div>
     </div>
-    <div id="nc-extra-wrap" style="display:none;">
-      <div class="form-row">
-        <div class="form-group"><label>이메일</label><input type="email" id="nc-email"></div>
-      </div>
-      <div class="form-group">
-        <label>태그</label>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="VIP"> VIP</label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="갱신예정"> 갱신예정</label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="전환상담"> 전환상담</label>
-          <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="만기예정"> 만기예정</label>
-        </div>
-      </div>
-      <div id="nc-maternity-section">
-        <div class="modal-sep" style="margin-top:14px;">👶 산모 정보</div>
-        <div class="form-row" style="align-items:center;gap:10px;">
-          <div class="form-group" style="flex:0 0 auto;">
-            <label>산모 여부</label>
-            <div style="display:flex;gap:8px;margin-top:6px;">
-              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">
-                <input type="radio" name="nc-maternity" value="Y" onchange="toggleNcMaternityFields()"> 산모
-              </label>
-              <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">
-                <input type="radio" name="nc-maternity" value="N" onchange="toggleNcMaternityFields()" checked> 해당없음
-              </label>
-            </div>
-          </div>
-        </div>
-        <div id="nc-maternity-fields" style="display:none;">
-          <div class="form-row">
-            <div class="form-group">
-              <label>출생예정일</label>
-              <input type="date" id="nc-duedate" oninput="calcNcPregnancyWeek()">
-            </div>
-            <div class="form-group">
-              <label>현재 임신 주차 <span id="nc-week-display" style="font-size:12px;font-weight:700;color:#ec4899;margin-left:4px;"></span></label>
-              <input type="number" id="nc-pregweek" placeholder="자동 계산" min="1" max="42" readonly
-                style="background:#f8fafc;color:var(--text2);cursor:default;">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>태아 유형</label>
-              <select id="nc-fetustype">
-                <option value="">-- 선택 --</option>
-                <option>단태아</option><option>쌍태아(쌍둥이)</option><option>다태아(세쌍둥이+)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>임신중독증 여부</label>
-              <select id="nc-toxemia">
-                <option value="">-- 선택 --</option>
-                <option>없음</option><option>의심</option><option>진단받음</option>
-              </select>
-            </div>
-          </div>
-        </div>
+    <div class="form-group">
+      <label>출처</label>
+      <select id="nc-source">
+        <option value="">-- 선택 --</option>
+        <option>펫박람회</option><option>태아박람회</option><option>DB</option>
+        <option>SNS</option><option>광고</option><option>산모교실</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>태그</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="VIP"> VIP</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="갱신예정"> 갱신예정</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="전환상담"> 전환상담</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;color:var(--text);"><input type="checkbox" class="nc-tag" value="만기예정"> 만기예정</label>
       </div>
     </div>
-
-    <!-- 가망 고객 전용 -->
     <div id="prospect-fields" style="display:none;">
       <div class="modal-sep">가망 고객 정보</div>
       <div class="form-row">
@@ -2074,7 +1722,55 @@
       </div>
       <div class="form-group"><label>메모</label><input type="text" id="nc-memo" placeholder="특이사항 등..."></div>
     </div>
-
+    <div id="nc-maternity-section">
+      <div class="modal-sep" style="margin-top:14px;">👶 산모 정보</div>
+      <div class="form-row" style="align-items:center;gap:10px;">
+        <div class="form-group" style="flex:0 0 auto;">
+          <label>산모 여부</label>
+          <div style="display:flex;gap:8px;margin-top:6px;">
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="radio" name="nc-maternity" value="Y" onchange="toggleNcMaternityFields()"> 산모
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;cursor:pointer;">
+              <input type="radio" name="nc-maternity" value="N" onchange="toggleNcMaternityFields()" checked> 해당없음
+            </label>
+          </div>
+        </div>
+      </div>
+      <div id="nc-maternity-fields" style="display:none;">
+        <div class="form-row">
+          <div class="form-group">
+            <label>출생예정일</label>
+            <input type="date" id="nc-duedate" oninput="calcNcPregnancyWeek()">
+          </div>
+          <div class="form-group">
+            <label>현재 임신 주차 <span id="nc-week-display" style="font-size:12px;font-weight:700;color:#ec4899;margin-left:4px;"></span></label>
+            <input type="number" id="nc-pregweek" placeholder="자동 계산" min="1" max="42" readonly
+              style="background:#f8fafc;color:var(--text2);cursor:default;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>태아 유형</label>
+            <select id="nc-fetustype">
+              <option value="">-- 선택 --</option>
+              <option>단태아</option>
+              <option>쌍태아(쌍둥이)</option>
+              <option>다태아(세쌍둥이+)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>임신중독증 여부</label>
+            <select id="nc-toxemia">
+              <option value="">-- 선택 --</option>
+              <option>없음</option>
+              <option>의심</option>
+              <option>진단받음</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('add-customer')">취소</button>
       <button class="btn btn-primary" id="modal-submit-btn" onclick="addCustomer()">추가</button>
@@ -2552,7 +2248,13 @@ const incomeCatColor = {
   "교육비":"#8b5cf6","선물":"#ec4899","사무용품":"#64748b","기타 지출":"#94a3b8"
 };
 
-let customers = [];
+let customers = [
+  {id:9999, type:"가입", name:"테스트고객", birth:"1990-06-15", phone:"010-0000-0000",
+   email:"", address:"", source:"직접입력", ssn:"", job:"", customerMemo:"만기 계산 테스트용",
+   maternity:"N", duedate:"", fetustype:"", toxemia:"", pregweek:"",
+   contracts:[], consultations:[], tasks:[], tags:["신규"],
+   joinDate:"2026-01-01", regDate:"", interest:"", stage:"", memo:"", family:[]}
+];
 
 // ─── 알림 규칙 설정 ───────────────────────────────────────
 // 알림 규칙 배열 — type: 'builtin'(기본) / 'custom_rule'(사용자 추가)
@@ -2592,13 +2294,6 @@ const renderTags=tags=>(tags||[]).map(t=>`<span class="tag ${tagCls(t)}">${t}</s
 const stCls=s=>`stage-${s||"초기접촉"}`;
 
 
-
-// ─── 고객데이터원본 이미지 뷰어 ──────────────────────────────────
-function openScanImageViewer(url) {
-  document.getElementById("scan-viewer-img").src = url;
-  document.getElementById("scan-viewer-download").href = url;
-  openModal("scan-viewer");
-}
 
 // ─── 사진으로 고객 추가 ────────────────────────────────────────
 let scanImageBase64 = null;
@@ -2796,23 +2491,6 @@ function saveScanCustomer() {
   renderDashboard();
   autoSave();
   showToast(`✅ ${name} 고객이 추가되었습니다!`);
-
-  // 사진을 OneDrive에 업로드
-  if(scanImageBase64 && window._uploadToOneDrive) {
-    const ext = (scanMimeType || "image/jpeg").split("/")[1] || "jpg";
-    const fileName = `${obj.id}_${obj.name}.${ext}`;
-    showToast("📤 OneDrive에 사진 업로드 중...", 3000);
-    window._uploadToOneDrive(scanImageBase64, scanMimeType, fileName)
-      .then(url => {
-        obj.scanImageUrl = url;
-        autoSave();
-        showToast("✅ 사진이 OneDrive에 저장되었습니다.");
-      })
-      .catch(err => {
-        console.error("OneDrive 업로드 실패:", err);
-        showToast("⚠️ 사진 저장 실패 (OneDrive 로그인 필요)");
-      });
-  }
 }
 
 
@@ -3227,11 +2905,7 @@ async function aiSalesReport() {
 }
 
 function showPage(name){
-  if(name==="settings") {
-    setTimeout(updateGeminiKeyStatus, 50);
-    const emailEl = document.getElementById("setting-user-email");
-    if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
-  }
+  if(name==="settings") setTimeout(updateGeminiKeyStatus, 50);
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-"+name).classList.add("active");
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -4009,10 +3683,9 @@ function renderDetail(id){
   document.getElementById("det-name").textContent=c.name;
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
   document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span>`:""}${renderTags(c.tags)}`;
-  const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
   document.getElementById("det-actions").innerHTML=isPr?
-    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
-    `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`;
+    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>`:
+    `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>`;
   document.getElementById("det-convert-banner").innerHTML=isPr?`<div class="convert-banner"><p>🎉 계약이 성사됐나요? 가입 고객으로 전환하면 계약 정보를 관리할 수 있어요.</p><button class="btn btn-primary btn-sm" onclick="openModal('convert')">전환하기</button></div>`:"";
   // 메모 렌더
   const memoView = document.getElementById("det-memo-view");
@@ -4529,18 +4202,9 @@ function openAddModal(type){
   if(r){r.checked=true;toggleProspectFields();}
   openModal("add-customer");
 }
-function toggleNcExtra() {
-  const wrap = document.getElementById("nc-extra-wrap");
-  const btn = document.getElementById("nc-extra-btn");
-  const open = wrap.style.display === "none";
-  wrap.style.display = open ? "" : "none";
-  btn.textContent = open ? "▼ 태그 · 산모정보 · 이메일 접기" : "▶ 태그 · 산모정보 · 이메일 더보기";
-}
-
 function toggleProspectFields(){
   const type=document.querySelector('input[name="nc-type"]:checked')?.value;
   document.getElementById("prospect-fields").style.display=type==="가망"?"block":"none";
-  document.getElementById("nc-contract-date-wrap").style.display=type==="가입"?"":"none";
   document.getElementById("modal-title").textContent=type==="가망"?"🌱 가망 고객 추가":"✅ 가입 고객 추가";
   const btn=document.getElementById("modal-submit-btn");
   btn.className=`btn ${type==="가망"?"btn-purple":"btn-primary"}`;
@@ -4552,8 +4216,7 @@ function addCustomer(){
   const type=document.querySelector('input[name="nc-type"]:checked')?.value||"가입";
   const tags=[...document.querySelectorAll(".nc-tag:checked")].map(c=>c.value);
   const todayStr=new Date().toISOString().slice(0,10);
-  const contractStart = document.getElementById("nc-contract-start")?.value || "";
-  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,ssn:document.getElementById("nc-ssn").value.replace(/-/g,"")||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?(contractStart||todayStr):"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
+  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,ssn:document.getElementById("nc-ssn").value.replace(/-/g,"")||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?todayStr:"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
   if(type==="가망"){obj.interest=document.getElementById("nc-interest").value;obj.stage=document.getElementById("nc-stage").value;obj.source=document.getElementById("nc-source").value;obj.memo=document.getElementById("nc-memo").value;}
   // 산모 정보
   obj.maternity = document.querySelector('input[name="nc-maternity"]:checked')?.value || "N";
@@ -4564,12 +4227,9 @@ function addCustomer(){
     obj.pregweek = document.getElementById("nc-pregweek").value;
   }
   customers.push(obj);
-  ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate","nc-contract-start"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("nc-ssn").value="";
   document.querySelectorAll(".nc-tag").forEach(cb=>cb.checked=false);
-  // 더보기 접기
-  const ew=document.getElementById("nc-extra-wrap");if(ew)ew.style.display="none";
-  const eb=document.getElementById("nc-extra-btn");if(eb)eb.textContent="▶ 태그 · 산모정보 · 이메일 더보기";
   closeModal("add-customer");
   type==="가망"?renderProspects():renderEnrolled();
   renderDashboard();
@@ -4932,14 +4592,14 @@ async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = [];
-  await saveToFirestore();
+  await saveToSheet();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 전체 데이터가 초기화되었습니다.");
 }
 async function resetCustomersOnly() {
   if(!confirm("고객 데이터(가입·가망 고객, 계약, 상담, 이재사항, Task)를 모두 삭제하시겠습니까?")) return;
   customers = []; calEvents = []; standaloneTasks = [];
-  await saveToFirestore();
+  await saveToSheet();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 고객 데이터가 초기화되었습니다.");
 }
@@ -6171,24 +5831,6 @@ function submitContractUpload() {
 }
 // ──────────────────────────────────────────────────────────
 
-// ─── 업데이트 히스토리 ────────────────────────────────────────
-async function loadChangelog() {
-  const el = document.getElementById("changelog-list");
-  if(!el) return;
-  try {
-    const res = await fetch("/changelog.json?t=" + Date.now());
-    const items = await res.json();
-    el.innerHTML = items.map(item => `
-      <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:baseline;">
-        <span style="color:var(--text2);font-size:11px;min-width:80px;">${item.date}</span>
-        <span style="color:var(--text2);font-size:11px;font-family:monospace;min-width:50px;">${item.hash}</span>
-        <span>${item.message}</span>
-      </div>`).join("");
-  } catch(e) {
-    el.textContent = "히스토리를 불러올 수 없습니다.";
-  }
-}
-
 // ─── 개발 백로그 ──────────────────────────────────────────
 const BACKLOG_PASSWORD_HASH = "467a9abdfba4d2a6e4d14d221c6c2b7c6c71772e0eaa910b100e38f2e1a3803f";
 
@@ -6231,7 +5873,6 @@ async function confirmBacklogAuth() {
   if (navItem) navItem.querySelector(".icon").textContent = "🗂️";
   showPage("backlog");
   renderBacklog();
-  loadChangelog();
 }
 
 function lockBacklog() {
@@ -6356,14 +5997,16 @@ function deleteBacklogItem(id) {
 }
 // ──────────────────────────────────────────────────────────
 
-// ─── Firebase 연동 ────────────────────────────────────────────
+// ─── 구글 시트 연동 ───────────────────────────────────────
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzvcI5hPcogqvHolrDM-m6wjjYo7l0d8Gv98y40TXDB8-3ouDDbx8PziVpFqhUZmZGs6Q/exec";
 
-let _dataLoaded = false;
+let _dataLoaded = false; // 구글 시트 로드 완료 전 저장 방지
 let _autoSaveTimer = null;
 
-// ─── 로컬 계정 로그인 ──────────────────────────────────────────
+// ─── 로그인 ───────────────────────────────────────────────────
 
 // 기본 계정: id=rina / pw=rina2021!!
+// 해시값 미리 계산 (SHA-256)
 const LOGIN_ACCOUNTS = [
   {
     id: "rina",
@@ -6371,6 +6014,7 @@ const LOGIN_ACCOUNTS = [
     pwHash: "467a9abdfba4d2a6e4d14d221c6c2b7c6c71772e0eaa910b100e38f2e1a3803f"
   }
 ];
+let _loginChecked = false;
 
 async function doLogin() {
   const inputId = document.getElementById("login-id").value.trim();
@@ -6388,11 +6032,9 @@ async function doLogin() {
   const account = LOGIN_ACCOUNTS.find(a => a.id === inputId && a.pwHash === pwHash);
 
   if(account) {
+    // 세션 저장 (탭 닫으면 사라짐)
     sessionStorage.setItem("crm_auth", inputId);
     document.getElementById("login-screen").style.display = "none";
-    const nameEl = document.getElementById("sb-user-name");
-    if(nameEl) nameEl.textContent = inputId;
-    await loadFromFirestore();
   } else {
     errEl.textContent = "아이디 또는 비밀번호가 올바르지 않아요.";
     errEl.style.display = "";
@@ -6402,17 +6044,8 @@ async function doLogin() {
 }
 
 function checkLogin() {
-  const savedId = sessionStorage.getItem("crm_auth");
-  if(savedId) {
+  if(sessionStorage.getItem("crm_auth")) {
     document.getElementById("login-screen").style.display = "none";
-    const nameEl = document.getElementById("sb-user-name");
-    if(nameEl) nameEl.textContent = savedId;
-    // Firebase 준비 후 데이터 불러오기
-    if(window._fbReady) {
-      loadFromFirestore();
-    } else {
-      window.addEventListener("firebase-ready", loadFromFirestore);
-    }
   }
 }
 
@@ -6423,6 +6056,45 @@ function doLogout() {
 
 // 페이지 로드 시 로그인 체크
 checkLogin();
+
+async function saveNewId() {
+  const newId = document.getElementById("setting-new-id").value.trim();
+  if(!newId) { showToast("새 아이디를 입력하세요."); return; }
+  if(newId.length < 2) { showToast("아이디는 2자 이상이어야 해요."); return; }
+  LOGIN_ACCOUNTS[0].id = newId;
+  // 세션도 업데이트
+  sessionStorage.setItem("crm_auth", newId);
+  document.getElementById("setting-new-id").value = "";
+  showToast(`✅ 아이디가 "${newId}"로 변경되었습니다.`);
+}
+
+async function saveNewPassword() {
+  const curPw  = document.getElementById("setting-cur-pw").value;
+  const newPw  = document.getElementById("setting-new-pw").value;
+  const newPw2 = document.getElementById("setting-new-pw2").value;
+  const msgEl  = document.getElementById("setting-pw-msg");
+
+  const showMsg = (msg, isErr) => {
+    msgEl.textContent = msg;
+    msgEl.style.display = "";
+    msgEl.style.background = isErr ? "#fee2e2" : "#dcfce7";
+    msgEl.style.color = isErr ? "#dc2626" : "#16a34a";
+  };
+
+  if(!curPw || !newPw || !newPw2) { showMsg("모든 항목을 입력하세요.", true); return; }
+  if(newPw !== newPw2) { showMsg("새 비밀번호가 일치하지 않아요.", true); return; }
+  if(newPw.length < 6) { showMsg("비밀번호는 6자 이상이어야 해요.", true); return; }
+
+  const curHash = await hashPassword(curPw);
+  if(curHash !== LOGIN_ACCOUNTS[0].pwHash) { showMsg("현재 비밀번호가 올바르지 않아요.", true); return; }
+
+  LOGIN_ACCOUNTS[0].pwHash = await hashPassword(newPw);
+  document.getElementById("setting-cur-pw").value = "";
+  document.getElementById("setting-new-pw").value = "";
+  document.getElementById("setting-new-pw2").value = "";
+  showMsg("✅ 비밀번호가 변경되었습니다.", false);
+  setTimeout(() => { msgEl.style.display = "none"; }, 3000);
+}
 
 function showToast(msg, duration=2000) {
   let t = document.getElementById("_toast");
@@ -6440,13 +6112,13 @@ function showToast(msg, duration=2000) {
 
 function autoSave() {
   clearTimeout(_autoSaveTimer);
-  if(!_dataLoaded) return;
-  saveToFirestore();
+  saveToSheet();
 }
 
-async function saveToFirestore() {
+async function saveToSheet() {
+  // ── 안전장치: 데이터 로드 전 빈 데이터 저장 방지 ──
   if(!_dataLoaded) {
-    showSyncToast("⚠️ 저장 불가 (데이터 로드 필요)", true);
+    showSyncToast("⚠️ 데이터 로드 전 저장 건너뜀", false);
     return;
   }
   const payload = {
@@ -6459,56 +6131,48 @@ async function saveToFirestore() {
     calEvents,
     msgTemplates,
     myContacts,
-    updatedAt: new Date().toISOString()
   };
   showSyncToast("💾 저장 중...", false, true);
   try {
-    const { doc, setDoc } = window._fbFunctions;
-    const db = window._fbDb;
-    const userId = sessionStorage.getItem("crm_auth") || "rina";
-    await setDoc(doc(db, "users", userId, "data", "crm"), payload);
-    showSyncToast("✅ 저장됨");
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "save", payload }),
+    });
+    const json = await res.json();
+    if (json.ok) showSyncToast("✅ 저장됨");
+    else showSyncToast("❌ 저장 실패", true);
   } catch(e) {
-    showSyncToast("❌ 저장 실패: " + e.message, true);
+    showSyncToast("❌ 네트워크 오류", true);
   }
 }
 
-
-
-async function loadFromFirestore() {
-  showSyncToast("⏳ 데이터 불러오는 중...", false, true);
+async function loadFromSheet() {
+  showSyncToast("⏳ 불러오는 중...");
   try {
-    const { doc, getDoc } = window._fbFunctions;
-    const db = window._fbDb;
-    const userId = sessionStorage.getItem("crm_auth") || "rina";
-    const snap = await getDoc(doc(db, "users", userId, "data", "crm"));
-    if(snap.exists()) {
-      const p = snap.data();
-      if (p.customers)       customers       = p.customers;
+    const res = await fetch(GAS_URL + "?action=load");
+    const json = await res.json();
+    if (json.ok && json.payload) {
+      const p = json.payload;
+      if (p.customers)      customers      = p.customers;
       if (p.standaloneTasks) standaloneTasks = p.standaloneTasks;
-      if (p.incomeRecords)   incomeRecords   = p.incomeRecords;
-      if (p.boardPosts)      boardPosts      = p.boardPosts;
-      if (p.myContacts)      myContacts      = p.myContacts;
-      if (p.customAlerts)    customAlerts    = p.customAlerts;
-      if (p.backlogItems)    backlogItems    = p.backlogItems;
-      if (p.calEvents)       calEvents       = p.calEvents;
+      if (p.incomeRecords)  incomeRecords  = p.incomeRecords;
+      if (p.boardPosts)     boardPosts     = p.boardPosts;
+      if (p.myContacts)    myContacts    = p.myContacts;
+      if (p.customAlerts)   customAlerts   = p.customAlerts;
+      if (p.backlogItems)   backlogItems   = p.backlogItems;
+      if (p.calEvents)     calEvents     = p.calEvents;
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
+      renderDashboard(); renderEnrolled(); updateSidebar();
       _dataLoaded = true;
-      showSyncToast("✅ 데이터 불러오기 완료");
+      showSyncToast("✅ 불러오기 완료");
     } else {
-      // 신규 사용자 — 데이터 없음
       _dataLoaded = true;
-      showSyncToast("👋 처음 사용하시네요! 데이터를 입력해 주세요.");
+      showSyncToast("시트에 저장된 데이터 없음");
     }
   } catch(e) {
-    _dataLoaded = false;
-    showSyncToast("❌ 불러오기 실패: " + e.message, true);
-  } finally {
-    renderDashboard(); renderEnrolled(); updateSidebar();
+    showSyncToast("❌ 네트워크 오류", true);
   }
 }
-
-
 
 function showSyncToast(msg, isErr = false, persist = false) {
   let t = document.getElementById("sync-toast");
@@ -6531,7 +6195,36 @@ function showSyncToast(msg, isErr = false, persist = false) {
 
 toggleProspectFields();
 
-// 초기 렌더는 로그인 후 loadFromFirestore에서 실행됨
+// 페이지 로드 시 구글 시트에서 자동 불러오기
+(async () => {
+  try {
+    showSyncToast("⏳ 데이터 불러오는 중...");
+    const res = await fetch(GAS_URL + "?action=load");
+    const json = await res.json();
+    if (json.ok && json.payload) {
+      const p = json.payload;
+      if (p.customers)       customers       = p.customers;
+      if (p.standaloneTasks) standaloneTasks = p.standaloneTasks;
+      if (p.incomeRecords)   incomeRecords   = p.incomeRecords;
+      if (p.boardPosts)      boardPosts      = p.boardPosts;
+      if (p.customAlerts)    customAlerts    = p.customAlerts;
+      if (p.backlogItems)    backlogItems    = p.backlogItems;
+      if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
+      _dataLoaded = true;
+      showSyncToast("✅ 데이터 불러오기 완료");
+    } else {
+      _dataLoaded = true;
+      showSyncToast("📋 저장된 데이터 없음");
+    }
+  } catch(e) {
+    _dataLoaded = true;
+    showSyncToast("⚠️ 오프라인 모드");
+  } finally {
+    renderDashboard();
+    renderEnrolled();
+    updateSidebar();
+  }
+})();
 </script>
 
 <!-- MODAL: ADD MEDICAL -->
@@ -6723,19 +6416,13 @@ let uploadRows = [];
 let uploadMapped = [];
 
 const ENROLLED_FIELDS = [
-  {key:"name",       label:"이름",     req:true},
-  {key:"phone",      label:"전화번호",  req:true},
-  {key:"birth",      label:"생년월일",  req:false},
-  {key:"email",      label:"이메일",   req:false},
-  {key:"address",    label:"주소",     req:false},
-  {key:"source",     label:"출처",     req:false},
-  {key:"tags",       label:"태그",     req:false},
-  {key:"ct_type",    label:"계약 종류", req:false},
-  {key:"ct_product", label:"상품명",   req:false},
-  {key:"ct_insurer", label:"보험사",   req:false},
-  {key:"ct_premium", label:"월 보험료", req:false},
-  {key:"ct_start",   label:"계약일",   req:false},
-  {key:"ct_end",     label:"만기일",   req:false},
+  {key:"name",   label:"이름",     req:true},
+  {key:"phone",  label:"전화번호",  req:true},
+  {key:"birth",  label:"생년월일",  req:false},
+  {key:"email",  label:"이메일",   req:false},
+  {key:"address",label:"주소",     req:false},
+  {key:"source", label:"출처",     req:false},
+  {key:"tags",   label:"태그",     req:false},
 ];
 const PROSPECT_FIELDS = [
   {key:"name",    label:"이름",     req:true},
@@ -6751,10 +6438,9 @@ const PROSPECT_FIELDS = [
 ];
 
 const ENROLLED_TEMPLATE = [
-  ["이름","전화번호","생년월일","이메일","주소","출처","태그","계약 종류","상품명","보험사","월 보험료","계약일","만기일"],
-  ["홍길동","010-1234-5678","1990-01-15","hong@email.com","서울시 강남구","DB","VIP","실손보험","실손의료비","삼성생명","50000","2020-01-01","2040-01-01"],
-  ["홍길동","010-1234-5678","1990-01-15","","","","","종신보험","무배당종신","한화생명","120000","2021-03-01","2060-03-01"],
-  ["김철수","010-9876-5432","1985-07-22","","경기도 성남시","SNS","","","","","","",""],
+  ["이름","전화번호","생년월일","이메일","주소","출처","태그"],
+  ["홍길동","010-1234-5678","1990-01-15","hong@email.com","서울시 강남구","DB","VIP"],
+  ["김철수","010-9876-5432","1985-07-22","","경기도 성남시","SNS",""],
 ];
 const PROSPECT_TEMPLATE = [
   ["이름","전화번호","생년월일","이메일","주소","관심 상품","출처","상담 단계","메모","태그"],
@@ -6882,56 +6568,31 @@ function buildPreview() {
 function confirmUpload() {
   if (!uploadMapped.length) return;
   const isProspect = uploadType === "가망";
-
-  // 같은 이름+전화번호를 하나의 고객으로 합치기
-  const customerMap = new Map();
   uploadMapped.forEach(r => {
-    const key = `${r.name}|${r.phone}`;
-    if (!customerMap.has(key)) {
-      const tags = r.tags ? r.tags.split(/[,，\s]+/).map(t=>t.trim()).filter(Boolean) : ["신규"];
-      const obj = {
-        id: Date.now() + Math.random(),
-        type: uploadType,
-        name: r.name, phone: r.phone,
-        birth: r.birth || "", email: r.email || "",
-        address: r.address || "",
-        source: r.source || "",
-        contracts: [], consultations: [], tasks: [],
-        tags: tags.length ? tags : ["신규"]
-      };
-      if (isProspect) {
-        obj.interest = r.interest || "";
-        obj.stage = ["초기접촉","니즈파악","설계중","계약검토"].includes(r.stage) ? r.stage : "초기접촉";
-        obj.memo = r.memo || "";
-      }
-      customerMap.set(key, obj);
+    const tags = r.tags ? r.tags.split(/[,，\s]+/).map(t=>t.trim()).filter(Boolean) : ["신규"];
+    const obj = {
+      id: Date.now() + Math.random(),
+      type: uploadType,
+      name: r.name, phone: r.phone,
+      birth: r.birth || "", email: r.email || "",
+      address: r.address || "",
+      source: r.source || "",
+      contracts: [], consultations: [],
+      tags: tags.length ? tags : ["신규"]
+    };
+    if (isProspect) {
+      obj.interest = r.interest || "";
+      obj.source = r.source || "";
+      obj.stage = ["초기접촉","니즈파악","설계중","계약검토"].includes(r.stage) ? r.stage : "초기접촉";
+      obj.memo = r.memo || "";
     }
-    // 계약 추가 (상품명이 있을 때만)
-    if (r.ct_product) {
-      const cust = customerMap.get(key);
-      const end = r.ct_end || "";
-      const d = end ? getDday(end) : 999;
-      cust.contracts.push({
-        id: Date.now() + Math.random(),
-        type: r.ct_type || "실손보험",
-        product: r.ct_product,
-        insurer: r.ct_insurer || "",
-        premium: parseInt(r.ct_premium) || 0,
-        start: r.ct_start || "",
-        end,
-        status: d <= 180 ? "expiring" : "active",
-        duedate: ""
-      });
-    }
+    customers.push(obj);
   });
-
-  customerMap.forEach(obj => customers.push(obj));
   closeModal("excel-upload");
   resetUpload();
   isProspect ? renderProspects() : renderEnrolled();
   renderDashboard();
-  autoSave();
-  alert(`🎉 ${customerMap.size}명의 ${uploadType} 고객이 추가되었습니다!`);
+  alert(`🎉 ${uploadMapped.length}명의 ${uploadType} 고객이 추가되었습니다!`);
 }
 
 function goToStep(n) {
@@ -8820,68 +8481,6 @@ function applyResponsiveLayout() {
 // 초기 실행 + resize 시 재실행
 applyResponsiveLayout();
 window.addEventListener("resize", applyResponsiveLayout);
-// ──────────────────────────────────────────────────────────
-
-// ── 다크/라이트 모드 ──────────────────────────────────────
-function toggleDarkMode() {
-  const isDark = document.body.classList.toggle('dark');
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  updateDarkBtnLabels(isDark);
-  applyDarkInlineStyles(isDark);
-}
-
-function applyDarkInlineStyles(isDark) {
-  // 인라인 style="background:#fff" 요소들을 JS로 보완
-  const allEls = document.querySelectorAll('[style]');
-  allEls.forEach(el => {
-    if (isDark) {
-      const st = el.getAttribute('style') || '';
-      if (/background\s*:\s*(#fff\b|white\b|#ffffff\b)/i.test(st)) {
-        el.dataset.origBg = el.style.background;
-        el.style.setProperty('background', '#1f2937', 'important');
-      }
-      if (/\bcolor\s*:\s*(#333\b|#0f1b35\b|#334155\b)/i.test(st)) {
-        el.dataset.origColor = el.style.color;
-        el.style.setProperty('color', '#f1f5f9', 'important');
-      }
-      if (/\bcolor\s*:\s*(#64748b\b)/i.test(st)) {
-        el.dataset.origColor = el.style.color;
-        el.style.setProperty('color', '#94a3b8', 'important');
-      }
-    } else {
-      if (el.dataset.origBg !== undefined) {
-        el.style.background = el.dataset.origBg;
-        delete el.dataset.origBg;
-      }
-      if (el.dataset.origColor !== undefined) {
-        el.style.color = el.dataset.origColor;
-        delete el.dataset.origColor;
-      }
-    }
-  });
-}
-
-function updateDarkBtnLabels(isDark) {
-  const sbBtn = document.getElementById('sb-dark-btn');
-  const mobBtn = document.getElementById('mob-dark-btn');
-  if (sbBtn) sbBtn.textContent = isDark ? '☀️ 라이트 모드' : '🌙 다크 모드';
-  if (mobBtn) mobBtn.textContent = isDark ? '☀️' : '🌙';
-}
-
-// 저장된 테마 복원
-(function() {
-  const saved = localStorage.getItem('theme');
-  if (saved === 'dark') {
-    document.body.classList.add('dark');
-    updateDarkBtnLabels(true);
-    // DOM 완전 로드 후 인라인 스타일 처리
-    if (document.readyState === 'complete') {
-      applyDarkInlineStyles(true);
-    } else {
-      window.addEventListener('load', () => applyDarkInlineStyles(true));
-    }
-  }
-})();
 // ──────────────────────────────────────────────────────────
 
 </script>

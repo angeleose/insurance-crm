@@ -10,6 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Generate changelog.json
+        run: |
+          git log --pretty=format:'{"hash":"%h","date":"%ad","message":"%s"}' --date=format:'%Y-%m-%d' -30 | \
+          awk 'BEGIN{print "["} NR>1{print ","} {print} END{print "]"}' > changelog.json
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
