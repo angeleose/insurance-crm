@@ -6228,37 +6228,65 @@ function submitContractUpload() {
 // ──────────────────────────────────────────────────────────
 
 // ─── 업데이트 히스토리 ────────────────────────────────────────
-async function loadChangelog() {
+const CHANGELOG_PAGE_SIZE = 10;
+let _changelogItems = [];
+let _changelogShown = CHANGELOG_PAGE_SIZE;
+
+function renderChangelogItems() {
   const el = document.getElementById("changelog-list");
   if(!el) return;
   const tagStyles = {
-    feat:   { bg:"#dbeafe", color:"#1d4ed8", label:"✨ 기능" },
-    fix:    { bg:"#fee2e2", color:"#dc2626", label:"🐛 수정" },
-    ci:     { bg:"#f0fdf4", color:"#16a34a", label:"⚙️ 배포" },
-    chore:  { bg:"#f1f5f9", color:"#475569", label:"🔧 정리" },
-    docs:   { bg:"#fef9c3", color:"#854d0e", label:"📄 문서" },
-    style:  { bg:"#fdf4ff", color:"#7e22ce", label:"🎨 스타일" },
+    feat:    { bg:"#dbeafe", color:"#1d4ed8", label:"✨ 기능" },
+    fix:     { bg:"#fee2e2", color:"#dc2626", label:"🐛 수정" },
+    ci:      { bg:"#f0fdf4", color:"#16a34a", label:"⚙️ 배포" },
+    chore:   { bg:"#f1f5f9", color:"#475569", label:"🔧 정리" },
+    docs:    { bg:"#fef9c3", color:"#854d0e", label:"📄 문서" },
+    style:   { bg:"#fdf4ff", color:"#7e22ce", label:"🎨 스타일" },
     refactor:{ bg:"#fff7ed", color:"#c2410c", label:"♻️ 리팩터" },
   };
+  const visible = _changelogItems.slice(0, _changelogShown);
+  const rows = visible.map(item => {
+    const match = item.message.match(/^(\w+):\s*(.*)/);
+    const type = match ? match[1].toLowerCase() : null;
+    const msg = match ? match[2] : item.message;
+    const tag = tagStyles[type];
+    const badge = tag
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${tag.bg};color:${tag.color};white-space:nowrap;">${tag.label}</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569;white-space:nowrap;">📝 기타</span>`;
+    return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap;">
+      <span style="color:var(--text2);font-size:11px;min-width:78px;">${item.date}</span>
+      ${badge}
+      <span style="font-size:13px;flex:1;">${msg}</span>
+      <span style="color:var(--text2);font-size:10px;font-family:monospace;">${item.hash}</span>
+    </div>`;
+  }).join("");
+
+  const remaining = _changelogItems.length - _changelogShown;
+  const moreBtn = remaining > 0
+    ? `<div style="text-align:center;margin-top:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="changelogLoadMore()" style="font-size:12px;">
+          ▼ 더보기 (${remaining}개 남음)
+        </button>
+       </div>`
+    : "";
+
+  el.innerHTML = rows + moreBtn;
+}
+
+function changelogLoadMore() {
+  _changelogShown += CHANGELOG_PAGE_SIZE;
+  renderChangelogItems();
+}
+
+async function loadChangelog() {
+  const el = document.getElementById("changelog-list");
+  if(!el) return;
+  el.textContent = "로딩 중...";
   try {
     const res = await fetch("/changelog.json?t=" + Date.now());
-    const items = await res.json();
-    el.innerHTML = items.map(item => {
-      const match = item.message.match(/^(\w+):\s*(.*)/);
-      const type = match ? match[1].toLowerCase() : null;
-      const msg = match ? match[2] : item.message;
-      const tag = tagStyles[type];
-      const badge = tag
-        ? `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:${tag.bg};color:${tag.color};white-space:nowrap;">${tag.label}</span>`
-        : `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569;white-space:nowrap;">📝 기타</span>`;
-      return `
-        <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap;">
-          <span style="color:var(--text2);font-size:11px;min-width:78px;">${item.date}</span>
-          ${badge}
-          <span style="font-size:13px;flex:1;">${msg}</span>
-          <span style="color:var(--text2);font-size:10px;font-family:monospace;">${item.hash}</span>
-        </div>`;
-    }).join("");
+    _changelogItems = await res.json();
+    _changelogShown = CHANGELOG_PAGE_SIZE;
+    renderChangelogItems();
   } catch(e) {
     el.textContent = "히스토리를 불러올 수 없습니다.";
   }
