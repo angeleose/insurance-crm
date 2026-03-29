@@ -6549,13 +6549,19 @@ let uploadRows = [];
 let uploadMapped = [];
 
 const ENROLLED_FIELDS = [
-  {key:"name",   label:"이름",     req:true},
-  {key:"phone",  label:"전화번호",  req:true},
-  {key:"birth",  label:"생년월일",  req:false},
-  {key:"email",  label:"이메일",   req:false},
-  {key:"address",label:"주소",     req:false},
-  {key:"source", label:"출처",     req:false},
-  {key:"tags",   label:"태그",     req:false},
+  {key:"name",       label:"이름",     req:true},
+  {key:"phone",      label:"전화번호",  req:true},
+  {key:"birth",      label:"생년월일",  req:false},
+  {key:"email",      label:"이메일",   req:false},
+  {key:"address",    label:"주소",     req:false},
+  {key:"source",     label:"출처",     req:false},
+  {key:"tags",       label:"태그",     req:false},
+  {key:"ct_type",    label:"계약 종류", req:false},
+  {key:"ct_product", label:"상품명",   req:false},
+  {key:"ct_insurer", label:"보험사",   req:false},
+  {key:"ct_premium", label:"월 보험료", req:false},
+  {key:"ct_start",   label:"계약일",   req:false},
+  {key:"ct_end",     label:"만기일",   req:false},
 ];
 const PROSPECT_FIELDS = [
   {key:"name",    label:"이름",     req:true},
@@ -6571,9 +6577,10 @@ const PROSPECT_FIELDS = [
 ];
 
 const ENROLLED_TEMPLATE = [
-  ["이름","전화번호","생년월일","이메일","주소","출처","태그"],
-  ["홍길동","010-1234-5678","1990-01-15","hong@email.com","서울시 강남구","DB","VIP"],
-  ["김철수","010-9876-5432","1985-07-22","","경기도 성남시","SNS",""],
+  ["이름","전화번호","생년월일","이메일","주소","출처","태그","계약 종류","상품명","보험사","월 보험료","계약일","만기일"],
+  ["홍길동","010-1234-5678","1990-01-15","hong@email.com","서울시 강남구","DB","VIP","실손보험","실손의료비","삼성생명","50000","2020-01-01","2040-01-01"],
+  ["홍길동","010-1234-5678","1990-01-15","","","","","종신보험","무배당종신","한화생명","120000","2021-03-01","2060-03-01"],
+  ["김철수","010-9876-5432","1985-07-22","","경기도 성남시","SNS","","","","","","",""],
 ];
 const PROSPECT_TEMPLATE = [
   ["이름","전화번호","생년월일","이메일","주소","관심 상품","출처","상담 단계","메모","태그"],
@@ -6701,31 +6708,56 @@ function buildPreview() {
 function confirmUpload() {
   if (!uploadMapped.length) return;
   const isProspect = uploadType === "가망";
+
+  // 같은 이름+전화번호를 하나의 고객으로 합치기
+  const customerMap = new Map();
   uploadMapped.forEach(r => {
-    const tags = r.tags ? r.tags.split(/[,，\s]+/).map(t=>t.trim()).filter(Boolean) : ["신규"];
-    const obj = {
-      id: Date.now() + Math.random(),
-      type: uploadType,
-      name: r.name, phone: r.phone,
-      birth: r.birth || "", email: r.email || "",
-      address: r.address || "",
-      source: r.source || "",
-      contracts: [], consultations: [],
-      tags: tags.length ? tags : ["신규"]
-    };
-    if (isProspect) {
-      obj.interest = r.interest || "";
-      obj.source = r.source || "";
-      obj.stage = ["초기접촉","니즈파악","설계중","계약검토"].includes(r.stage) ? r.stage : "초기접촉";
-      obj.memo = r.memo || "";
+    const key = `${r.name}|${r.phone}`;
+    if (!customerMap.has(key)) {
+      const tags = r.tags ? r.tags.split(/[,，\s]+/).map(t=>t.trim()).filter(Boolean) : ["신규"];
+      const obj = {
+        id: Date.now() + Math.random(),
+        type: uploadType,
+        name: r.name, phone: r.phone,
+        birth: r.birth || "", email: r.email || "",
+        address: r.address || "",
+        source: r.source || "",
+        contracts: [], consultations: [], tasks: [],
+        tags: tags.length ? tags : ["신규"]
+      };
+      if (isProspect) {
+        obj.interest = r.interest || "";
+        obj.stage = ["초기접촉","니즈파악","설계중","계약검토"].includes(r.stage) ? r.stage : "초기접촉";
+        obj.memo = r.memo || "";
+      }
+      customerMap.set(key, obj);
     }
-    customers.push(obj);
+    // 계약 추가 (상품명이 있을 때만)
+    if (r.ct_product) {
+      const cust = customerMap.get(key);
+      const end = r.ct_end || "";
+      const d = end ? getDday(end) : 999;
+      cust.contracts.push({
+        id: Date.now() + Math.random(),
+        type: r.ct_type || "실손보험",
+        product: r.ct_product,
+        insurer: r.ct_insurer || "",
+        premium: parseInt(r.ct_premium) || 0,
+        start: r.ct_start || "",
+        end,
+        status: d <= 180 ? "expiring" : "active",
+        duedate: ""
+      });
+    }
   });
+
+  customerMap.forEach(obj => customers.push(obj));
   closeModal("excel-upload");
   resetUpload();
   isProspect ? renderProspects() : renderEnrolled();
   renderDashboard();
-  alert(`🎉 ${uploadMapped.length}명의 ${uploadType} 고객이 추가되었습니다!`);
+  autoSave();
+  alert(`🎉 ${customerMap.size}명의 ${uploadType} 고객이 추가되었습니다!`);
 }
 
 function goToStep(n) {
