@@ -561,6 +561,52 @@
 .tl-tag  { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; margin-right:5px; vertical-align:middle; }
 </style>
 
+  <!-- Microsoft MSAL SDK -->
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+  <script>
+    const _msalConfig = {
+      auth: {
+        clientId: "1817ba47-a122-4fcd-a7e7-802c2fd0534a",
+        authority: "https://login.microsoftonline.com/consumers",
+        redirectUri: window.location.origin
+      }
+    };
+    const _msalApp = new msal.PublicClientApplication(_msalConfig);
+    const _msalScopes = ["Files.ReadWrite"];
+
+    async function uploadToOneDrive(base64Data, mimeType, fileName) {
+      // 토큰 획득
+      let tokenRes;
+      try {
+        tokenRes = await _msalApp.acquireTokenSilent({ scopes: _msalScopes, account: _msalApp.getAllAccounts()[0] });
+      } catch(e) {
+        tokenRes = await _msalApp.acquireTokenPopup({ scopes: _msalScopes });
+      }
+      const token = tokenRes.accessToken;
+
+      // base64 → Blob 변환
+      const byteChars = atob(base64Data);
+      const byteArr = new Uint8Array(byteChars.length);
+      for(let i=0; i<byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: mimeType || "image/jpeg" });
+
+      // OneDrive 업로드 (insurance-crm 폴더)
+      const uploadUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/insurance-crm/${fileName}:/content`;
+      const res = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": mimeType || "image/jpeg" },
+        body: blob
+      });
+      if(!res.ok) throw new Error("OneDrive 업로드 실패: " + res.status);
+      const data = await res.json();
+      return data.webUrl; // 파일 URL 반환
+    }
+
+    window._uploadToOneDrive = uploadToOneDrive;
+    // 페이지 로드 시 리디렉션 처리
+    _msalApp.handleRedirectPromise().catch(()=>{});
+  </script>
+
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -2645,18 +2691,21 @@ function saveScanCustomer() {
   autoSave();
   showToast(`✅ ${name} 고객이 추가되었습니다!`);
 
-  // 사진을 Firebase Storage에 업로드
-  if(scanImageBase64 && window._fbStorage) {
-    const { ref, uploadString, getDownloadURL } = window._fbStorageFns;
-    const userId = sessionStorage.getItem("crm_auth") || "rina";
-    const storageRef = ref(window._fbStorage, `users/${userId}/scan-images/${obj.id}`);
-    uploadString(storageRef, scanImageBase64, "base64", { contentType: scanMimeType || "image/jpeg" })
-      .then(snapshot => getDownloadURL(snapshot.ref))
+  // 사진을 OneDrive에 업로드
+  if(scanImageBase64 && window._uploadToOneDrive) {
+    const ext = (scanMimeType || "image/jpeg").split("/")[1] || "jpg";
+    const fileName = `${obj.id}_${obj.name}.${ext}`;
+    showToast("📤 OneDrive에 사진 업로드 중...", 3000);
+    window._uploadToOneDrive(scanImageBase64, scanMimeType, fileName)
       .then(url => {
         obj.scanImageUrl = url;
         autoSave();
+        showToast("✅ 사진이 OneDrive에 저장되었습니다.");
       })
-      .catch(err => console.error("사진 업로드 실패:", err));
+      .catch(err => {
+        console.error("OneDrive 업로드 실패:", err);
+        showToast("⚠️ 사진 저장 실패 (OneDrive 로그인 필요)");
+      });
   }
 }
 
