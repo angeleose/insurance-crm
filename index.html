@@ -603,8 +603,48 @@
     }
 
     window._uploadToOneDrive = uploadToOneDrive;
-    // 페이지 로드 시 리디렉션 처리
+
+    // 페이지 로드 시 리디렉션 처리 및 연결 상태 복원
     _msalApp.handleRedirectPromise().catch(()=>{});
+
+    function updateOneDriveUI() {
+      const account = _msalApp.getAllAccounts()[0];
+      const btn = document.getElementById("onedrive-connect-btn");
+      const disconnectBtn = document.getElementById("onedrive-disconnect-btn");
+      const status = document.getElementById("onedrive-status");
+      if(!btn) return;
+      if(account) {
+        btn.textContent = "✅ 연결됨";
+        btn.disabled = true;
+        btn.style.background = "#16a34a";
+        btn.style.borderColor = "#16a34a";
+        if(disconnectBtn) disconnectBtn.style.display = "inline-block";
+        if(status) status.textContent = `연결 계정: ${account.username}`;
+      } else {
+        btn.textContent = "🔗 Microsoft 계정 연결";
+        btn.disabled = false;
+        btn.style.background = "#0078d4";
+        btn.style.borderColor = "#0078d4";
+        if(disconnectBtn) disconnectBtn.style.display = "none";
+        if(status) status.textContent = "연결되지 않음 — 사진 저장 시 로그인 팝업이 뜹니다.";
+      }
+    }
+
+    window.connectOneDrive = async function() {
+      try {
+        await _msalApp.acquireTokenPopup({ scopes: _msalScopes });
+        updateOneDriveUI();
+      } catch(e) { alert("연결 실패: " + e.message); }
+    };
+
+    window.disconnectOneDrive = function() {
+      const account = _msalApp.getAllAccounts()[0];
+      if(account) _msalApp.logoutPopup({ account });
+      setTimeout(updateOneDriveUI, 500);
+    };
+
+    // 설정 페이지 열릴 때 상태 갱신
+    document.addEventListener("DOMContentLoaded", () => setTimeout(updateOneDriveUI, 500));
   </script>
 
   <!-- Firebase SDK -->
@@ -1532,6 +1572,19 @@
         <div style="margin-bottom:8px;">로그인 아이디: <strong id="setting-user-email" style="color:var(--text);">-</strong></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="margin-top:12px;color:#dc2626;border-color:#fca5a5;">🚪 로그아웃</button>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #0078d4;">
+      <div class="card-title" style="color:#0078d4;">☁️ OneDrive 연결 (고객데이터원본 사진 저장)</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7;">
+        Microsoft 계정으로 한 번 연결하면 이후 사진이 자동으로 OneDrive에 저장됩니다.<br>
+        저장 위치: OneDrive → <strong>insurance-crm</strong> 폴더
+      </p>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="onedrive-connect-btn" class="btn btn-primary" onclick="connectOneDrive()" style="background:#0078d4;border-color:#0078d4;font-size:13px;">🔗 Microsoft 계정 연결</button>
+        <button id="onedrive-disconnect-btn" class="btn btn-ghost" onclick="disconnectOneDrive()" style="font-size:13px;color:#dc2626;display:none;">연결 해제</button>
+      </div>
+      <div id="onedrive-status" style="margin-top:8px;font-size:12px;color:var(--text2);"></div>
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #a5f3fc;">
