@@ -561,42 +561,90 @@
 .tl-tag  { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; margin-right:5px; vertical-align:middle; }
 </style>
 
-  <!-- Microsoft MSAL SDK (동적 로드) -->
+  <!-- Microsoft OneDrive 연동 (PKCE OAuth) -->
   <script>
     (function() {
-      const MSAL_CDN = "https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js";
       const CLIENT_ID = "1817ba47-a122-4fcd-a7e7-802c2fd0534a";
-      const SCOPES = ["Files.ReadWrite"];
-      let _msalApp = null;
+      const REDIRECT_URI = window.location.origin;
+      const SCOPES = "Files.ReadWrite offline_access";
+      const TOKEN_KEY = "ms_od_token";
+      const EXPIRY_KEY = "ms_od_expiry";
 
-      function initMsal() {
-        const msalLib = window.msal || window.msalBrowser;
-        if(!msalLib) { console.warn("MSAL 전역변수 없음"); return; }
-        _msalApp = new msalLib.PublicClientApplication({
-          auth: {
-            clientId: CLIENT_ID,
-            authority: "https://login.microsoftonline.com/consumers",
-            redirectUri: window.location.origin
-          }
-        });
-        _msalApp.handleRedirectPromise().catch(()=>{});
-        updateOneDriveUI();
+      function getToken() { return localStorage.getItem(TOKEN_KEY); }
+      function isExpired() { const e = localStorage.getItem(EXPIRY_KEY); return !e || Date.now() > parseInt(e); }
+
+      function saveToken(token, expiresIn) {
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(EXPIRY_KEY, Date.now() + (expiresIn - 60) * 1000);
       }
 
+      function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(EXPIRY_KEY);
+        localStorage.removeItem("ms_od_user");
+      }
+
+      async function generatePKCE() {
+        const arr = new Uint8Array(32);
+        crypto.getRandomValues(arr);
+        const verifier = btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+        const data = new TextEncoder().encode(verifier);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+        return { verifier, challenge };
+      }
+
+      // 페이지 로드 시 OAuth 콜백 처리
+      (async function handleCallback() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const verifier = sessionStorage.getItem('od_pkce_verifier');
+        if(!code || !verifier) return;
+
+        // URL 정리
+        history.replaceState({}, '', window.location.pathname);
+
+        try {
+          const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: CLIENT_ID,
+              grant_type: 'authorization_code',
+              code,
+              redirect_uri: REDIRECT_URI,
+              code_verifier: verifier,
+              scope: SCOPES
+            })
+          });
+          const data = await res.json();
+          if(data.access_token) {
+            saveToken(data.access_token, data.expires_in || 3600);
+            // 사용자 정보 저장
+            const me = await fetch('https://graph.microsoft.com/v1.0/me', {
+              headers: { Authorization: `Bearer ${data.access_token}` }
+            }).then(r=>r.json());
+            localStorage.setItem("ms_od_user", me.userPrincipalName || me.mail || "연결됨");
+            sessionStorage.removeItem('od_pkce_verifier');
+            updateOneDriveUI();
+          }
+        } catch(e) { console.error("토큰 교환 실패:", e); }
+      })();
+
       function updateOneDriveUI() {
-        if(!_msalApp) return;
-        const account = _msalApp.getAllAccounts()[0];
+        const token = getToken();
+        const valid = token && !isExpired();
         const btn = document.getElementById("onedrive-connect-btn");
         const disconnectBtn = document.getElementById("onedrive-disconnect-btn");
         const status = document.getElementById("onedrive-status");
         if(!btn) return;
-        if(account) {
+        if(valid) {
           btn.textContent = "✅ 연결됨";
           btn.disabled = true;
           btn.style.background = "#16a34a";
           btn.style.borderColor = "#16a34a";
           if(disconnectBtn) disconnectBtn.style.display = "inline-block";
-          if(status) status.textContent = `연결 계정: ${account.username}`;
+          if(status) status.textContent = `연결 계정: ${localStorage.getItem("ms_od_user") || ""}`;
         } else {
           btn.textContent = "🔗 Microsoft 계정 연결";
           btn.disabled = false;
@@ -608,29 +656,27 @@
       }
 
       window.connectOneDrive = async function() {
-        if(!_msalApp) { alert("MSAL 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요."); return; }
-        try {
-          await _msalApp.acquireTokenPopup({ scopes: SCOPES });
-          updateOneDriveUI();
-        } catch(e) { alert("연결 실패: " + e.message); }
+        const { verifier, challenge } = await generatePKCE();
+        sessionStorage.setItem('od_pkce_verifier', verifier);
+        const url = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` + new URLSearchParams({
+          client_id: CLIENT_ID,
+          response_type: 'code',
+          redirect_uri: REDIRECT_URI,
+          scope: SCOPES,
+          code_challenge: challenge,
+          code_challenge_method: 'S256'
+        });
+        window.location.href = url;
       };
 
       window.disconnectOneDrive = function() {
-        if(!_msalApp) return;
-        const account = _msalApp.getAllAccounts()[0];
-        if(account) _msalApp.logoutPopup({ account });
-        setTimeout(updateOneDriveUI, 500);
+        clearToken();
+        updateOneDriveUI();
       };
 
       window._uploadToOneDrive = async function(base64Data, mimeType, fileName) {
-        if(!_msalApp) throw new Error("MSAL 미초기화");
-        let tokenRes;
-        try {
-          tokenRes = await _msalApp.acquireTokenSilent({ scopes: SCOPES, account: _msalApp.getAllAccounts()[0] });
-        } catch(e) {
-          tokenRes = await _msalApp.acquireTokenPopup({ scopes: SCOPES });
-        }
-        const token = tokenRes.accessToken;
+        if(!getToken() || isExpired()) throw new Error("OneDrive 연결 필요");
+        const token = getToken();
         const byteChars = atob(base64Data);
         const byteArr = new Uint8Array(byteChars.length);
         for(let i=0; i<byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
@@ -644,15 +690,7 @@
         return (await res.json()).webUrl;
       };
 
-      // MSAL 스크립트 동적 로드
-      const s = document.createElement("script");
-      s.src = MSAL_CDN;
-      s.onload = initMsal;
-      s.onerror = () => console.warn("MSAL 로드 실패");
-      document.head.appendChild(s);
-
-      // DOM 준비 후 UI 갱신
-      document.addEventListener("DOMContentLoaded", () => setTimeout(updateOneDriveUI, 1000));
+      document.addEventListener("DOMContentLoaded", updateOneDriveUI);
     })();
   </script>
 
