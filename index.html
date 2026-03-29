@@ -565,6 +565,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBuS-7fRBv_DsWjYV09FuKiti7W7uYkWX8",
@@ -578,6 +579,8 @@
 
     const app = initializeApp(firebaseConfig);
     window._fbDb = getFirestore(app);
+    window._fbStorage = getStorage(app);
+    window._fbStorageFns = { ref, uploadString, getDownloadURL };
     window._fbFunctions = { doc, setDoc, getDoc, onSnapshot, collection, query, where };
     window._fbReady = true;
     window.dispatchEvent(new Event("firebase-ready"));
@@ -1618,6 +1621,20 @@
 </div>
 
 
+<!-- MODAL: 고객데이터원본 이미지 뷰어 -->
+<div class="modal-overlay" id="modal-scan-viewer" onclick="if(event.target===this)closeModal('scan-viewer')">
+  <div class="modal-box" style="width:90%;max-width:700px;">
+    <h3>📄 고객데이터원본</h3>
+    <div style="text-align:center;margin:16px 0;">
+      <img id="scan-viewer-img" src="" style="width:100%;border-radius:10px;border:1px solid var(--border);max-height:70vh;object-fit:contain;">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <a id="scan-viewer-download" href="" download="고객데이터원본.jpg" class="btn btn-ghost btn-sm" style="border-color:#a5f3fc;color:#0891b2;">⬇️ 다운로드</a>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('scan-viewer')">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 가족 관계 추가 -->
 <div class="modal-overlay" id="modal-family" onclick="if(event.target===this)closeModal('family')">
   <div class="modal-box" style="width:440px;">
@@ -2424,6 +2441,13 @@ const stCls=s=>`stage-${s||"초기접촉"}`;
 
 
 
+// ─── 고객데이터원본 이미지 뷰어 ──────────────────────────────────
+function openScanImageViewer(url) {
+  document.getElementById("scan-viewer-img").src = url;
+  document.getElementById("scan-viewer-download").href = url;
+  openModal("scan-viewer");
+}
+
 // ─── 사진으로 고객 추가 ────────────────────────────────────────
 let scanImageBase64 = null;
 let scanMimeType = null;
@@ -2620,6 +2644,20 @@ function saveScanCustomer() {
   renderDashboard();
   autoSave();
   showToast(`✅ ${name} 고객이 추가되었습니다!`);
+
+  // 사진을 Firebase Storage에 업로드
+  if(scanImageBase64 && window._fbStorage) {
+    const { ref, uploadString, getDownloadURL } = window._fbStorageFns;
+    const userId = sessionStorage.getItem("crm_auth") || "rina";
+    const storageRef = ref(window._fbStorage, `users/${userId}/scan-images/${obj.id}`);
+    uploadString(storageRef, scanImageBase64, "base64", { contentType: scanMimeType || "image/jpeg" })
+      .then(snapshot => getDownloadURL(snapshot.ref))
+      .then(url => {
+        obj.scanImageUrl = url;
+        autoSave();
+      })
+      .catch(err => console.error("사진 업로드 실패:", err));
+  }
 }
 
 
@@ -3816,9 +3854,10 @@ function renderDetail(id){
   document.getElementById("det-name").textContent=c.name;
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
   document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span>`:""}${renderTags(c.tags)}`;
+  const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
   document.getElementById("det-actions").innerHTML=isPr?
-    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>`:
-    `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>`;
+    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
+    `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`;
   document.getElementById("det-convert-banner").innerHTML=isPr?`<div class="convert-banner"><p>🎉 계약이 성사됐나요? 가입 고객으로 전환하면 계약 정보를 관리할 수 있어요.</p><button class="btn btn-primary btn-sm" onclick="openModal('convert')">전환하기</button></div>`:"";
   // 메모 렌더
   const memoView = document.getElementById("det-memo-view");
