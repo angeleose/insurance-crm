@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>보험 고객 관리 CRM</title>
+<title>보험 고객 관리 CRM v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1055,7 +1055,7 @@
       </div>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="enrolled-table-wrap">
-      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="enroll-check-all" onchange="toggleAllEnrolled(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>계약</th><th>월 보험료</th><th>태그</th><th>가입일</th><th>최근 상담</th></tr></thead>
+      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="enroll-check-all" onchange="toggleAllEnrolled(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></th><th>이름</th><th>생년월일</th><th>연락처</th><th>출처</th><th>계약</th><th>월 보험료</th><th>태그</th><th>가입일</th><th>최근 상담</th></tr></thead>
       <tbody id="enrolled-tbody"></tbody></table>
     </div>
     <div id="enrolled-list-wrap" style="display:none;"></div>
@@ -1086,7 +1086,7 @@
       </select>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="prospect-table-wrap">
-      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="prospect-check-all" onchange="toggleAllProspects(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></th><th>이름</th><th>나이</th><th>연락처</th><th>출처</th><th>관심 상품</th><th>상담 단계</th><th>등록일</th><th>최근 상담</th><th>다음 팔로업</th></tr></thead>
+      <table><thead><tr><th style="width:36px;"><input type="checkbox" id="prospect-check-all" onchange="toggleAllProspects(this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></th><th>이름</th><th>생년월일</th><th>연락처</th><th>출처</th><th>관심 상품</th><th>상담 단계</th><th>등록일</th><th>최근 상담</th><th>다음 팔로업</th></tr></thead>
       <tbody id="prospect-tbody"></tbody></table>
     </div>
     <div id="prospect-list-wrap" style="display:none;"></div>
@@ -3780,7 +3780,7 @@ function renderDashboard(){
     : birthdayList.map(c=>{
         const badge = c.dday===null ? `<span style="font-size:11px;color:var(--text2);">${c.bm}월 ${c.bd}일</span>`
           : `<span style="font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;background:${c.dday<0?"#f1f5f9":c.dday===0?"#fef9c3":"#fce7f3"};color:${c.dday<0?"#94a3b8":c.dday===0?"#d97706":"#be185d"};">${c.dday<0?"지남":c.dday===0?"🎂 오늘!":"D-"+c.dday}</span>`;
-        return `<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.birth} · ${c.type}</p></div>${badge}</div>`;
+        return `<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${formatBirth(c.birth)} · ${c.type}</p></div>${badge}</div>`;
       }).join("");
 
   // ── 출생예정일 (기간 무관 — 14일 이내) ──
@@ -3957,7 +3957,7 @@ function renderEnrolled(resetPage){
     const enrolledContainer = document.getElementById("enrolled-tbody");
     enrolledContainer.innerHTML=!list.length
       ?`<tr><td colspan="8"><div class="empty"><span>🔍</span>결과 없음</div></td></tr>`
-      :pagedList.map(c=>{const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="enroll-check" data-id="${c.id}" onchange="updateEnrolledSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></td><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
+      :pagedList.map(c=>{const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="enroll-check" data-id="${c.id}" onchange="updateEnrolledSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
   }
 
   // 페이지네이션 렌더
@@ -4053,12 +4053,13 @@ function renderProspects(){
     }
   } else {
     document.getElementById("prospect-tbody").innerHTML=!list.length?`<tr><td colspan="8"><div class="empty"><span>🌱</span>가망 고객 없음</div></td></tr>`:
-      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td>${getAge(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
+      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
   }
 }
 
 function renderDetail(id){
   const c=customers.find(x=>x.id===id);if(!c)return;
+  if(c.birth) c.birth = formatBirth(c.birth) === "-" ? "" : formatBirth(c.birth);
   const isPr=c.type==="가망";
   document.getElementById("det-avatar").textContent=c.name[0];
   document.getElementById("det-avatar").className=`avatar ${c.type}`;
@@ -4081,7 +4082,7 @@ function renderDetail(id){
   if(memoViewEl && !c.customerMemo) memoViewEl.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
 
   document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div></div></div>`:"";
-  document.getElementById("det-info").innerHTML=[["생년월일",c.birth||"-"],["나이",getAge(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
+  document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
   const cc=document.getElementById("det-contracts-card");
@@ -6051,6 +6052,35 @@ function handleContractImportFile(file) {
   reader.readAsBinaryString(file);
 }
 
+function formatBirth(val) {
+  if (!val) return "-";
+  const s = String(val).trim();
+  console.log("[formatBirth] input:", s);
+  // 이미 YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // YYYYMMDD
+  if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  // "Thu Jun 03 1976 23:59:08 GMT+0900 (한국 표준시)" 형식 — 직접 파싱
+  const direct = s.match(/(\w{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (direct) {
+    const months = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+    const mm = months[direct[1]];
+    const dd = String(direct[2]).padStart(2,"0");
+    const yyyy = direct[3];
+    if (mm) return `${yyyy}-${mm}-${dd}`;
+  }
+  // 괄호 안 텍스트 제거 후 파싱 (한국 표준시 등)
+  const cleaned = s.replace(/\s*\([^)]*\)/g, "").trim();
+  const d = new Date(cleaned);
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+  return s;
+}
+
 function formatExcelDate(val) {
   if (!val) return "";
   const s = String(val).trim();
@@ -6606,7 +6636,7 @@ async function loadFromFirestore() {
     const snap = await getDoc(doc(db, "users", userId, "data", "crm"));
     if(snap.exists()) {
       const p = snap.data();
-      if (p.customers)       customers       = p.customers;
+      if (p.customers)       customers       = p.customers.map(c => ({ ...c, birth: formatBirth(c.birth) === "-" ? "" : formatBirth(c.birth) }));
       if (p.standaloneTasks) standaloneTasks = p.standaloneTasks;
       if (p.incomeRecords)   incomeRecords   = p.incomeRecords;
       if (p.boardPosts)      boardPosts      = p.boardPosts;
