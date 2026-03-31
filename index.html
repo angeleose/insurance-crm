@@ -6601,7 +6601,7 @@ async function saveToFirestore() {
     showSyncToast("⚠️ 저장 불가 (데이터 로드 필요)", true);
     return;
   }
-  const payload = {
+  const payload = JSON.parse(JSON.stringify({
     customers,
     standaloneTasks,
     incomeRecords,
@@ -6612,7 +6612,7 @@ async function saveToFirestore() {
     msgTemplates,
     myContacts,
     updatedAt: new Date().toISOString()
-  };
+  }));
   showSyncToast("💾 저장 중...", false, true);
   try {
     const { doc, setDoc } = window._fbFunctions;
