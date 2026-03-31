@@ -4420,7 +4420,8 @@ function quickAddTaskGlobal() {
   const input = document.getElementById("task-global-quick");
   const title = input.value.trim();
   if (!title) return;
-  standaloneTasks.push({id:String(Date.now()+Math.floor(Math.random()*1000)), title, priority:"보통", due:"", memo:"", done:false, cid:null, cname:""});
+  const _w=new Date();_w.setDate(_w.getDate()+7);const _due=_w.toISOString().slice(0,10);
+  standaloneTasks.push({id:String(Date.now()+Math.floor(Math.random()*1000)), title, priority:"보통", due:_due, memo:"", done:false, cid:null, cname:""});
   autoSave();
   input.value="";
   renderTasksPage();
@@ -4432,7 +4433,9 @@ function openModal_addTask(fromCustomer) {
   if(fromCustomer) taskEditCid = currentCustomerId;
   document.getElementById("task-modal-title").textContent = "✅ Task 추가";
   document.getElementById("task-modal-btn").textContent = "추가";
-  ["task-title","task-due","task-memo"].forEach(id=>document.getElementById(id).value="");
+  const _wk=new Date();_wk.setDate(_wk.getDate()+7);
+  ["task-title","task-memo"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("task-due").value=_wk.toISOString().slice(0,10);
   document.getElementById("task-priority").value="보통";
   document.getElementById("task-customer-select").value = fromCustomer ? String(currentCustomerId||"") : "";
   document.getElementById("task-customer-wrap").style.display = fromCustomer ? "none" : "";
