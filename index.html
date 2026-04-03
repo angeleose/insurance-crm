@@ -5062,30 +5062,75 @@ function downloadAllExcel() {
 // ──────────────────────────────────────────────────────────
 
 // ─── 계약 중복 제거 ────────────────────────────────────────
+function normProduct(s) {
+  return String(s||"").trim().replace(/\s+/g," ").toLowerCase();
+}
+function normPremium(v) {
+  return parseInt(String(v||"0").replace(/[^0-9]/g,""))||0;
+}
+
 function deduplicateContracts() {
+  // 1단계: 중복 항목 수집 (미리보기)
+  const dupList = [];
+  customers.forEach(c => {
+    const seen = new Map(); // key → 첫 번째 계약
+    (c.contracts||[]).forEach(ct => {
+      const key = normProduct(ct.product) + "__" + normPremium(ct.premium);
+      if (seen.has(key)) {
+        dupList.push({ cname: c.name, keep: seen.get(key), remove: ct });
+      } else {
+        seen.set(key, ct);
+      }
+    });
+  });
+
+  if (dupList.length === 0) {
+    // 상품명+보험료로 중복 없으면 증권번호 기준도 확인
+    const policyDups = [];
+    customers.forEach(c => {
+      const seenPno = new Map();
+      (c.contracts||[]).forEach(ct => {
+        if (!ct.policyNo) return;
+        if (seenPno.has(ct.policyNo)) {
+          policyDups.push({ cname: c.name, policyNo: ct.policyNo });
+        } else {
+          seenPno.set(ct.policyNo, ct);
+        }
+      });
+    });
+    if (policyDups.length === 0) {
+      alert("중복 계약이 없습니다.\n(상품명+보험료, 증권번호 기준 모두 중복 없음)");
+    } else {
+      alert(`증권번호 기준 중복 ${policyDups.length}건 발견:\n${policyDups.map(d=>`${d.cname} — ${d.policyNo}`).join("\n")}`);
+    }
+    return;
+  }
+
+  // 미리보기 확인
+  const preview = dupList.slice(0,10).map(d =>
+    `• ${d.cname} — ${d.remove.product} (${normPremium(d.remove.premium).toLocaleString()}원)`
+  ).join("\n");
+  const more = dupList.length > 10 ? `\n... 외 ${dupList.length-10}건` : "";
+  if (!confirm(`중복 계약 ${dupList.length}건을 제거하시겠습니까?\n\n${preview}${more}\n\n(상품명+보험료가 동일한 중복 계약을 삭제합니다)`)) return;
+
+  // 2단계: 실제 제거
   let totalBefore = 0, totalAfter = 0;
   customers.forEach(c => {
-    const before = (c.contracts || []).length;
-    totalBefore += before;
+    totalBefore += (c.contracts||[]).length;
     const seen = new Set();
-    c.contracts = (c.contracts || []).filter(ct => {
-      // 상품명 + 보험료 조합을 키로 사용
-      const key = `${(ct.product||"").trim()}__${ct.premium||0}`;
+    c.contracts = (c.contracts||[]).filter(ct => {
+      const key = normProduct(ct.product) + "__" + normPremium(ct.premium);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
     totalAfter += c.contracts.length;
   });
-  const removed = totalBefore - totalAfter;
-  if (removed === 0) {
-    alert("중복 계약이 없습니다.");
-    return;
-  }
+
   autoSave();
   renderContracts();
   renderDashboard();
-  alert(`✅ 중복 제거 완료\n제거된 계약: ${removed}건\n남은 계약: ${totalAfter}건`);
+  alert(`✅ 중복 제거 완료\n제거: ${totalBefore - totalAfter}건 → 남은 계약: ${totalAfter}건`);
 }
 
 // ─── 데이터 초기화 ─────────────────────────────────────────
