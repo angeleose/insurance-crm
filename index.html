@@ -6282,22 +6282,50 @@ function previewContractUpload() {
         end:          formatExcelDate(String(r[findCol(colMap.end)]||"").trim()),
       })).filter(r=>r.customerName&&r.product);
 
+      // 중복 감지 (고객명 + 상품명 + 계약일자 일치)
+      contractUploadRows = contractUploadRows.map((r, i) => {
+        const cust = customers.find(x => x.type==="가입" && x.name===r.customerName);
+        const dupCt = cust?.contracts.find(ct =>
+          ct.product === r.product &&
+          (r.start ? ct.start === r.start : ct.insurer === r.insurer)
+        );
+        return { ...r, _dup: !!dupCt, _dupCtId: dupCt?.id, _custId: cust?.id };
+      });
+
+      const newCount = contractUploadRows.filter(r=>!r._dup&&customers.find(x=>x.name===r.customerName)).length;
+      const dupCount = contractUploadRows.filter(r=>r._dup).length;
+      const noMatch  = contractUploadRows.filter(r=>!customers.find(x=>x.name===r.customerName)).length;
+
       // 미리보기
       const preview = document.getElementById("ct-upload-preview");
       const previewContent = document.getElementById("ct-upload-preview-content");
       preview.style.display = "";
-      previewContent.innerHTML = `<table style="width:100%;border-collapse:collapse;">
-        <thead><tr>${["고객명","상품명","종류","보험사","월보험료","계약일자","만기일"].map(h=>`<th style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:left;font-size:11px;color:var(--text2);">${h}</th>`).join("")}</tr></thead>
-        <tbody>${contractUploadRows.map(r=>`<tr>
-          <td style="padding:4px 8px;font-size:12px;">${r.customerName}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.product}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.type}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.insurer||"-"}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.premium?r.premium.toLocaleString()+"원":"-"}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.start||"-"}</td>
-          <td style="padding:4px 8px;font-size:12px;">${r.end||"-"}</td>
-        </tr>`).join("")}</tbody>
-      </table>`;
+
+      const th = s => `<th style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:left;font-size:11px;color:var(--text2);">${s}</th>`;
+      const td = s => `<td style="padding:4px 8px;font-size:12px;">${s}</td>`;
+
+      previewContent.innerHTML = `
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;font-weight:700;">
+          <span style="color:var(--green);">✅ 신규 ${newCount}건</span>
+          ${dupCount?`<span style="color:#d97706;">⚠️ 중복 ${dupCount}건</span>`:""}
+          ${noMatch?`<span style="color:var(--red);">❌ 고객 미매칭 ${noMatch}건</span>`:""}
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>${["처리","고객명","상품명","종류","보험사","월보험료","계약일자","만기일"].map(th).join("")}</tr></thead>
+          <tbody>${contractUploadRows.map((r,i)=>{
+            const cust = customers.find(x=>x.name===r.customerName);
+            let actionCell;
+            if(!cust) {
+              actionCell = `<td style="padding:4px 8px;"><span style="font-size:11px;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#991b1b;">미매칭</span></td>`;
+            } else if(r._dup) {
+              actionCell = `<td style="padding:4px 8px;"><select id="ct-dup-action-${i}" style="font-size:11px;padding:2px 4px;border:1px solid #fbbf24;border-radius:5px;background:#fefce8;color:#92400e;"><option value="skip">건너뛰기</option><option value="update">업데이트</option></select></td>`;
+            } else {
+              actionCell = `<td style="padding:4px 8px;"><span style="font-size:11px;padding:2px 6px;border-radius:8px;background:#d1fae5;color:#065f46;">신규</span></td>`;
+            }
+            const rowStyle = r._dup?'style="background:#fffbeb;"':(!cust?'style="background:#fef2f2;"':'');
+            return `<tr ${rowStyle}>${actionCell}${td(r.customerName)}${td(r.product)}${td(r.type)}${td(r.insurer||"-")}${td(r.premium?r.premium.toLocaleString()+"원":"-")}${td(r.start||"-")}${td(r.end||"-")}</tr>`;
+          }).join("")}</tbody>
+        </table>`;
 
       msgEl.textContent = `✅ ${contractUploadRows.length}건 인식됨`;
       msgEl.style.color = "var(--green)";
@@ -6310,12 +6338,35 @@ function previewContractUpload() {
 }
 
 function submitContractUpload() {
-  let added = 0, notFound = [];
-  contractUploadRows.forEach(r => {
-    const c = customers.find(x=>x.type==="가입"&&x.name===r.customerName);
+  let added = 0, updated = 0, skipped = 0, notFound = [];
+
+  contractUploadRows.forEach((r, i) => {
+    const c = customers.find(x => x.type==="가입" && x.name===r.customerName);
     if(!c){ notFound.push(r.customerName); return; }
+
     const end = r.end;
     const d = end ? getDday(end) : 999;
+    const action = r._dup
+      ? (document.getElementById(`ct-dup-action-${i}`)?.value || "skip")
+      : "new";
+
+    if(action === "skip") { skipped++; return; }
+
+    if(action === "update" && r._dupCtId) {
+      const ct = c.contracts.find(x => String(x.id) === String(r._dupCtId));
+      if(ct) {
+        ct.type    = r.type || ct.type;
+        ct.insurer = r.insurer || ct.insurer;
+        ct.premium = r.premium || ct.premium;
+        ct.start   = r.start || ct.start;
+        ct.end     = end || ct.end;
+        ct.status  = d<=180?"expiring":"active";
+        updated++;
+      }
+      return;
+    }
+
+    // 신규 추가
     c.contracts.push({
       id: Date.now()+Math.random(),
       type: r.type, product: r.product, insurer: r.insurer,
@@ -6324,11 +6375,15 @@ function submitContractUpload() {
     });
     added++;
   });
+
   closeModal("contract-upload");
   renderContracts();
   autoSave();
-  const msg = `✅ ${added}건 추가 완료` + (notFound.length ? `
-⚠️ 고객 미매칭: ${[...new Set(notFound)].join(", ")}` : "");
+  const parts = [];
+  if(added)   parts.push(`신규 추가 ${added}건`);
+  if(updated) parts.push(`업데이트 ${updated}건`);
+  if(skipped) parts.push(`건너뜀 ${skipped}건`);
+  const msg = `✅ 완료!\n${parts.join(" · ")}` + (notFound.length ? `\n⚠️ 고객 미매칭: ${[...new Set(notFound)].join(", ")}` : "");
   alert(msg);
 }
 // ──────────────────────────────────────────────────────────
