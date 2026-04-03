@@ -6221,10 +6221,17 @@ function formatExcelDate(val) {
 
 function mapProductType(v) {
   if (!v) return "기타";
-  if (v.includes("보장")) return "건강보험";
-  if (v.includes("저축")) return "연금보험";
   if (v.includes("실손")) return "실손보험";
-  return v || "기타";
+  if (v.includes("태아")) return "태아보험";
+  if (v.includes("종신")) return "종신보험";
+  if (v.includes("암보험")||v.includes("암 보험")) return "암보험";
+  if (v.includes("치아")) return "치아보험";
+  if (v.includes("연금")||v.includes("저축")) return "연금보험";
+  if (v.includes("간병")) return "간병보험";
+  if (v.includes("펫")||v.includes("pet")||v.includes("반려")) return "펫보험";
+  if (v.includes("정기")) return "정기보험";
+  if (v.includes("보장")||v.includes("건강")) return "건강보험";
+  return "기타";
 }
 
 function confirmContractImport() {
