@@ -6223,8 +6223,8 @@ function mapProductType(v) {
 }
 
 function confirmContractImport() {
-  let addedContracts = 0, newCustomers = 0;
-  const today = new Date().toISOString().slice(0,10);
+  let addedContracts = 0, newCustomers = 0, autoFilled = 0;
+  const conflictItems = []; // { ct, r, name, diffs }
 
   contractImportData.forEach(r => {
     // 기존 가입 고객 찾기
@@ -6244,9 +6244,40 @@ function confirmContractImport() {
       newCustomers++;
     }
 
-    // 중복 계약 체크 (증권번호 기준)
-    if (r.policyNo && c.contracts.some(ct=>ct.policyNo===r.policyNo)) return;
+    // 중복 계약 찾기 (증권번호 우선, 없으면 상품명+시작일)
+    const existing = r.policyNo
+      ? c.contracts.find(ct => ct.policyNo === r.policyNo)
+      : c.contracts.find(ct => ct.product === r.product && ct.start === r.start);
 
+    if (existing) {
+      // 필드별 비교: 빈 필드는 자동 채움, 다른 값은 충돌 수집
+      const fieldMap = [
+        { field: "type",    label: "종류" },
+        { field: "product", label: "상품명" },
+        { field: "insurer", label: "보험사" },
+        { field: "premium", label: "보험료" },
+        { field: "start",   label: "계약일자" },
+        { field: "end",     label: "만기일" },
+        { field: "insured", label: "피보험자" },
+      ];
+      const diffs = [];
+      fieldMap.forEach(({field, label}) => {
+        const oldVal = existing[field] ?? "";
+        const newVal = r[field] ?? "";
+        if (!oldVal && newVal) {
+          existing[field] = newVal;
+          autoFilled++;
+        } else if (oldVal && newVal && oldVal !== newVal) {
+          diffs.push({ field, label, oldVal, newVal });
+        }
+      });
+      if (diffs.length > 0) {
+        conflictItems.push({ ct: existing, r, name: r.customerName, diffs });
+      }
+      return; // 신규 추가 안 함
+    }
+
+    // 신규 계약 추가
     const d = r.end ? getDday(r.end) : 999;
     c.contracts.push({
       id: Date.now()+Math.random(),
@@ -6264,11 +6295,31 @@ function confirmContractImport() {
     addedContracts++;
   });
 
+  // 충돌 항목이 있으면 사용자에게 확인
+  if (conflictItems.length > 0) {
+    let msg = `⚠️ 기존 계약과 다른 내용이 ${conflictItems.length}건 있습니다.\n새로운 정보로 업데이트하시겠습니까?\n\n`;
+    conflictItems.forEach(({name, r, diffs}) => {
+      msg += `▶ ${name} — ${r.product || r.policyNo || ""}\n`;
+      diffs.forEach(({label, oldVal, newVal}) => {
+        msg += `  ${label}: ${oldVal} → ${newVal}\n`;
+      });
+      msg += "\n";
+    });
+    if (confirm(msg)) {
+      conflictItems.forEach(({ct, diffs}) => {
+        diffs.forEach(({field, newVal}) => { ct[field] = newVal; });
+      });
+    }
+  }
+
   closeModal("contract-import");
   renderEnrolled();
   renderDashboard();
   autoSave();
-  alert(`🎉 완료!\n계약 ${addedContracts}건 추가\n신규 고객 ${newCustomers}명 생성`);
+  const parts = [`계약 ${addedContracts}건 추가`];
+  if (newCustomers) parts.push(`신규 고객 ${newCustomers}명 생성`);
+  if (autoFilled) parts.push(`빈 필드 ${autoFilled}개 자동 채움`);
+  alert(`🎉 완료!\n${parts.join("\n")}`);
 }
 // ──────────────────────────────────────────────────────────
 
