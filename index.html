@@ -9355,12 +9355,17 @@ function updateDarkBtnLabels(isDark) {
     <div class="ai-msg bot">안녕하세요! 보험 CRM AI 어시스턴트입니다. 고객 현황, 계약 분석, 업무 조언 등 무엇이든 물어보세요 😊</div>
   </div>
   <div class="ai-quick-btns" id="ai-quick-btns">
+    <button class="ai-quick-btn" style="background:#eff6ff;border-color:#2563eb;color:#2563eb;font-weight:700;" onclick="activateExtractMode()">📥 정보 추출 & 저장</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('오늘 해야 할 일 알려줘')">📋 오늘 할 일</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('만기 임박한 계약 알려줘')">⚠️ 만기 임박</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('이번달 생일인 고객 알려줘')">🎂 이번달 생일</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('전체 고객 현황 요약해줘')">👥 고객 현황</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('팔로업이 필요한 가망 고객 알려줘')">🌱 팔로업 필요</button>
     <button class="ai-quick-btn" onclick="aiQuickAsk('이번달 수익 현황 알려줘')">💰 수익 현황</button>
+  </div>
+  <div id="ai-extract-banner" style="display:none;margin:0 12px 8px;padding:8px 12px;background:#eff6ff;border:1.5px solid #2563eb;border-radius:10px;font-size:12px;color:#1d4ed8;">
+    📥 <strong>정보 추출 모드</strong> — 고객 정보(카카오톡, 문자, 메모 등)를 붙여넣고 전송하세요.
+    <button onclick="deactivateExtractMode()" style="float:right;background:none;border:none;color:#64748b;cursor:pointer;font-size:13px;">✕</button>
   </div>
   <div class="ai-input-wrap">
     <textarea id="ai-input" placeholder="메시지를 입력하세요..." rows="1"
@@ -9414,13 +9419,32 @@ function buildCrmContext() {
 미완료 Task 목록: ${pendingTasks.slice(0,10).map(t=>`"${t.title}"${t.due?` 마감:${t.due}`:""}`).join(" / ")||"없음"}`;
 }
 
+let _extractMode = false;
+
+function activateExtractMode() {
+  _extractMode = true;
+  document.getElementById("ai-extract-banner").style.display = "";
+  document.getElementById("ai-input").placeholder = "고객 정보 텍스트를 붙여넣으세요...";
+  document.getElementById("ai-input").focus();
+}
+function deactivateExtractMode() {
+  _extractMode = false;
+  document.getElementById("ai-extract-banner").style.display = "none";
+  document.getElementById("ai-input").placeholder = "메시지를 입력하세요...";
+}
+
 async function sendAiMessage() {
   const input = document.getElementById("ai-input");
   const msg = input.value.trim();
   if(!msg || _aiThinking) return;
   appendAiMsg(msg, "user");
   input.value=""; input.style.height="40px";
-  await runAiChat(msg);
+  if (_extractMode) {
+    deactivateExtractMode();
+    await runExtractChat(msg);
+  } else {
+    await runAiChat(msg);
+  }
 }
 
 async function aiQuickAsk(msg) {
@@ -9450,6 +9474,191 @@ async function runAiChat(userMsg) {
   }
   _aiThinking = false;
   document.getElementById("ai-send-btn").disabled = false;
+}
+
+async function runExtractChat(rawText) {
+  _aiThinking = true;
+  document.getElementById("ai-send-btn").disabled = true;
+  const loadingEl = appendAiMsg("⏳ 정보 추출 중...", "bot loading");
+  const extractPrompt = `다음 텍스트에서 고객 정보와 보험 계약 정보를 추출해서 아래 JSON 형식으로만 응답하세요. 없는 필드는 빈 문자열("")로 두세요. JSON 외 다른 텍스트는 절대 포함하지 마세요.
+
+형식:
+{
+  "customer": {
+    "name": "이름",
+    "phone": "전화번호 (010-0000-0000 형식)",
+    "birth": "생년월일 (yyyy-mm-dd 형식)",
+    "email": "이메일",
+    "address": "주소",
+    "memo": "메모",
+    "type": "가입 또는 가망 (불명확하면 가망)"
+  },
+  "contracts": [
+    {
+      "product": "상품명",
+      "insurer": "보험사",
+      "insured": "피보험자",
+      "policyNo": "증권번호",
+      "premium": 월보험료숫자(숫자만),
+      "start": "계약일자 yyyy-mm-dd",
+      "end": "만기일 yyyy-mm-dd",
+      "type": "실손보험/종신보험/암보험/태아보험/치아보험/정기보험/연금보험/건강보험/펫보험/간병보험/기타 중 하나"
+    }
+  ]
+}
+
+텍스트:
+${rawText}`;
+  try {
+    const result = await callGemini(extractPrompt);
+    loadingEl.remove();
+    // JSON 파싱 시도
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("JSON을 찾을 수 없습니다.");
+    const extracted = JSON.parse(jsonMatch[0]);
+    showExtractCard(extracted);
+  } catch(e) {
+    loadingEl.remove();
+    appendAiMsg("❌ 정보 추출 실패: " + e.message + "\n\n텍스트를 더 구체적으로 입력해주세요.", "bot");
+  }
+  _aiThinking = false;
+  document.getElementById("ai-send-btn").disabled = false;
+}
+
+function showExtractCard(data) {
+  const wrap = document.getElementById("ai-messages");
+  const el = document.createElement("div");
+  el.className = "ai-msg bot";
+  el.style.cssText = "padding:0;background:none;border:none;width:100%;max-width:100%;";
+
+  const c = data.customer || {};
+  const contracts = data.contracts || [];
+
+  // 피보험자 태아면 계약 type 강제 태아보험
+  contracts.forEach(ct => {
+    if (ct.insured && ct.insured.includes("태아")) ct.type = "태아보험";
+  });
+
+  const fieldRow = (label, val) => val
+    ? `<div style="display:flex;gap:6px;font-size:12px;padding:3px 0;border-bottom:1px solid #f1f5f9;">
+        <span style="color:#64748b;min-width:70px;flex-shrink:0;">${label}</span>
+        <span style="font-weight:600;color:#0f1b35;">${val}</span>
+       </div>`
+    : "";
+
+  const contractCards = contracts.map((ct, i) => `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12px;">
+      <div style="font-weight:700;color:#2563eb;margin-bottom:4px;">📄 계약 ${i+1}${ct.product ? " — " + ct.product : ""}</div>
+      ${fieldRow("보험사", ct.insurer)}
+      ${fieldRow("피보험자", ct.insured)}
+      ${fieldRow("증권번호", ct.policyNo)}
+      ${fieldRow("월보험료", ct.premium ? ct.premium.toLocaleString()+"원" : "")}
+      ${fieldRow("계약일자", ct.start)}
+      ${fieldRow("만기일", ct.end)}
+      ${fieldRow("종류", ct.type)}
+    </div>`).join("");
+
+  const uid = "extract_" + Date.now();
+  el.innerHTML = `
+    <div style="background:#fff;border:1.5px solid #2563eb;border-radius:12px;padding:12px;font-size:12px;">
+      <div style="font-weight:700;font-size:13px;color:#2563eb;margin-bottom:8px;">📥 추출된 정보</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+        <div style="font-weight:700;color:#0f1b35;margin-bottom:4px;">👤 고객 정보 <span style="font-size:11px;color:#64748b;font-weight:400;">(${c.type||"가망"})</span></div>
+        ${fieldRow("이름", c.name)}
+        ${fieldRow("전화번호", c.phone)}
+        ${fieldRow("생년월일", c.birth)}
+        ${fieldRow("이메일", c.email)}
+        ${fieldRow("주소", c.address)}
+        ${fieldRow("메모", c.memo)}
+      </div>
+      ${contractCards}
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="saveExtractedData(${uid})" style="flex:1;padding:8px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">✅ CRM에 저장</button>
+        <button onclick="this.closest('.ai-msg').remove()" style="padding:8px 12px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:12px;cursor:pointer;">취소</button>
+      </div>
+    </div>`;
+
+  window[uid] = data;
+  wrap.appendChild(el);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function saveExtractedData(uid) {
+  const data = window[uid];
+  if (!data) return;
+  const c = data.customer || {};
+  const contracts = data.contracts || [];
+
+  if (!c.name) { alert("이름이 없어 저장할 수 없습니다."); return; }
+
+  // 기존 고객 찾기 (이름+전화번호 or 이름만)
+  let existing = customers.find(x =>
+    x.name === c.name && (c.phone ? x.phone === c.phone : true)
+  ) || customers.find(x => x.name === c.name);
+
+  if (existing) {
+    // 빈 필드만 업데이트
+    if (!existing.phone && c.phone) existing.phone = c.phone;
+    if (!existing.birth && c.birth) existing.birth = c.birth;
+    if (!existing.email && c.email) existing.email = c.email;
+    if (!existing.address && c.address) existing.address = c.address;
+    if (c.memo) existing.memo = (existing.memo ? existing.memo + "\n" : "") + c.memo;
+  } else {
+    existing = {
+      id: Date.now() + Math.random(),
+      type: c.type === "가입" ? "가입" : "가망",
+      name: c.name,
+      phone: c.phone || "",
+      birth: c.birth || "",
+      email: c.email || "",
+      address: c.address || "",
+      memo: c.memo || "",
+      source: "",
+      contracts: [], consultations: [], medicals: [], tasks: [],
+      tags: ["신규"], ssn: "",
+      regDate: new Date().toISOString().slice(0,10)
+    };
+    customers.push(existing);
+  }
+
+  // 계약 추가
+  let addedCt = 0;
+  contracts.forEach(ct => {
+    if (!ct.product) return;
+    if (ct.insured && ct.insured.includes("태아")) ct.type = "태아보험";
+    const dup = ct.policyNo
+      ? existing.contracts.find(x => x.policyNo === ct.policyNo)
+      : existing.contracts.find(x => x.product === ct.product && x.start === ct.start);
+    if (dup) return;
+    const d = ct.end ? getDday(ct.end) : 999;
+    existing.contracts.push({
+      id: Date.now() + Math.random(),
+      type: ct.type || "기타",
+      product: ct.product,
+      insurer: ct.insurer || "",
+      insured: ct.insured || "",
+      policyNo: ct.policyNo || "",
+      premium: ct.premium || 0,
+      start: ct.start || "",
+      end: ct.end || "",
+      status: d <= 180 ? "expiring" : "active",
+      duedate: ""
+    });
+    addedCt++;
+  });
+
+  autoSave();
+  renderEnrolled();
+  renderProspects();
+  renderDashboard();
+
+  // 카드 제거 후 완료 메시지
+  const card = document.querySelector(`[onclick="saveExtractedData(${uid})"]`);
+  if (card) card.closest(".ai-msg").remove();
+  delete window[uid];
+
+  const isNew = !customers.find(x => x === existing) || true;
+  appendAiMsg(`✅ 저장 완료!\n👤 ${c.name} (${existing.type === "가입" ? "가입 고객" : "가망 고객"})${addedCt ? `\n📄 계약 ${addedCt}건 추가` : ""}`, "bot");
 }
 
 function appendAiMsg(text, cls) {
