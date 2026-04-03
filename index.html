@@ -1449,7 +1449,7 @@
 
   <!-- CONTRACTS -->
   <div class="page" id="page-contracts">
-    <div class="page-header"><h2>보험 계약 목록</h2><p>가입 고객의 전체 보험 계약 현황을 확인하세요.</p></div>
+    <div class="page-header"><h2>보험 계약 목록 <span id="contracts-total-badge" style="font-size:14px;font-weight:500;color:var(--text2);"></span></h2><p>가입 고객의 전체 보험 계약 현황을 확인하세요.</p></div>
     <div class="toolbar">
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-contracts" placeholder="고객명 또는 상품명 검색..." oninput="renderContracts()"></div>
       <button class="btn btn-ghost btn-sm" onclick="openContractUploadModal()" style="display:flex;align-items:center;gap:6px;">📂 엑셀 업로드</button>
@@ -4181,13 +4181,20 @@ function renderFollowup(){
 
 function renderContracts(){
   const types = ["전체","실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험"];
-  document.getElementById("contract-type-filters").innerHTML = types.map(t=>
-    `<button class="filter-btn ${t===activeContractTypeFilter?"active":""}" onclick="activeContractTypeFilter='${t}';renderContracts()">${t}</button>`
-  ).join("");
   const q = (document.getElementById("search-contracts").value||"").trim();
   const allItems = customers
     .filter(c=>c.type==="가입")
     .flatMap(c=>c.contracts.map(ct=>({...ct, cname:c.name, cid:c.id})));
+  const countByType = {};
+  types.forEach(t => {
+    countByType[t] = t==="전체" ? allItems.filter(ct=>!q||ct.cname.includes(q)||ct.product.includes(q)).length
+      : allItems.filter(ct=>ct.type===t&&(!q||ct.cname.includes(q)||ct.product.includes(q))).length;
+  });
+  document.getElementById("contract-type-filters").innerHTML = types.map(t=>
+    `<button class="filter-btn ${t===activeContractTypeFilter?"active":""}" onclick="activeContractTypeFilter='${t}';renderContracts()">${t} <span style="font-size:11px;opacity:.7;">${countByType[t]}</span></button>`
+  ).join("");
+  const totalBadge = document.getElementById("contracts-total-badge");
+  if(totalBadge) totalBadge.textContent = `(전체 ${countByType["전체"]}건)`;
   const filtered = allItems.filter(ct=>
     (activeContractTypeFilter==="전체" || ct.type===activeContractTypeFilter) &&
     (!q || ct.cname.includes(q) || ct.product.includes(q))
