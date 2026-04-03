@@ -6880,8 +6880,20 @@ async function loadFromFirestore() {
       if (p.backlogItems)    backlogItems    = p.backlogItems;
       if (p.calEvents)       calEvents       = p.calEvents;
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
+      // 피보험자 태아 → 태아보험 마이그레이션
+      let migrated = 0;
+      customers.forEach(c => (c.contracts||[]).forEach(ct => {
+        if (ct.insured && ct.insured.includes("태아") && ct.type !== "태아보험") {
+          ct.type = "태아보험"; migrated++;
+        }
+      }));
       _dataLoaded = true;
-      showSyncToast("✅ 데이터 불러오기 완료");
+      if (migrated > 0) {
+        saveToFirestore();
+        showSyncToast(`✅ 로드 완료 (태아보험 ${migrated}건 자동 분류)`);
+      } else {
+        showSyncToast("✅ 데이터 불러오기 완료");
+      }
     } else {
       // 신규 사용자 — 데이터 없음
       _dataLoaded = true;
