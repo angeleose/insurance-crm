@@ -3313,7 +3313,7 @@ async function aiSalesReport() {
   }
 }
 
-function showPage(name){
+function showPage(name, pushHistory=true){
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     const emailEl = document.getElementById("setting-user-email");
@@ -3335,7 +3335,15 @@ function showPage(name){
   if(name==="calendar")renderCalendar();
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
+  if(pushHistory && history.state?.page !== name) {
+    history.pushState({page:name}, "", "#"+name);
+  }
 }
+window.addEventListener("popstate", e=>{
+  const page = e.state?.page || (location.hash.slice(1)) || "dashboard";
+  const el = document.getElementById("page-"+page);
+  if(el) showPage(page, false);
+});
 document.querySelectorAll(".nav-item").forEach(n=>{
   if(!n.getAttribute("onclick")) n.addEventListener("click",()=>showPage(n.dataset.page));
 });
@@ -6696,7 +6704,9 @@ async function loadFromFirestore() {
     _dataLoaded = false;
     showSyncToast("❌ 불러오기 실패: " + e.message, true);
   } finally {
-    renderDashboard(); renderEnrolled(); updateSidebar();
+    const initPage = location.hash.slice(1) || "dashboard";
+    showPage(document.getElementById("page-"+initPage) ? initPage : "dashboard");
+    updateSidebar();
   }
 }
 
