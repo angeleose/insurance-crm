@@ -47,7 +47,9 @@
   .notif{background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;margin-left:auto;}
 
   /* MAIN */
-  #main{margin-left:var(--sidebar-w);flex:1;padding:32px;min-height:100vh;}
+  --ai-sidebar-w:360px;
+  #main{margin-left:var(--sidebar-w);flex:1;padding:32px;min-height:100vh;transition:margin-right .3s ease;}
+  #main.ai-open{margin-right:var(--ai-sidebar-w);}
   .page{display:none;}
   .page.active{display:block;animation:fadeIn .25s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -559,6 +561,34 @@
 .tl-date { font-size:10px; color:var(--text2); font-weight:600; margin-bottom:2px; }
 .tl-body { font-size:12px; color:var(--text); line-height:1.6; }
 .tl-tag  { display:inline-block; font-size:10px; font-weight:700; padding:1px 6px; border-radius:5px; margin-right:5px; vertical-align:middle; }
+
+/* AI 챗봇 사이드바 */
+#ai-sidebar{position:fixed;top:0;right:0;width:var(--ai-sidebar-w);height:100vh;background:var(--card);border-left:1.5px solid var(--border);display:flex;flex-direction:column;z-index:60;transform:translateX(100%);transition:transform .3s ease;box-shadow:-4px 0 24px rgba(0,0,0,.08);}
+#ai-sidebar.open{transform:translateX(0);}
+#ai-toggle-btn{position:fixed;bottom:28px;right:20px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-size:22px;border:none;cursor:pointer;z-index:61;box-shadow:0 4px 16px rgba(37,99,235,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;}
+#ai-toggle-btn:hover{transform:scale(1.08);}
+#ai-sidebar.open ~ #ai-toggle-btn{right:calc(var(--ai-sidebar-w) + 20px);}
+.ai-header{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;flex-shrink:0;}
+.ai-header h3{font-size:15px;font-weight:700;margin:0;}
+.ai-header p{font-size:11px;opacity:.8;margin:2px 0 0;}
+#ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.ai-msg{max-width:90%;padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.6;word-break:break-word;}
+.ai-msg.user{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-bottom-right-radius:4px;}
+.ai-msg.bot{align-self:flex-start;background:var(--bg);color:var(--text);border-bottom-left-radius:4px;border:1px solid var(--border);}
+.ai-msg.bot.loading{opacity:.6;}
+.ai-input-wrap{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
+.ai-input-wrap textarea{flex:1;resize:none;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;height:40px;max-height:120px;overflow-y:auto;line-height:1.5;}
+.ai-input-wrap textarea:focus{border-color:#2563eb;}
+.ai-input-wrap button{width:38px;height:40px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.ai-input-wrap button:disabled{opacity:.5;cursor:not-allowed;}
+.ai-quick-btns{padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;}
+.ai-quick-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;white-space:nowrap;}
+.ai-quick-btn:hover{border-color:#2563eb;color:#2563eb;}
+body.dark #ai-sidebar{background:#1e293b;border-left-color:#374151;}
+body.dark .ai-msg.bot{background:#0f172a;border-color:#374151;color:#e2e8f0;}
+body.dark .ai-input-wrap textarea{background:#0f172a;color:#e2e8f0;border-color:#374151;}
+body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
+@media(max-width:768px){#ai-sidebar{width:100%;} #main.ai-open{margin-right:0;} #ai-toggle-btn{bottom:80px;}}
 </style>
 
   <!-- Microsoft OneDrive 연동 (PKCE OAuth) -->
@@ -9046,6 +9076,127 @@ function updateDarkBtnLabels(isDark) {
 })();
 // ──────────────────────────────────────────────────────────
 
+</script>
+
+<!-- AI 챗봇 사이드바 -->
+<div id="ai-sidebar">
+  <div class="ai-header">
+    <div>
+      <h3>🤖 AI 어시스턴트</h3>
+      <p>CRM 데이터 기반으로 답변해드려요</p>
+    </div>
+    <button onclick="toggleAiSidebar()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="ai-messages">
+    <div class="ai-msg bot">안녕하세요! 보험 CRM AI 어시스턴트입니다. 고객 현황, 계약 분석, 업무 조언 등 무엇이든 물어보세요 😊</div>
+  </div>
+  <div class="ai-quick-btns" id="ai-quick-btns">
+    <button class="ai-quick-btn" onclick="aiQuickAsk('오늘 해야 할 일 알려줘')">📋 오늘 할 일</button>
+    <button class="ai-quick-btn" onclick="aiQuickAsk('만기 임박한 계약 알려줘')">⚠️ 만기 임박</button>
+    <button class="ai-quick-btn" onclick="aiQuickAsk('이번달 생일인 고객 알려줘')">🎂 이번달 생일</button>
+    <button class="ai-quick-btn" onclick="aiQuickAsk('전체 고객 현황 요약해줘')">👥 고객 현황</button>
+    <button class="ai-quick-btn" onclick="aiQuickAsk('팔로업이 필요한 가망 고객 알려줘')">🌱 팔로업 필요</button>
+    <button class="ai-quick-btn" onclick="aiQuickAsk('이번달 수익 현황 알려줘')">💰 수익 현황</button>
+  </div>
+  <div class="ai-input-wrap">
+    <textarea id="ai-input" placeholder="메시지를 입력하세요..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMessage();}"
+      oninput="this.style.height='40px';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+    <button id="ai-send-btn" onclick="sendAiMessage()">↑</button>
+  </div>
+</div>
+<button id="ai-toggle-btn" onclick="toggleAiSidebar()" title="AI 어시스턴트">🤖</button>
+
+<script>
+let _aiHistory = [];
+let _aiThinking = false;
+
+function toggleAiSidebar() {
+  const sidebar = document.getElementById("ai-sidebar");
+  const main = document.getElementById("main");
+  sidebar.classList.toggle("open");
+  if(window.innerWidth > 768) main.classList.toggle("ai-open", sidebar.classList.contains("open"));
+}
+
+function buildCrmContext() {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0,10);
+  const enrolled = customers.filter(c=>c.type==="가입");
+  const prospects = customers.filter(c=>c.type==="가망");
+  const allContracts = enrolled.flatMap(c=>c.contracts.map(ct=>({...ct,cname:c.name})));
+  const expiring = allContracts.filter(ct=>{const d=getDday(ct.end);return d>=0&&d<=90;});
+  const totalPremium = allContracts.reduce((s,ct)=>s+(ct.premium||0),0);
+  const pendingTasks = standaloneTasks.filter(t=>!t.done);
+  const overdueTasks = pendingTasks.filter(t=>t.due&&t.due<todayStr);
+  const thisMonth = today.getMonth()+1;
+  const birthdayCustomers = customers.filter(c=>{
+    if(!c.birth||c.birth.length<7) return false;
+    return parseInt(c.birth.slice(5,7))===thisMonth;
+  });
+  const recentCustomers = [...enrolled].sort((a,b)=>{
+    const da=a.contracts.map(ct=>ct.start).filter(Boolean).sort().pop()||"";
+    const db=b.contracts.map(ct=>ct.start).filter(Boolean).sort().pop()||"";
+    return db.localeCompare(da);
+  }).slice(0,5);
+
+  return `[CRM 현황 데이터 — ${todayStr}]
+가입 고객: ${enrolled.length}명 / 가망 고객: ${prospects.length}명 / 총 계약: ${allContracts.length}건
+월 총 보험료: ${totalPremium.toLocaleString()}원
+만기 임박(90일 이내): ${expiring.map(ct=>`${ct.cname} ${ct.product} (${ct.end})`).join(", ")||"없음"}
+미완료 Task: ${pendingTasks.length}건${overdueTasks.length?` (기한 초과 ${overdueTasks.length}건)`:""}
+이번달(${thisMonth}월) 생일 고객: ${birthdayCustomers.map(c=>c.name).join(", ")||"없음"}
+최근 가입 고객: ${recentCustomers.map(c=>c.name).join(", ")||"없음"}
+가망 고객 단계별: ${["초기접촉","니즈파악","설계중","계약검토"].map(s=>`${s}(${prospects.filter(c=>c.stage===s||(!c.stage&&s==="초기접촉")).length}명)`).join(", ")}
+미완료 Task 목록: ${pendingTasks.slice(0,10).map(t=>`"${t.title}"${t.due?` 마감:${t.due}`:""}`).join(" / ")||"없음"}`;
+}
+
+async function sendAiMessage() {
+  const input = document.getElementById("ai-input");
+  const msg = input.value.trim();
+  if(!msg || _aiThinking) return;
+  appendAiMsg(msg, "user");
+  input.value=""; input.style.height="40px";
+  await runAiChat(msg);
+}
+
+async function aiQuickAsk(msg) {
+  if(_aiThinking) return;
+  appendAiMsg(msg, "user");
+  await runAiChat(msg);
+}
+
+async function runAiChat(userMsg) {
+  _aiThinking = true;
+  document.getElementById("ai-send-btn").disabled = true;
+  const loadingEl = appendAiMsg("⏳ 생각 중...", "bot loading");
+  _aiHistory.push({role:"user", content: userMsg});
+  const context = buildCrmContext();
+  const systemPrompt = `당신은 보험 설계사를 돕는 AI 어시스턴트입니다. 아래 CRM 데이터를 바탕으로 간결하고 실용적으로 답변하세요. 숫자나 고객명은 실제 데이터를 인용하세요.\n\n${context}`;
+  const historyText = _aiHistory.slice(-6).map(h=>`${h.role==="user"?"사용자":"AI"}: ${h.content}`).join("\n");
+  const fullPrompt = `${systemPrompt}\n\n[대화 내역]\n${historyText}`;
+  try {
+    const result = await callGemini(fullPrompt);
+    loadingEl.remove();
+    const botMsg = result || "응답을 받지 못했습니다.";
+    appendAiMsg(botMsg, "bot");
+    _aiHistory.push({role:"assistant", content: botMsg});
+  } catch(e) {
+    loadingEl.remove();
+    appendAiMsg("❌ 오류: " + e.message, "bot");
+  }
+  _aiThinking = false;
+  document.getElementById("ai-send-btn").disabled = false;
+}
+
+function appendAiMsg(text, cls) {
+  const wrap = document.getElementById("ai-messages");
+  const el = document.createElement("div");
+  el.className = "ai-msg " + cls;
+  el.textContent = text;
+  wrap.appendChild(el);
+  wrap.scrollTop = wrap.scrollHeight;
+  return el;
+}
 </script>
 </body>
 </html>
