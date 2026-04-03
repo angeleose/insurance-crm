@@ -6117,18 +6117,23 @@ function handleContractImportFile(file) {
         return;
       }
 
-      const parsed = rows.map(r => ({
-        customerName: String(r[colCustomer]||"").trim(),
-        insured:      colInsured  ? String(r[colInsured]||"").trim() : "",
-        product:      String(r[colProduct]||"").trim(),
-        insurer:      colInsurer  ? String(r[colInsurer]||"").trim() : "",
-        policyNo:     colPolicyNo ? String(r[colPolicyNo]||"").trim() : "",
-        premium:      colPremium  ? Math.round(parseFloat(String(r[colPremium]||"0").replace(/[^0-9.]/g,""))||0) : 0,
-        start:        colStart    ? formatExcelDate(r[colStart]) : "",
-        end:          colEnd      ? formatExcelDate(r[colEnd])   : "",
-        type:         colType     ? mapProductType(String(r[colType]||"")) : "기타",
-        status:       colStatus   ? String(r[colStatus]||"정상").trim() : "정상",
-      })).filter(r => r.customerName && r.product);
+      const parsed = rows.map(r => {
+        const insured = colInsured ? String(r[colInsured]||"").trim() : "";
+        const baseType = colType ? mapProductType(String(r[colType]||"")) : "기타";
+        const type = insured.includes("태아") ? "태아보험" : baseType;
+        return {
+          customerName: String(r[colCustomer]||"").trim(),
+          insured,
+          product:      String(r[colProduct]||"").trim(),
+          insurer:      colInsurer  ? String(r[colInsurer]||"").trim() : "",
+          policyNo:     colPolicyNo ? String(r[colPolicyNo]||"").trim() : "",
+          premium:      colPremium  ? Math.round(parseFloat(String(r[colPremium]||"0").replace(/[^0-9.]/g,""))||0) : 0,
+          start:        colStart    ? formatExcelDate(r[colStart]) : "",
+          end:          colEnd      ? formatExcelDate(r[colEnd])   : "",
+          type,
+          status:       colStatus   ? String(r[colStatus]||"정상").trim() : "정상",
+        };
+      }).filter(r => r.customerName && r.product);
 
       contractImportData = parsed;
 
