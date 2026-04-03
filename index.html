@@ -6072,11 +6072,34 @@ function handleContractImportFile(file) {
     try {
       const wb = XLSX.read(e.target.result, {type:"binary"});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
-      if (!rows.length) { msgEl.textContent = "❌ 데이터가 없습니다."; return; }
+
+      // 원시 행 배열로 읽기 (헤더 행 자동 탐색)
+      const rawRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+      if (!rawRows.length) { msgEl.textContent = "❌ 데이터가 없습니다."; return; }
+
+      // 헤더 행 탐색: 계약자/고객명/이름/상품명 등이 있는 행 찾기
+      const KEY_WORDS = ["계약자","계약자명","고객명","이름","상품명","보험상품","피보험자"];
+      let headerRowIdx = rawRows.findIndex(row =>
+        row.some(cell => KEY_WORDS.includes(String(cell).trim()))
+      );
+      if (headerRowIdx === -1) {
+        msgEl.textContent = `❌ 헤더를 찾을 수 없습니다. 파일의 실제 열 이름을 알려주세요. (첫 행: ${rawRows[0].join(", ")})`;
+        msgEl.style.color = "var(--red)";
+        return;
+      }
+
+      const headerRow = rawRows[headerRowIdx].map(h => String(h).trim());
+      const dataRows = rawRows.slice(headerRowIdx + 1).filter(r => r.some(c => c !== ""));
+      const rows = dataRows.map(r => {
+        const obj = {};
+        headerRow.forEach((h, i) => { obj[h] = r[i] ?? ""; });
+        return obj;
+      });
+
+      if (!rows.length) { msgEl.textContent = "❌ 데이터 행이 없습니다."; return; }
 
       // 열 매핑 — 유연한 컬럼명 인식
-      const headers = Object.keys(rows[0]);
+      const headers = headerRow;
       const findH = (...keys) => keys.find(k => headers.includes(k)) || null;
       const colCustomer = findH("계약자","계약자명","이름","성명","고객명","고객");
       const colProduct  = findH("상품명","보험상품명","보험상품","상품");
