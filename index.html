@@ -6075,18 +6075,36 @@ function handleContractImportFile(file) {
       const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
       if (!rows.length) { msgEl.textContent = "❌ 데이터가 없습니다."; return; }
 
-      // 열 매핑 (실제 파일 헤더 기준)
+      // 열 매핑 — 유연한 컬럼명 인식
+      const headers = Object.keys(rows[0]);
+      const findH = (...keys) => keys.find(k => headers.includes(k)) || null;
+      const colCustomer = findH("계약자","계약자명","이름","성명","고객명","고객");
+      const colProduct  = findH("상품명","보험상품명","보험상품","상품");
+      const colInsured  = findH("피보험자","피보험자명");
+      const colInsurer  = findH("제휴사","보험사","회사명","회사");
+      const colPolicyNo = findH("증권번호","증권","계약번호","증권 번호");
+      const colPremium  = findH("보험료","월보험료","납입보험료","보험료(원)","월납입","보험료금액");
+      const colStart    = findH("계약일자","계약일","시작일","가입일","가입일자");
+      const colEnd      = findH("종료일자","만기일","만기일자","종료일","만기");
+      const colType     = findH("상품종류","상품구분","종류","보험종류","구분");
+      const colStatus   = findH("계약상태","상태");
+
+      if (!colCustomer || !colProduct) {
+        msgEl.textContent = `❌ 필수 열을 찾을 수 없습니다. (인식된 열: ${headers.join(", ")})`;
+        return;
+      }
+
       const parsed = rows.map(r => ({
-        customerName: String(r["계약자"]||"").trim(),
-        insured:      String(r["피보험자"]||"").trim(),
-        product:      String(r["상품명"]||"").trim(),
-        insurer:      String(r["제휴사"]||"").trim(),
-        policyNo:     String(r["증권번호"]||"").trim(),
-        premium:      Math.round(parseFloat(r["보험료"]||0)),
-        start:        formatExcelDate(r["계약일자"]),
-        end:          formatExcelDate(r["종료일자"]),
-        type:         mapProductType(String(r["상품종류"]||"")),
-        status:       String(r["계약상태"]||"정상").trim(),
+        customerName: String(r[colCustomer]||"").trim(),
+        insured:      colInsured  ? String(r[colInsured]||"").trim() : "",
+        product:      String(r[colProduct]||"").trim(),
+        insurer:      colInsurer  ? String(r[colInsurer]||"").trim() : "",
+        policyNo:     colPolicyNo ? String(r[colPolicyNo]||"").trim() : "",
+        premium:      colPremium  ? Math.round(parseFloat(String(r[colPremium]||"0").replace(/[^0-9.]/g,""))||0) : 0,
+        start:        colStart    ? formatExcelDate(r[colStart]) : "",
+        end:          colEnd      ? formatExcelDate(r[colEnd])   : "",
+        type:         colType     ? mapProductType(String(r[colType]||"")) : "기타",
+        status:       colStatus   ? String(r[colStatus]||"정상").trim() : "정상",
       })).filter(r => r.customerName && r.product);
 
       contractImportData = parsed;
@@ -6095,7 +6113,8 @@ function handleContractImportFile(file) {
       const statEl = document.getElementById("ci-stats");
       const matchCount = parsed.filter(r => customers.some(c=>c.type==="가입"&&c.name===r.customerName)).length;
       const newCount = new Set(parsed.filter(r => !customers.some(c=>c.type==="가입"&&c.name===r.customerName)).map(r=>r.customerName)).size;
-      statEl.innerHTML = `📄 총 <strong>${parsed.length}건</strong> 인식 &nbsp;·&nbsp; ✅ 기존 고객 매칭 <strong>${matchCount}건</strong> &nbsp;·&nbsp; 🆕 신규 고객 생성 <strong>${newCount}명</strong>`;
+      statEl.innerHTML = `📄 총 <strong>${parsed.length}건</strong> 인식 &nbsp;·&nbsp; ✅ 기존 고객 매칭 <strong>${matchCount}건</strong> &nbsp;·&nbsp; 🆕 신규 고객 생성 <strong>${newCount}명</strong>
+        <div style="margin-top:6px;font-size:11px;color:#64748b;">인식 열: 계약자→${colCustomer} / 상품명→${colProduct}${colEnd?` / 만기→${colEnd}`:""}${colStart?` / 계약일→${colStart}`:""}</div>`;
 
       const thStyle = 'style="padding:6px 10px;background:#f1f5f9;font-size:11px;font-weight:700;color:var(--text2);border-bottom:1.5px solid var(--border);white-space:nowrap;"';
       const tdStyle = 'style="padding:5px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;"';
