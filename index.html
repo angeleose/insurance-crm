@@ -1487,7 +1487,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="filters" id="contract-type-filters"></div>
     <div class="card" style="padding:0;overflow:hidden;">
-      <table><thead><tr><th>고객명</th><th>종류</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>시작일</th><th>만기일</th><th>D-Day</th><th>상태</th></tr></thead>
+      <table><thead><tr><th>고객명</th><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>시작일</th><th>만기일</th><th>D-Day</th><th>상태</th></tr></thead>
       <tbody id="contracts-tbody"></tbody></table>
     </div>
     <div id="contracts-list-wrap" style="display:none;"></div>
@@ -2177,6 +2177,10 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <label>고객 선택 *</label>
       <select id="ct-customer-id" style="width:100%;"></select>
     </div>
+    <div class="form-group">
+      <label>피보험자</label>
+      <input type="text" id="ct-insured" placeholder="예: 홍길동, 태아" oninput="onCtInsuredInput()">
+    </div>
     <div class="form-row">
       <div class="form-group"><label>종류</label><select id="ct-type" onchange="document.getElementById('ct-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option></select></div>
       <div class="form-group"><label>상품명</label><input type="text" id="ct-product" placeholder="5세대 실손"></div>
@@ -2385,6 +2389,10 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
 <div class="modal-overlay" id="modal-edit-contract">
   <div class="modal-box" style="width:420px;padding:22px 24px;">
     <h3 style="margin-bottom:14px;">✏️ 보험 계약 수정</h3>
+    <div class="form-group">
+      <label>피보험자</label>
+      <input type="text" id="ec-insured" placeholder="예: 홍길동, 태아" oninput="onEcInsuredInput()">
+    </div>
     <div class="form-row">
       <div class="form-group"><label>종류</label><select id="ec-type" onchange="document.getElementById('ec-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option></select></div>
       <div class="form-group"><label>상품명</label><input type="text" id="ec-product" placeholder="5세대 실손"></div>
@@ -4126,7 +4134,7 @@ function renderDetail(id){
   const cc=document.getElementById("det-contracts-card");
   cc.style.display=isPr&&!c.contracts.length?"none":"block";
   document.getElementById("det-contract-count").textContent=c.contracts.length+"건";
-  document.getElementById("det-contracts").innerHTML=!c.contracts.length?'<div class="empty"><span>📄</span>등록된 계약 없음</div>':`<table><thead><tr><th>종류</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>계약일</th><th>만기일</th><th>D-Day</th><th>상태</th><th></th></tr></thead><tbody>${c.contracts.map(ct=>{const d=getDday(ct.end);return`<tr><td>${ct.type}</td><td><strong>${ct.product}</strong></td><td>${ct.insurer}</td><td>${ct.premium.toLocaleString()}원</td><td style="color:var(--text2);font-size:12px;">${ct.start||"-"}</td><td>${ct.end||"-"}</td><td><span class="badge-dday ${d<=90?"badge-urgent":d<=180?"badge-warn":"badge-ok"}">D-${d}</span></td><td><span class="badge ${ct.status==="active"?"badge-active":"badge-expiring"}">${ct.status==="active"?"유지":"만기예정"}</span></td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="openEditContract(${ct.id})">✏️</button> <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red);" onclick="deleteContract(${ct.id})">🗑️</button></td></tr>`;}).join("")}</tbody></table>`;
+  document.getElementById("det-contracts").innerHTML=!c.contracts.length?'<div class="empty"><span>📄</span>등록된 계약 없음</div>':`<table><thead><tr><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>계약일</th><th>만기일</th><th>D-Day</th><th>상태</th><th></th></tr></thead><tbody>${c.contracts.map(ct=>{const d=getDday(ct.end);return`<tr><td>${ct.type}</td><td style="font-size:12px;color:var(--text2);">${ct.insured||"-"}</td><td><strong>${ct.product}</strong></td><td>${ct.insurer}</td><td>${ct.premium.toLocaleString()}원</td><td style="color:var(--text2);font-size:12px;">${ct.start||"-"}</td><td>${ct.end||"-"}</td><td><span class="badge-dday ${d<=90?"badge-urgent":d<=180?"badge-warn":"badge-ok"}">D-${d}</span></td><td><span class="badge ${ct.status==="active"?"badge-active":"badge-expiring"}">${ct.status==="active"?"유지":"만기예정"}</span></td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="openEditContract(${ct.id})">✏️</button> <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red);" onclick="deleteContract(${ct.id})">🗑️</button></td></tr>`;}).join("")}</tbody></table>`;
   document.getElementById("det-consult-count").textContent=c.consultations.length+"건";
   const sortedConsults=[...c.consultations].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("det-consults").innerHTML=!sortedConsults.length?'<div class="empty"><span>💬</span>상담 기록 없음</div>':sortedConsults.map(cs=>{
@@ -4282,6 +4290,7 @@ function renderContracts(){
       return `<tr class="clickable" onclick="goToDetail(${ct.cid})">
         <td><strong>${ct.cname}</strong></td>
         <td>${ct.type}</td>
+        <td style="font-size:12px;color:var(--text2);">${ct.insured||"-"}</td>
         <td><strong>${ct.product}</strong></td>
         <td>${ct.insurer}</td>
         <td>${ct.premium.toLocaleString()}원</td>
@@ -4681,6 +4690,20 @@ function addCustomer(){
   autoSave();
 }
 
+function onCtInsuredInput() {
+  const v = document.getElementById("ct-insured").value.trim();
+  if(v==="태아") {
+    document.getElementById("ct-type").value = "태아보험";
+    document.getElementById("ct-duedate-wrap").style.display = "";
+  }
+}
+function onEcInsuredInput() {
+  const v = document.getElementById("ec-insured").value.trim();
+  if(v==="태아") {
+    document.getElementById("ec-type").value = "태아보험";
+    document.getElementById("ec-duedate-wrap").style.display = "";
+  }
+}
 function addContract(){
   // 고객 선택 wrap이 보이면 목록에서 추가하는 모드
   const customerWrap = document.getElementById("ct-customer-wrap");
@@ -4693,8 +4716,9 @@ function addContract(){
   const product=document.getElementById("ct-product").value.trim();if(!product){alert("상품명을 입력하세요.");return;}
   const end=document.getElementById("ct-end").value,d=end?getDday(end):999;
   const ctType = document.getElementById("ct-type").value;
-  c.contracts.push({id:Date.now(),type:ctType,product,insurer:document.getElementById("ct-insurer").value,premium:parseInt(document.getElementById("ct-premium").value)||0,start:document.getElementById("ct-start").value,end,status:d<=180?"expiring":"active",duedate:ctType==="태아보험"?document.getElementById("ct-duedate").value:""});
-  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate"].forEach(id=>document.getElementById(id).value="");
+  const ctInsured = document.getElementById("ct-insured").value.trim();
+  c.contracts.push({id:Date.now(),type:ctType,product,insurer:document.getElementById("ct-insurer").value,premium:parseInt(document.getElementById("ct-premium").value)||0,start:document.getElementById("ct-start").value,end,status:d<=180?"expiring":"active",duedate:ctType==="태아보험"?document.getElementById("ct-duedate").value:"",insured:ctInsured});
+  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate","ct-insured"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const r=document.getElementById("ct-calc-result");if(r)r.style.display="none";
   document.getElementById("ct-duedate-wrap").style.display="none";
@@ -5741,6 +5765,7 @@ function openEditContract(ctId) {
   document.getElementById("ec-type").value = ct.type;
   const ecDdWrap = document.getElementById("ec-duedate-wrap");
   ecDdWrap.style.display = ct.type==="태아보험" ? "" : "none";
+  document.getElementById("ec-insured").value = ct.insured||"";
   document.getElementById("ec-duedate").value = ct.duedate||"";
   document.getElementById("ec-product").value = ct.product;
   document.getElementById("ec-insurer").value = ct.insurer;
@@ -5758,6 +5783,7 @@ function saveEditContract() {
   if(!product){alert("상품명을 입력하세요.");return;}
   ct.type = document.getElementById("ec-type").value;
   ct.duedate = ct.type==="태아보험" ? document.getElementById("ec-duedate").value : "";
+  ct.insured = document.getElementById("ec-insured").value.trim();
   ct.product = product;
   ct.insurer = document.getElementById("ec-insurer").value;
   ct.premium = parseInt(document.getElementById("ec-premium").value)||0;
