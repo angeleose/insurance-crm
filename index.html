@@ -4694,14 +4694,14 @@ function addCustomer(){
 
 function onCtInsuredInput() {
   const v = document.getElementById("ct-insured").value.trim();
-  if(v==="태아") {
+  if(v.includes("태아")) {
     document.getElementById("ct-type").value = "태아보험";
     document.getElementById("ct-duedate-wrap").style.display = "";
   }
 }
 function onEcInsuredInput() {
   const v = document.getElementById("ec-insured").value.trim();
-  if(v==="태아") {
+  if(v.includes("태아")) {
     document.getElementById("ec-type").value = "태아보험";
     document.getElementById("ec-duedate-wrap").style.display = "";
   }
@@ -6271,6 +6271,11 @@ function confirmContractImport() {
           diffs.push({ field, label, oldVal, newVal });
         }
       });
+      // 피보험자가 태아이면 종류를 태아보험으로 강제 설정
+      if (existing.insured && existing.insured.includes("태아") && existing.type !== "태아보험") {
+        existing.type = "태아보험";
+        autoFilled++;
+      }
       if (diffs.length > 0) {
         conflictItems.push({ ct: existing, r, name: r.customerName, diffs });
       }
@@ -6279,9 +6284,10 @@ function confirmContractImport() {
 
     // 신규 계약 추가
     const d = r.end ? getDday(r.end) : 999;
+    const resolvedType = (r.insured && r.insured.includes("태아")) ? "태아보험" : r.type;
     c.contracts.push({
       id: Date.now()+Math.random(),
-      type: r.type,
+      type: resolvedType,
       product: r.product,
       insurer: r.insurer,
       policyNo: r.policyNo,
