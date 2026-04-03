@@ -2839,14 +2839,16 @@ function saveScanCustomer() {
   const todayStr = new Date().toISOString().slice(0,10);
   const ssn = document.getElementById("scan-ssn").value.replace(/-/g,"");
 
-  // ── 중복 체크 (이름+전화번호 or 주민번호) ──
+  // ── 중복 체크 (이름+전화번호 or 이름+생년월일 or 주민번호) ──
   const phoneClean = phone.replace(/-/g,"");
+  const birthVal = document.getElementById("scan-birth")?.value || "";
   const dup = customers.find(c => {
     const cPhone = (c.phone||"").replace(/-/g,"");
     const nameMatch = c.name === name;
     const phoneMatch = cPhone === phoneClean;
+    const birthMatch = birthVal && c.birth && formatBirth(c.birth) === formatBirth(birthVal);
     const ssnMatch = ssn && c.ssn && c.ssn === ssn;
-    return (nameMatch && phoneMatch) || ssnMatch;
+    return (nameMatch && phoneMatch) || (nameMatch && birthMatch) || ssnMatch;
   });
 
   if(dup) {
@@ -7090,9 +7092,15 @@ function buildPreview() {
     return;
   }
 
-  // 중복 감지 (기존 고객과 이름+전화번호 일치)
+  // 중복 감지 (이름+전화번호 or 이름+생년월일)
   const dupRows = rows.map(r => {
-    const existing = customers.find(c => c.name === r.name && c.phone === r.phone);
+    const rBirth = r.birth ? formatBirth(r.birth) : "";
+    const existing = customers.find(c => {
+      const nameMatch = c.name === r.name;
+      const phoneMatch = r.phone && (c.phone||"").replace(/-/g,"") === r.phone.replace(/-/g,"");
+      const birthMatch = rBirth && rBirth !== "-" && c.birth && formatBirth(c.birth) === rBirth;
+      return nameMatch && (phoneMatch || birthMatch);
+    });
     return { ...r, _dup: !!existing, _existId: existing?.id };
   });
   const newCount = dupRows.filter(r => !r._dup).length;
@@ -7137,7 +7145,13 @@ function confirmUpload() {
 
   // 중복 감지 및 선택된 액션 읽기
   const dupRows = uploadMapped.map((r, i) => {
-    const existing = customers.find(c => c.name === r.name && c.phone === r.phone);
+    const rBirth = r.birth ? formatBirth(r.birth) : "";
+    const existing = customers.find(c => {
+      const nameMatch = c.name === r.name;
+      const phoneMatch = r.phone && (c.phone||"").replace(/-/g,"") === r.phone.replace(/-/g,"");
+      const birthMatch = rBirth && rBirth !== "-" && c.birth && formatBirth(c.birth) === rBirth;
+      return nameMatch && (phoneMatch || birthMatch);
+    });
     const action = existing
       ? (document.getElementById(`dup-action-${i}`)?.value || "skip")
       : "new";
