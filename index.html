@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>보험 고객 관리 CRM v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root {
     --navy:#0f1b35;--navy2:#1a2d52;--blue:#2563eb;--blue-light:#3b82f6;--sky:#e8f0fe;
@@ -724,6 +725,164 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     })();
   </script>
 
+  <!-- Google Calendar 연동 -->
+  <script>
+    (function() {
+      const GC_CID_KEY   = "gc_client_id";
+      const GC_TOKEN_KEY = "gc_token";
+      const GC_EXP_KEY   = "gc_token_expiry";
+      const GC_SCOPE     = "https://www.googleapis.com/auth/calendar.events";
+
+      let _tokenClient = null;
+
+      function gcClientId()  { return localStorage.getItem(GC_CID_KEY) || ""; }
+      function gcToken()     { return localStorage.getItem(GC_TOKEN_KEY) || ""; }
+      function gcExpired()   { const e=localStorage.getItem(GC_EXP_KEY); return !e || Date.now() > parseInt(e); }
+      function gcConnected() { return !!gcToken() && !gcExpired(); }
+
+      function gcSaveToken(token, expiresIn) {
+        localStorage.setItem(GC_TOKEN_KEY, token);
+        localStorage.setItem(GC_EXP_KEY, Date.now() + (expiresIn - 60) * 1000);
+      }
+      function gcClearToken() {
+        localStorage.removeItem(GC_TOKEN_KEY);
+        localStorage.removeItem(GC_EXP_KEY);
+      }
+
+      function updateGCalUI() {
+        const connected = gcConnected();
+        const hasClientId = !!gcClientId();
+
+        const connectBtn    = document.getElementById("gcal-connect-btn");
+        const disconnectBtn = document.getElementById("gcal-disconnect-btn");
+        const status        = document.getElementById("gcal-status");
+        const cidInput      = document.getElementById("gcal-client-id-input");
+        const syncBtn       = document.getElementById("gcal-sync-btn");
+
+        if(cidInput && !cidInput.value) cidInput.value = gcClientId();
+
+        if(connectBtn) {
+          if(connected) {
+            connectBtn.textContent = "✅ 연결됨";
+            connectBtn.disabled = true;
+            connectBtn.style.background = "#16a34a";
+            connectBtn.style.borderColor = "#16a34a";
+          } else {
+            connectBtn.textContent = "🔗 Google 계정 연결";
+            connectBtn.disabled = false;
+            connectBtn.style.background = "#4285F4";
+            connectBtn.style.borderColor = "#4285F4";
+          }
+        }
+        if(disconnectBtn) disconnectBtn.style.display = connected ? "inline-block" : "none";
+        if(status) status.textContent = connected ? "✅ Google Calendar 연결 완료" : (hasClientId ? "연결되지 않음" : "Client ID를 먼저 입력·저장하세요");
+        if(syncBtn) syncBtn.style.display = connected ? "" : "none";
+      }
+
+      function buildTokenClient() {
+        const cid = gcClientId();
+        if(!cid || !window.google?.accounts?.oauth2) return null;
+        return google.accounts.oauth2.initTokenClient({
+          client_id: cid,
+          scope: GC_SCOPE,
+          callback: (resp) => {
+            if(resp.error) { alert("Google 연결 실패: " + resp.error); return; }
+            gcSaveToken(resp.access_token, resp.expires_in || 3600);
+            updateGCalUI();
+            alert("Google Calendar 연결 성공! 이제 일정이 자동으로 동기화됩니다.");
+          }
+        });
+      }
+
+      window.saveGCalClientId = function() {
+        const val = (document.getElementById("gcal-client-id-input")?.value || "").trim();
+        if(!val) { alert("Client ID를 입력하세요."); return; }
+        localStorage.setItem(GC_CID_KEY, val);
+        gcClearToken();
+        _tokenClient = null;
+        updateGCalUI();
+        const st = document.getElementById("gcal-status");
+        if(st) st.textContent = "저장됨 — 이제 [Google 계정 연결] 버튼을 클릭하세요.";
+      };
+
+      window.connectGCal = function() {
+        if(!gcClientId()) { alert("먼저 Client ID를 입력하고 저장하세요."); return; }
+        if(!window.google?.accounts?.oauth2) { alert("Google 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요."); return; }
+        if(!_tokenClient) _tokenClient = buildTokenClient();
+        if(!_tokenClient) { alert("초기화 실패. Client ID를 확인하세요."); return; }
+        if(gcConnected()) { updateGCalUI(); return; }
+        _tokenClient.requestAccessToken({ prompt: "" });
+      };
+
+      window.disconnectGCal = function() {
+        const t = gcToken();
+        if(t && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(t, ()=>{});
+        gcClearToken();
+        updateGCalUI();
+      };
+
+      /* 단건 이벤트 → Google Calendar */
+      window._pushToGCal = async function(ev) {
+        if(!gcConnected()) return false;
+        let body;
+        if(ev.time) {
+          const [h, mi] = ev.time.split(":");
+          const [y, m, d] = ev.date.split("-");
+          const start = new Date(+y, +m-1, +d, +h, +(mi||0));
+          const end   = new Date(start.getTime() + 60*60*1000);
+          body = {
+            summary: ev.title,
+            description: ev.memo || "",
+            start: { dateTime: start.toISOString(), timeZone: "Asia/Seoul" },
+            end:   { dateTime: end.toISOString(),   timeZone: "Asia/Seoul" }
+          };
+        } else {
+          const nextDay = new Date(ev.date); nextDay.setDate(nextDay.getDate()+1);
+          body = {
+            summary: ev.title,
+            description: ev.memo || "",
+            start: { date: ev.date },
+            end:   { date: nextDay.toISOString().slice(0,10) }
+          };
+        }
+        try {
+          const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${gcToken()}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          return res.ok;
+        } catch(e) { console.error("GCal push 실패:", e); return false; }
+      };
+
+      /* 전체 방문 일정 → Google Calendar 일괄 동기화 */
+      window.syncAllToGCal = async function() {
+        if(!gcConnected()) { alert("Google Calendar 연결이 필요합니다."); return; }
+        if(typeof calEvents === "undefined" || !calEvents.length) { alert("동기화할 방문 일정이 없습니다."); return; }
+        let ok=0, fail=0;
+        for(const ev of calEvents) {
+          const r = await window._pushToGCal(ev);
+          r ? ok++ : fail++;
+        }
+        alert(`동기화 완료 — ${ok}건 성공${fail>0?`, ${fail}건 실패`:""}`);
+      };
+
+      /* GIS 로드 후 초기화 */
+      function tryInit() {
+        if(window.google?.accounts?.oauth2) {
+          if(gcClientId()) _tokenClient = buildTokenClient();
+          updateGCalUI();
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        updateGCalUI();
+        let tries = 0;
+        const iv = setInterval(()=>{ if(window.google?.accounts?.oauth2 || ++tries>30){ clearInterval(iv); tryInit(); } }, 300);
+      });
+    })();
+  </script>
+
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
@@ -1401,7 +1560,10 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <h2>📅 캘린더</h2>
         <p>방문 일정, 생일, 출산예정일을 한눈에 확인하세요.</p>
       </div>
-      <button class="btn btn-primary" onclick="openCalendarAddModal()">+ 일정 추가</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="gcal-sync-btn" onclick="syncAllToGCal()" class="btn btn-ghost" style="font-size:12px;padding:7px 13px;color:#4285F4;border-color:#4285F4;display:none;">📅 구글 캘린더 동기화</button>
+        <button class="btn btn-primary" onclick="openCalendarAddModal()">+ 일정 추가</button>
+      </div>
     </div>
 
     <!-- 월 네비게이션 -->
@@ -1725,6 +1887,26 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <button id="onedrive-disconnect-btn" class="btn btn-ghost" onclick="disconnectOneDrive()" style="font-size:13px;color:#dc2626;display:none;">연결 해제</button>
       </div>
       <div id="onedrive-status" style="margin-top:8px;font-size:12px;color:var(--text2);"></div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #4285F4;">
+      <div class="card-title" style="color:#4285F4;">📅 Google Calendar 연결</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.7;">
+        방문 일정을 저장할 때 Google Calendar에 자동으로 추가됩니다.<br>
+        <strong>1단계</strong> — <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285F4;font-weight:600;">Google Cloud Console</a>에서 OAuth 2.0 클라이언트 ID 발급<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;(유형: 웹 애플리케이션, 승인된 JS 출처에 <code style="font-size:11px;">https://insurance-crm-7l3.pages.dev</code> 추가)<br>
+        <strong>2단계</strong> — Calendar API 사용 설정 후 Client ID를 아래에 입력
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="gcal-client-id-input" placeholder="Client ID (숫자.apps.googleusercontent.com)"
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;">
+        <button class="btn btn-ghost" onclick="saveGCalClientId()" style="font-size:13px;padding:9px 14px;">저장</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="gcal-connect-btn" class="btn btn-primary" onclick="connectGCal()" style="background:#4285F4;border-color:#4285F4;font-size:13px;">🔗 Google 계정 연결</button>
+        <button id="gcal-disconnect-btn" class="btn btn-ghost" onclick="disconnectGCal()" style="font-size:13px;color:#dc2626;display:none;">연결 해제</button>
+      </div>
+      <div id="gcal-status" style="margin-top:8px;font-size:12px;color:var(--text2);"></div>
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;border:1.5px solid #a5f3fc;">
@@ -5388,6 +5570,12 @@ function saveCalendarEvent() {
   // 고객 상세 열려있으면 갱신
   if(cid && currentCustomerId===cid) renderDetail(cid);
   autoSave();
+  // Google Calendar 자동 동기화 (신규 추가 시)
+  if(!calEditId && typeof _pushToGCal === "function") {
+    _pushToGCal(ev).then(ok => {
+      if(ok) console.log("Google Calendar 동기화 완료:", ev.title);
+    });
+  }
 }
 
 
