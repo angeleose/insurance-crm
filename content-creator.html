@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>✨ 체험단 콘텐츠 메이커</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text2: #64748b;
+    --blue: #2563eb;
+    --green: #10b981;
+    --purple: #7c3aed;
+    --pink: #ec4899;
+    --orange: #f97316;
+    --red: #ef4444;
+    --naver: #03c75a;
+    --insta: #e1306c;
+    --youtube: #ff0000;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Pretendard',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
+    padding: 28px 32px 24px;
+    color: #fff;
+    position: sticky; top:0; z-index:100;
+    box-shadow: 0 4px 24px rgba(0,0,0,.25);
+  }
+  .header-inner { max-width: 900px; margin: 0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .header h1 { font-size:22px; font-weight:900; letter-spacing:-.5px; }
+  .header p { font-size:13px; color:rgba(255,255,255,.65); margin-top:3px; }
+  .api-row { display:flex; gap:8px; align-items:center; }
+  .api-row input {
+    padding:8px 12px; border:1.5px solid rgba(255,255,255,.2); border-radius:8px;
+    background:rgba(255,255,255,.1); color:#fff; font-size:12px; font-family:monospace; width:280px;
+  }
+  .api-row input::placeholder { color:rgba(255,255,255,.4); }
+  .api-row input:focus { outline:none; border-color:rgba(255,255,255,.5); }
+  .btn-save-key {
+    padding:8px 14px; background:rgba(255,255,255,.2); border:1.5px solid rgba(255,255,255,.3);
+    border-radius:8px; color:#fff; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
+    transition: background .2s;
+  }
+  .btn-save-key:hover { background:rgba(255,255,255,.3); }
+  #api-key-status { font-size:11px; color:rgba(255,255,255,.6); margin-top:4px; }
+
+  /* ── MAIN ── */
+  .main { max-width:900px; margin:0 auto; padding:28px 24px 80px; }
+
+  /* ── INPUT CARD ── */
+  .input-card {
+    background:var(--card); border-radius:20px; padding:28px;
+    box-shadow:0 2px 16px rgba(0,0,0,.08); border:1px solid var(--border); margin-bottom:24px;
+  }
+  .section-title {
+    font-size:15px; font-weight:800; color:var(--text); margin-bottom:16px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title .icon { font-size:20px; }
+
+  /* ── CATEGORY ── */
+  .cat-grid { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+  .cat-btn {
+    padding:7px 14px; border:1.5px solid var(--border); border-radius:20px;
+    font-size:13px; font-weight:600; cursor:pointer; background:#f8fafc;
+    color:var(--text2); transition:all .2s;
+  }
+  .cat-btn.active {
+    background: linear-gradient(135deg,#4f46e5,#7c3aed);
+    border-color: #4f46e5; color:#fff;
+  }
+
+  /* ── TONE ── */
+  .tone-grid { display:flex; gap:8px; flex-wrap:wrap; }
+  .tone-btn {
+    padding:6px 12px; border:1.5px solid var(--border); border-radius:12px;
+    font-size:12px; font-weight:600; cursor:pointer; background:#f8fafc;
+    color:var(--text2); transition:all .2s;
+  }
+  .tone-btn.active {
+    background:#fef3c7; border-color:#f59e0b; color:#92400e;
+  }
+
+  /* ── MEMO ── */
+  textarea {
+    width:100%; padding:14px; border:1.5px solid var(--border); border-radius:12px;
+    font-size:14px; font-family:'Pretendard',sans-serif; resize:vertical; min-height:100px;
+    color:var(--text); background:#fafafa; line-height:1.6; outline:none; transition:border-color .2s;
+  }
+  textarea:focus { border-color:#4f46e5; background:#fff; }
+  .char-count { font-size:11px; color:var(--text2); text-align:right; margin-top:4px; }
+
+  /* ── PHOTO UPLOAD ── */
+  .drop-zone {
+    border:2px dashed #c7d2fe; border-radius:16px; padding:32px;
+    text-align:center; cursor:pointer; transition:all .2s; background:#fafbff;
+    position:relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:#4f46e5; background:#eff6ff; }
+  .drop-zone input[type=file] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+  .drop-icon { font-size:36px; margin-bottom:8px; }
+  .drop-text { font-size:14px; font-weight:600; color:#4f46e5; }
+  .drop-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+
+  .photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:14px; }
+  .photo-item { position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+  .photo-item img { width:100%;height:100%;object-fit:cover; }
+  .photo-remove {
+    position:absolute;top:4px;right:4px; width:22px;height:22px;
+    background:rgba(0,0,0,.65); color:#fff; border:none; border-radius:50%;
+    cursor:pointer; font-size:12px; font-weight:700; display:flex;align-items:center;justify-content:center;
+    transition:background .2s;
+  }
+  .photo-remove:hover { background:#ef4444; }
+  .photo-count { font-size:11px; color:var(--text2); margin-top:8px; }
+
+  /* ── GENERATE BTN ── */
+  .btn-generate {
+    width:100%; padding:16px; background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    border:none; border-radius:14px; color:#fff; font-size:16px; font-weight:800;
+    cursor:pointer; letter-spacing:-.3px; display:flex;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 4px 20px rgba(79,70,229,.4); transition:all .2s; margin-top:24px;
+  }
+  .btn-generate:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(79,70,229,.5); }
+  .btn-generate:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+  /* ── LOADING ── */
+  .loading-wrap {
+    display:none; text-align:center; padding:40px;
+    background:var(--card); border-radius:20px; border:1px solid var(--border);
+    box-shadow:0 2px 16px rgba(0,0,0,.08); margin-bottom:24px;
+  }
+  .spinner {
+    width:48px; height:48px; border:4px solid #e0e7ff;
+    border-top-color:#4f46e5; border-radius:50%; animation:spin .8s linear infinite;
+    margin:0 auto 16px;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { font-size:15px; font-weight:700; color:#4f46e5; margin-bottom:6px; }
+  .loading-sub { font-size:13px; color:var(--text2); }
+  .progress-bar-wrap { width:240px; height:6px; background:#e0e7ff; border-radius:3px; margin:14px auto 0; overflow:hidden; }
+  .progress-bar { height:100%; background:linear-gradient(90deg,#4f46e5,#7c3aed); border-radius:3px; width:0; transition:width .3s; }
+
+  /* ── OUTPUT TABS ── */
+  .output-section { display:none; }
+  .tab-bar {
+    display:flex; gap:4px; background:#f1f5f9; border-radius:14px; padding:4px;
+    margin-bottom:20px;
+  }
+  .tab-btn {
+    flex:1; padding:10px 8px; border:none; border-radius:10px; cursor:pointer;
+    font-size:13px; font-weight:700; color:var(--text2); background:transparent;
+    transition:all .2s; display:flex;align-items:center;justify-content:center;gap:6px;
+  }
+  .tab-btn.active { background:#fff; color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  .tab-btn.naver.active { color:var(--naver); }
+  .tab-btn.insta.active { color:var(--insta); }
+  .tab-btn.youtube.active { color:var(--youtube); }
+
+  .content-card {
+    background:var(--card); border-radius:20px; padding:28px;
+    box-shadow:0 2px 16px rgba(0,0,0,.08); border:1px solid var(--border);
+    position:relative; display:none;
+  }
+  .content-card.active { display:block; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+
+  .platform-badge {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
+    border-radius:8px; font-size:12px; font-weight:800; margin-bottom:16px;
+  }
+  .platform-badge.naver { background:#e8faf0; color:var(--naver); }
+  .platform-badge.insta { background:#fce7f0; color:var(--insta); }
+  .platform-badge.youtube { background:#fef2f2; color:var(--youtube); }
+
+  .content-text {
+    font-size:14px; line-height:1.8; color:var(--text); white-space:pre-wrap;
+    background:#f8fafc; border-radius:12px; padding:20px; border:1px solid var(--border);
+    max-height:500px; overflow-y:auto;
+  }
+
+  .copy-bar { display:flex; gap:8px; margin-top:12px; justify-content:flex-end; align-items:center; }
+  .btn-copy {
+    padding:8px 18px; border-radius:10px; border:1.5px solid var(--border);
+    font-size:13px; font-weight:700; cursor:pointer; background:#fff;
+    color:var(--text); transition:all .2s;
+  }
+  .btn-copy:hover { background:#f1f5f9; }
+  .btn-copy.copied { background:#d1fae5; border-color:#10b981; color:#065f46; }
+  .btn-regen {
+    padding:8px 18px; border-radius:10px; border:none;
+    font-size:13px; font-weight:700; cursor:pointer;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff;
+    transition:all .2s;
+  }
+  .btn-regen:hover { opacity:.9; }
+
+  .word-count { font-size:11px; color:var(--text2); }
+
+  /* ── PLATFORM TIPS ── */
+  .tip-box {
+    background:#f8fafc; border-radius:10px; padding:12px 14px;
+    border-left:3px solid #c7d2fe; margin-top:12px; font-size:12px; color:var(--text2);
+    line-height:1.6;
+  }
+  .tip-box strong { color:var(--text); }
+
+  /* ── TOAST ── */
+  .toast {
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+    background:#1e1b4b; color:#fff; padding:12px 24px; border-radius:12px;
+    font-size:13px; font-weight:700; z-index:9999; pointer-events:none;
+    opacity:0; transition:opacity .3s; box-shadow:0 4px 20px rgba(0,0,0,.3);
+  }
+  .toast.show { opacity:1; }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:600px) {
+    .header { padding:20px 16px 18px; }
+    .header-inner { flex-direction:column; align-items:flex-start; gap:12px; }
+    .api-row input { width:100%; }
+    .main { padding:20px 16px 60px; }
+    .input-card { padding:20px; }
+    .content-card { padding:20px; }
+    .tab-btn { font-size:11px; padding:9px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>✨ 체험단 콘텐츠 메이커</h1>
+      <p>사진 + 메모 → 블로그 · 인스타 · 유튜브 숏츠 자동 작성</p>
+    </div>
+    <div>
+      <div class="api-row">
+        <input type="password" id="api-key-input" placeholder="Gemini API Key (AIza...)">
+        <button class="btn-save-key" onclick="saveApiKey()">저장</button>
+      </div>
+      <div id="api-key-status">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:rgba(255,255,255,.55);font-size:11px;text-decoration:none;">→ aistudio.google.com 에서 무료 발급</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- INPUT CARD -->
+  <div class="input-card">
+    <div class="section-title"><span class="icon">📂</span> 카테고리</div>
+    <div class="cat-grid" id="cat-grid">
+      <button class="cat-btn active" onclick="selectCat(this,'맛집/카페')">🍽️ 맛집·카페</button>
+      <button class="cat-btn" onclick="selectCat(this,'뷰티/화장품')">💄 뷰티·화장품</button>
+      <button class="cat-btn" onclick="selectCat(this,'여행/숙소')">✈️ 여행·숙소</button>
+      <button class="cat-btn" onclick="selectCat(this,'제품/쇼핑')">🛍️ 제품·쇼핑</button>
+      <button class="cat-btn" onclick="selectCat(this,'공연/전시')">🎭 공연·전시</button>
+      <button class="cat-btn" onclick="selectCat(this,'운동/스포츠')">💪 운동·스포츠</button>
+      <button class="cat-btn" onclick="selectCat(this,'교육/체험')">📚 교육·체험</button>
+    </div>
+  </div>
+
+  <div class="input-card">
+    <div class="section-title"><span class="icon">🎨</span> 글쓰기 톤</div>
+    <div class="tone-grid" id="tone-grid">
+      <button class="tone-btn active" onclick="selectTone(this,'따뜻하고 감성적인')">🌸 감성적</button>
+      <button class="tone-btn" onclick="selectTone(this,'명랑하고 유쾌한')">😄 유쾌한</button>
+      <button class="tone-btn" onclick="selectTone(this,'전문적이고 신뢰감 있는')">🎯 전문적</button>
+      <button class="tone-btn" onclick="selectTone(this,'솔직하고 리얼한')">💬 솔직한</button>
+      <button class="tone-btn" onclick="selectTone(this,'MZ세대 감성의 트렌디한')">🔥 트렌디</button>
+    </div>
+  </div>
+
+  <div class="input-card">
+    <div class="section-title"><span class="icon">📝</span> 한줄 메모 <span style="font-size:12px;color:var(--text2);font-weight:500;">(방문 장소, 느낀 점, 특이사항 등)</span></div>
+    <textarea id="memo" placeholder="예: 강남 신논현역 근처 이탈리안 파스타 맛집. 크림파스타 진짜 크림향 미쳤고 데이트코스로 딱. 웨이팅 30분 있었는데 기다릴 만 했음. 가격대 1.5~2만원대." oninput="updateCharCount()"></textarea>
+    <div class="char-count"><span id="char-count">0</span>자</div>
+  </div>
+
+  <div class="input-card">
+    <div class="section-title"><span class="icon">📸</span> 사진 업로드 <span style="font-size:12px;color:var(--text2);font-weight:500;">(최대 8장, AI가 내용을 분석합니다)</span></div>
+    <div class="drop-zone" id="drop-zone"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleDrop(event)">
+      <input type="file" accept="image/*" multiple onchange="handleFileInput(event)">
+      <div class="drop-icon">🖼️</div>
+      <div class="drop-text">사진을 여기에 드래그하거나 클릭하여 선택</div>
+      <div class="drop-sub">JPG, PNG, HEIC · 최대 8장 · 장당 10MB 이하</div>
+    </div>
+    <div class="photo-grid" id="photo-grid"></div>
+    <div class="photo-count" id="photo-count"></div>
+  </div>
+
+  <button class="btn-generate" id="generate-btn" onclick="generateAll()">
+    <span>✨</span> 콘텐츠 생성하기
+  </button>
+
+  <!-- LOADING -->
+  <div class="loading-wrap" id="loading-wrap">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">AI가 콘텐츠를 작성하고 있어요...</div>
+    <div class="loading-sub" id="loading-sub">사진을 분석하고 플랫폼별 최적 글을 작성 중입니다</div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="output-section" id="output-section">
+    <div class="tab-bar">
+      <button class="tab-btn naver active" id="tab-naver" onclick="switchTab('naver')">
+        <span style="font-size:16px;">N</span> 네이버 블로그
+      </button>
+      <button class="tab-btn insta" id="tab-insta" onclick="switchTab('insta')">
+        <span>📸</span> 인스타그램
+      </button>
+      <button class="tab-btn youtube" id="tab-youtube" onclick="switchTab('youtube')">
+        <span>▶</span> 유튜브 숏츠
+      </button>
+    </div>
+
+    <!-- NAVER -->
+    <div class="content-card active" id="card-naver">
+      <div class="platform-badge naver">N 네이버 블로그</div>
+      <div class="content-text" id="text-naver"></div>
+      <div class="copy-bar">
+        <span class="word-count" id="wc-naver"></span>
+        <button class="btn-regen" onclick="regenSingle('naver')">↺ 다시 쓰기</button>
+        <button class="btn-copy" id="copy-naver" onclick="copyText('naver')">📋 복사</button>
+      </div>
+      <div class="tip-box">
+        <strong>블로그 팁:</strong> 제목에 핵심 키워드를 앞에 배치하고, 사진은 단락 사이에 배치하세요. 지도 첨부 시 노출에 유리합니다.
+      </div>
+    </div>
+
+    <!-- INSTA -->
+    <div class="content-card" id="card-insta">
+      <div class="platform-badge insta">📸 인스타그램</div>
+      <div class="content-text" id="text-insta"></div>
+      <div class="copy-bar">
+        <span class="word-count" id="wc-insta"></span>
+        <button class="btn-regen" onclick="regenSingle('insta')">↺ 다시 쓰기</button>
+        <button class="btn-copy" id="copy-insta" onclick="copyText('insta')">📋 복사</button>
+      </div>
+      <div class="tip-box">
+        <strong>인스타 팁:</strong> 첫 줄이 핵심입니다. 해시태그는 댓글에 따로 달면 피드가 깔끔해 보여요. 스토리에는 위치 태그도 잊지 마세요.
+      </div>
+    </div>
+
+    <!-- YOUTUBE -->
+    <div class="content-card" id="card-youtube">
+      <div class="platform-badge youtube">▶ 유튜브 숏츠 대본</div>
+      <div class="content-text" id="text-youtube"></div>
+      <div class="copy-bar">
+        <span class="word-count" id="wc-youtube"></span>
+        <button class="btn-regen" onclick="regenSingle('youtube')">↺ 다시 쓰기</button>
+        <button class="btn-copy" id="copy-youtube" onclick="copyText('youtube')">📋 복사</button>
+      </div>
+      <div class="tip-box">
+        <strong>숏츠 팁:</strong> 처음 3초가 핵심입니다. 빠른 컷 전환과 자막 활용을 추천합니다. 영상 길이는 45~60초가 최적입니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let photos = [];   // { dataUrl, base64, mimeType, name }
+let selectedCat  = '맛집/카페';
+let selectedTone = '따뜻하고 감성적인';
+let generatedContent = { naver:'', insta:'', youtube:'' };
+
+// ── API KEY ────────────────────────────────────────────────────
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if(!val) { showToast('API 키를 입력하세요'); return; }
+  localStorage.setItem('gemini_api_key', val);
+  document.getElementById('api-key-input').value = '';
+  updateApiStatus();
+  showToast('✅ API 키가 저장되었습니다');
+}
+
+function updateApiStatus() {
+  const key = localStorage.getItem('gemini_api_key');
+  const el = document.getElementById('api-key-status');
+  if(key) {
+    el.innerHTML = `<span style="color:#86efac;font-size:11px;">✅ API 키 등록됨 (${key.slice(0,8)}…)</span>`;
+  } else {
+    el.innerHTML = `<a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:rgba(255,255,255,.55);font-size:11px;text-decoration:none;">→ aistudio.google.com 에서 무료 발급</a>`;
+  }
+}
+
+// ── CATEGORY / TONE ────────────────────────────────────────────
+function selectCat(btn, val) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedCat = val;
+}
+function selectTone(btn, val) {
+  document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTone = val;
+}
+
+// ── MEMO ──────────────────────────────────────────────────────
+function updateCharCount() {
+  const v = document.getElementById('memo').value;
+  document.getElementById('char-count').textContent = v.length;
+}
+
+// ── PHOTOS ────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+  loadFiles(files);
+}
+function handleFileInput(e) {
+  loadFiles([...e.target.files]);
+  e.target.value = '';
+}
+function loadFiles(files) {
+  const remaining = 8 - photos.length;
+  if(remaining <= 0) { showToast('최대 8장까지 업로드할 수 있어요'); return; }
+  files.slice(0, remaining).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      const base64  = dataUrl.split(',')[1];
+      photos.push({ dataUrl, base64, mimeType: file.type || 'image/jpeg', name: file.name });
+      renderPhotoGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function removePhoto(idx) {
+  photos.splice(idx, 1);
+  renderPhotoGrid();
+}
+function renderPhotoGrid() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = photos.map((p, i) => `
+    <div class="photo-item">
+      <img src="${p.dataUrl}" alt="photo${i+1}">
+      <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
+    </div>
+  `).join('');
+  document.getElementById('photo-count').textContent =
+    photos.length ? `${photos.length}장 선택됨` : '';
+}
+
+// ── GEMINI API ─────────────────────────────────────────────────
+async function callGemini(prompt, imagesToInclude) {
+  const key = localStorage.getItem('gemini_api_key');
+  if(!key) throw new Error('API_KEY_MISSING');
+
+  const parts = [{ text: prompt }];
+  // 최대 4장까지 첨부 (API 제한 고려)
+  imagesToInclude.slice(0, 4).forEach(p => {
+    parts.push({ inlineData: { mimeType: p.mimeType, data: p.base64 } });
+  });
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 2048 }
+      })
+    }
+  );
+  if(!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ── PROMPTS ───────────────────────────────────────────────────
+function buildNaverPrompt(memo, cat, tone) {
+  return `당신은 네이버 블로그 체험단 전문 작가입니다. 아래 정보를 바탕으로 네이버 블로그 리뷰 글을 작성해주세요.
+
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo || "(사진에서 파악하세요)"}
+${photos.length ? `첨부 사진 ${Math.min(photos.length,4)}장을 분석하여 내용에 반영해주세요.` : ''}
+
+다음 형식으로 작성하세요:
+
+[제목]
+(클릭을 유도하는 매력적인 제목 - 핵심 키워드 포함, 30자 이내)
+
+[본문]
+■ (소제목 1 - 방문 배경 또는 첫인상)
+(2-3문단, 감성적이고 생생하게)
+
+■ (소제목 2 - 주요 내용/메뉴/제품/서비스 상세)
+(2-3문단, 구체적인 묘사)
+
+■ (소제목 3 - 분위기/환경/특이사항)
+(1-2문단)
+
+■ 총평
+(별점: ★★★★☆ 또는 ★★★★★, 한줄 요약, 추천 대상)
+
+[해시태그]
+(관련 해시태그 20개 이상, # 포함, 공백으로 구분)
+
+※ 글자수는 800-1200자 사이로 작성하세요.
+※ 자연스럽고 진정성 있게, 과도한 광고성 표현은 피하세요.`;
+}
+
+function buildInstaPrompt(memo, cat, tone) {
+  return `당신은 인스타그램 체험단 인플루언서입니다. 아래 정보로 인스타그램 피드 게시글을 작성해주세요.
+
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo || "(사진에서 파악하세요)"}
+${photos.length ? `첨부 사진 ${Math.min(photos.length,4)}장을 분석하여 내용에 반영해주세요.` : ''}
+
+다음 형식으로 작성하세요:
+
+[첫줄 훅]
+(시선을 사로잡는 한 줄 - 이모지 포함, 질문/감탄/반전 활용)
+
+[본문]
+(3-5줄, 감성적이고 공감가는 내용, 적절한 이모지 사용)
+(줄바꿈을 활용하여 읽기 쉽게)
+.
+.
+.
+
+[해시태그]
+(인기 해시태그 + 틈새 해시태그 혼합 25개 이상, # 포함)
+
+※ 전체 본문은 150-250자 이내로 간결하게 (해시태그 제외).
+※ MZ감성, 공감가는 표현 사용.`;
+}
+
+function buildYoutubePrompt(memo, cat, tone) {
+  return `당신은 유튜브 숏츠 전문 영상 작가입니다. 아래 정보로 60초 이내 유튜브 숏츠 대본을 작성해주세요.
+
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo || "(사진에서 파악하세요)"}
+${photos.length ? `첨부 사진 ${Math.min(photos.length,4)}장을 분석하여 내용에 반영해주세요.` : ''}
+
+다음 형식으로 작성하세요:
+
+[영상 제목]
+(클릭률 높은 숏츠 제목, 30자 이내, 이모지 포함)
+
+[대본]
+
+🎬 [훅 - 0~3초]
+(첫 3초 안에 시청자를 사로잡는 강렬한 한마디)
+(화면: 가장 임팩트 있는 장면)
+
+📍 [소개 - 4~10초]
+(장소/제품/서비스 한 줄 소개)
+(화면: 외관 or 전체샷)
+
+✨ [핵심 포인트 1 - 11~25초]
+(가장 인상적인 포인트 설명)
+(화면: 클로즈업 or 디테일샷)
+
+🔥 [핵심 포인트 2 - 26~40초]
+(두 번째 하이라이트)
+(화면: 반응 or 먹방 or 사용 장면)
+
+💬 [솔직 한마디 - 41~52초]
+(진솔한 총평, 누구에게 추천하는지)
+
+📢 [CTA - 53~60초]
+(구독/좋아요/저장 유도 멘트)
+
+[설명란 해시태그]
+(5-10개)
+
+※ 대본은 실제 말하는 것처럼 구어체로 작성하세요.
+※ 각 섹션은 빠른 편집 기준으로 간결하게.`;
+}
+
+// ── GENERATE ──────────────────────────────────────────────────
+async function generateAll() {
+  const key = localStorage.getItem('gemini_api_key');
+  if(!key) { showToast('⚠️ Gemini API 키를 먼저 입력하고 저장하세요'); return; }
+  const memo = document.getElementById('memo').value.trim();
+  if(!memo && photos.length === 0) { showToast('메모나 사진을 하나 이상 추가해주세요'); return; }
+
+  setLoading(true);
+  document.getElementById('output-section').style.display = 'none';
+
+  const steps = [
+    { label:'📝 네이버 블로그 작성 중...', sub:'상세한 리뷰 글을 만들고 있어요', pct:10, key:'naver',
+      prompt: buildNaverPrompt(memo, selectedCat, selectedTone) },
+    { label:'📸 인스타그램 게시글 작성 중...', sub:'감성 캡션과 해시태그를 준비 중이에요', pct:45, key:'insta',
+      prompt: buildInstaPrompt(memo, selectedCat, selectedTone) },
+    { label:'▶ 유튜브 숏츠 대본 작성 중...', sub:'60초 대본을 완성하고 있어요', pct:75, key:'youtube',
+      prompt: buildYoutubePrompt(memo, selectedCat, selectedTone) }
+  ];
+
+  try {
+    for(const step of steps) {
+      setLoadingText(step.label, step.sub, step.pct);
+      const text = await callGemini(step.prompt, photos);
+      generatedContent[step.key] = text;
+    }
+    setLoadingText('✅ 완료!', '콘텐츠가 준비되었습니다', 100);
+    await new Promise(r => setTimeout(r, 500));
+    setLoading(false);
+    showOutput();
+  } catch(e) {
+    setLoading(false);
+    if(e.message === 'API_KEY_MISSING') {
+      showToast('⚠️ Gemini API 키를 먼저 입력하고 저장하세요');
+    } else {
+      showToast('❌ 생성 실패: ' + e.message);
+      console.error(e);
+    }
+  }
+}
+
+async function regenSingle(platform) {
+  const key = localStorage.getItem('gemini_api_key');
+  if(!key) { showToast('API 키가 필요합니다'); return; }
+  const memo = document.getElementById('memo').value.trim();
+  const el = document.getElementById(`text-${platform}`);
+  el.textContent = '✍️ 다시 작성 중...';
+
+  const prompts = {
+    naver: buildNaverPrompt(memo, selectedCat, selectedTone),
+    insta: buildInstaPrompt(memo, selectedCat, selectedTone),
+    youtube: buildYoutubePrompt(memo, selectedCat, selectedTone)
+  };
+  try {
+    const text = await callGemini(prompts[platform], photos);
+    generatedContent[platform] = text;
+    renderContent(platform);
+    showToast('↺ 다시 작성 완료!');
+  } catch(e) {
+    el.textContent = generatedContent[platform];
+    showToast('❌ 실패: ' + e.message);
+  }
+}
+
+// ── LOADING UI ────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loading-wrap').style.display = on ? 'block' : 'none';
+  document.getElementById('generate-btn').disabled = on;
+}
+function setLoadingText(main, sub, pct) {
+  document.getElementById('loading-text').textContent = main;
+  document.getElementById('loading-sub').textContent = sub;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+// ── OUTPUT ────────────────────────────────────────────────────
+function showOutput() {
+  const sec = document.getElementById('output-section');
+  sec.style.display = 'block';
+  ['naver','insta','youtube'].forEach(p => renderContent(p));
+  switchTab('naver');
+  sec.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function renderContent(platform) {
+  const text = generatedContent[platform];
+  const el = document.getElementById(`text-${platform}`);
+  const wc = document.getElementById(`wc-${platform}`);
+  el.textContent = text;
+  wc.textContent = `${text.length}자`;
+}
+
+function switchTab(tab) {
+  ['naver','insta','youtube'].forEach(p => {
+    document.getElementById(`tab-${p}`).classList.toggle('active', p===tab);
+    document.getElementById(`card-${p}`).classList.toggle('active', p===tab);
+  });
+}
+
+function copyText(platform) {
+  const text = generatedContent[platform];
+  if(!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(`copy-${platform}`);
+    btn.textContent = '✅ 복사됨';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 복사'; btn.classList.remove('copied'); }, 2000);
+    showToast('클립보드에 복사되었습니다');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('클립보드에 복사되었습니다');
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', updateApiStatus);
+</script>
+</body>
+</html>
