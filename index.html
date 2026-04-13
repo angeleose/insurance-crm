@@ -3159,7 +3159,7 @@ function renderFamilyList(cust) {
     return;
   }
   el.innerHTML = list.map((f,i) => {
-    const rel = customers.find(x=>x.id===f.relId);
+    const rel = customers.find(x=>String(x.id)===String(f.relId));
     if(!rel) return "";
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:0.5px solid var(--border);">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -3196,42 +3196,49 @@ function filterFamilyCustomers(q) {
     dd.innerHTML = `<div style="padding:10px 14px;font-size:13px;color:var(--text2);">검색 결과 없음</div>`;
   } else {
     dd.innerHTML = filtered.map(cx=>`
-      <div onclick="selectFamilyCustomer(${cx.id},'${cx.name}','${cx.phone}')"
+      <div data-cid="${cx.id}" data-cname="${cx.name}" data-cphone="${cx.phone||''}"
         style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
         onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
         <span style="font-weight:600;">${cx.name}</span>
-        <span style="color:var(--text2);font-size:12px;margin-left:8px;">${cx.phone}</span>
+        <span style="color:var(--text2);font-size:12px;margin-left:8px;">${cx.phone||""}</span>
         <span style="font-size:11px;margin-left:6px;padding:1px 6px;border-radius:4px;background:${cx.type==="가입"?"#dbeafe":"#dcfce7"};color:${cx.type==="가입"?"#1d4ed8":"#16a34a"};">${cx.type}</span>
       </div>`).join("");
   }
   dd.style.display = "";
   document.getElementById("fam-selected-id").value = "";
+  // 클릭 이벤트 위임 (data attribute로 ID 전달, 특수문자 안전)
+  dd.onclick = e => {
+    const item = e.target.closest("[data-cid]");
+    if (!item) return;
+    selectFamilyCustomer(item.dataset.cid, item.dataset.cname, item.dataset.cphone);
+  };
 }
 
 function selectFamilyCustomer(id, name, phone) {
-  document.getElementById("fam-search").value = `${name} (${phone})`;
-  document.getElementById("fam-selected-id").value = id;
+  document.getElementById("fam-search").value = `${name}${phone ? " ("+phone+")" : ""}`;
+  document.getElementById("fam-selected-id").value = String(id);
   document.getElementById("fam-dropdown").style.display = "none";
 }
 
 function saveFamilyRelation() {
-  const relId = parseInt(document.getElementById("fam-selected-id").value);
-  if(!relId) { alert("연결할 고객을 선택하세요."); return; }
+  const rawId = document.getElementById("fam-selected-id").value;
+  if(!rawId) { alert("연결할 고객을 선택하세요."); return; }
   const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
-  const rel = customers.find(x=>x.id===relId); if(!rel) return;
+  // ID를 문자열 비교로 탐색 (float ID 잘림 방지)
+  const rel = customers.find(x=>String(x.id)===String(rawId)); if(!rel) { alert("고객을 찾을 수 없습니다."); return; }
   if(!c.family) c.family = [];
 
-  // 중복 체크
-  if(c.family.find(f=>f.relId===relId)) { alert("이미 연결된 고객이에요."); return; }
+  // 중복 체크 (String 비교)
+  if(c.family.find(f=>String(f.relId)===String(rel.id))) { alert("이미 연결된 고객이에요."); return; }
 
   const relType = document.getElementById("fam-rel").value;
   const memo = document.getElementById("fam-memo").value.trim();
 
   // 양방향 연결 (상대방에게도 자동 추가)
-  c.family.push({ relId, rel: relType, memo });
+  c.family.push({ relId: rel.id, rel: relType, memo });
   if(!rel.family) rel.family = [];
   const reverseRel = relType==="배우자"?"배우자":relType==="부모"?"자녀":relType==="자녀"?"부모":relType==="형제/자매"?"형제/자매":"기타";
-  if(!rel.family.find(f=>f.relId===currentCustomerId)) {
+  if(!rel.family.find(f=>String(f.relId)===String(currentCustomerId))) {
     rel.family.push({ relId: currentCustomerId, rel: reverseRel, memo });
   }
 
