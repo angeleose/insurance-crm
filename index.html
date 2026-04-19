@@ -3515,7 +3515,24 @@ async function aiSalesReport() {
   }
 }
 
+function clearAllFilters() {
+  // 검색창 초기화
+  ["search-enrolled","search-prospect","search-contracts","search-consultations"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = "";
+  });
+  // 필터 변수 초기화
+  activeTagFilter = "전체";
+  activeStageFilter = "전체";
+  activeSourceFilter = "전체";
+  activeEnrolledSourceFilter = "전체";
+  activeContractTypeFilter = "전체";
+  activeConsultTypeFilter = "전체";
+  activeConsultCustFilter = "전체고객";
+}
+
 function showPage(name, pushHistory=true){
+  clearAllFilters();
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     const emailEl = document.getElementById("setting-user-email");
