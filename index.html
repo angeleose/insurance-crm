@@ -5781,8 +5781,9 @@ function renderTimeline(c) {
   // 0-1) 계약 체결일
   (c.contracts||[]).forEach(ct => {
     if(ct.start) {
+      const d = formatExcelDate(ct.start) || ct.start;
       items.push({
-        type:"contract", date:ct.start, sortKey:ct.start+"T00:01",
+        type:"contract", date:d, sortKey:d+"T00:01",
         dot:"#0ea5e9",
         tag:"📄 계약 체결",
         tagBg:"#e0f2fe", tagColor:"#0369a1",
@@ -7157,9 +7158,11 @@ async function loadFromFirestore() {
       if (p.backlogItems)    backlogItems    = p.backlogItems;
       if (p.calEvents)       calEvents       = p.calEvents;
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
-      // 피보험자 태아 → 태아보험 마이그레이션
+      // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
+        if (ct.start) ct.start = formatExcelDate(ct.start) || ct.start;
+        if (ct.end)   ct.end   = formatExcelDate(ct.end)   || ct.end;
         if (ct.insured && ct.insured.includes("태아") && ct.type !== "태아보험") {
           ct.type = "태아보험"; migrated++;
         }
