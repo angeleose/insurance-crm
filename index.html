@@ -1344,6 +1344,21 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="card-title">📄 보험 계약 <span id="det-contract-count" style="font-size:12px;color:var(--text2);font-weight:500;"></span></div>
       <div id="det-contracts"></div>
     </div>
+    <div class="card" id="det-onedrive-card">
+      <div class="card-title" style="justify-content:space-between;">
+        <span>☁️ OneDrive 증권 폴더</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleOneDriveEdit()" id="onedrive-edit-btn" style="font-size:12px;">✏️ 편집</button>
+      </div>
+      <div id="det-onedrive-view"></div>
+      <div id="det-onedrive-edit" style="display:none;margin-top:6px;">
+        <input type="url" id="onedrive-url-input" placeholder="OneDrive 공유 링크를 붙여넣으세요..."
+          style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" onclick="saveOneDriveLink()" style="font-size:12px;">저장</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleOneDriveEdit()" style="font-size:12px;">취소</button>
+        </div>
+      </div>
+    </div>
     <div class="card" id="det-family-card">
       <div class="card-title" style="justify-content:space-between;">
         <span>👨‍👩‍👧 가족 관계</span>
@@ -3150,6 +3165,56 @@ function calcContractEnd(prefix) {
 
 
 
+function renderOneDriveLink(cust) {
+  const view = document.getElementById("det-onedrive-view");
+  if (!view) return;
+  const url = cust.onedriveUrl || "";
+  if (url) {
+    view.innerHTML = `
+      <a href="${url}" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:10px;text-decoration:none;color:#1d4ed8;font-size:13px;font-weight:600;">
+        <span style="font-size:22px;">☁️</span>
+        <div>
+          <div>OneDrive 폴더 열기</div>
+          <div style="font-size:11px;color:#64748b;font-weight:400;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;">${url}</div>
+        </div>
+        <span style="margin-left:auto;font-size:16px;">↗</span>
+      </a>`;
+  } else {
+    view.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">연결된 OneDrive 폴더가 없습니다.</div>`;
+  }
+}
+
+function toggleOneDriveEdit() {
+  const editDiv = document.getElementById("det-onedrive-edit");
+  const viewDiv = document.getElementById("det-onedrive-view");
+  const btn = document.getElementById("onedrive-edit-btn");
+  const isOpen = editDiv.style.display !== "none";
+  if (isOpen) {
+    editDiv.style.display = "none";
+    viewDiv.style.display = "";
+    btn.textContent = "✏️ 편집";
+  } else {
+    const c = customers.find(x => x.id === currentCustomerId);
+    document.getElementById("onedrive-url-input").value = c?.onedriveUrl || "";
+    editDiv.style.display = "";
+    viewDiv.style.display = "none";
+    btn.textContent = "✕";
+    document.getElementById("onedrive-url-input").focus();
+  }
+}
+
+function saveOneDriveLink() {
+  const c = customers.find(x => x.id === currentCustomerId);
+  if (!c) return;
+  const url = document.getElementById("onedrive-url-input").value.trim();
+  c.onedriveUrl = url;
+  toggleOneDriveEdit();
+  renderOneDriveLink(c);
+  autoSave();
+  showToast("✅ OneDrive 링크가 저장되었습니다.");
+}
+
 function renderFamilyList(cust) {
   const el = document.getElementById("det-family-list");
   if(!el) return;
@@ -4362,6 +4427,7 @@ function renderDetail(id){
   // 이재사항
   renderMedicals(c);
   renderAnalysisFiles(c);
+  renderOneDriveLink(c);
   renderFamilyList(c);
   renderTimeline(c);
   _cardExpanded['consults'] = false;
