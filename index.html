@@ -977,6 +977,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="enrolled" onclick="closeMobileDrawer()"><span class="icon">✅</span> 가입 고객</div>
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
     <div class="nav-item" data-page="contracts" onclick="closeMobileDrawer()"><span class="icon">📄</span> 보험 계약</div>
+    <div class="nav-item" data-page="proposals" onclick="closeMobileDrawer()"><span class="icon">📋</span> 가입제안서</div>
     <div class="nav-item" data-page="consultations" onclick="closeMobileDrawer()"><span class="icon">💬</span> 상담 기록</div>
     <div class="nav-item" data-page="tasks" onclick="closeMobileDrawer()"><span class="icon">☑️</span> Task</div>
     <div class="nav-item" data-page="calendar" onclick="closeMobileDrawer();showPage('calendar')"><span class="icon">📅</span> 캘린더</div>
@@ -1061,6 +1062,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="nav-item" data-page="enrolled"><span class="icon">✅</span> 가입 고객</div>
       <div class="nav-item" data-page="prospects"><span class="icon">🌱</span> 가망 고객</div>
       <div class="nav-item" data-page="contracts"><span class="icon">📄</span> 보험 계약</div>
+      <div class="nav-item" data-page="proposals"><span class="icon">📋</span> 가입제안서</div>
       <div class="nav-item" data-page="consultations"><span class="icon">💬</span> 상담 기록</div>
       <div class="nav-item" data-page="tasks"><span class="icon">☑️</span> Task <span class="notif" id="nb-tasks" style="display:none;">0</span></div>
       <div class="nav-item" data-page="calendar" onclick="showPage('calendar')"><span class="icon">📅</span> 캘린더</div>
@@ -1366,6 +1368,13 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       </div>
       <div id="det-family-list"></div>
     </div>
+    <div class="card" id="det-proposals-card">
+      <div class="card-title" style="justify-content:space-between;">
+        <span>📋 가입제안서</span>
+        <button class="btn btn-ghost btn-sm" onclick="openProposalModal()" style="font-size:12px;">+ 추가</button>
+      </div>
+      <div id="det-proposals-list"></div>
+    </div>
     <div class="card" id="det-analysis-card">
       <div class="card-title" style="justify-content:space-between;">
         <span>📎 보장분석 파일</span>
@@ -1670,6 +1679,23 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <tbody id="contracts-tbody"></tbody></table>
     </div>
     <div id="contracts-list-wrap" style="display:none;"></div>
+  </div>
+
+  <!-- PROPOSALS -->
+  <div class="page" id="page-proposals">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><h2>📋 가입제안서</h2><p>고객별 가입제안서를 관리하세요.</p></div>
+      <button class="btn btn-primary" onclick="openProposalModal()" style="margin-top:4px;">+ 제안서 추가</button>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-proposals" placeholder="고객명 또는 상품명 검색..." oninput="renderProposalsPage()"></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>고객명</th><th>제목</th><th>보험사</th><th>상품명</th><th>월 보험료</th><th>작성일</th><th>메모</th><th>파일</th><th></th></tr></thead>
+        <tbody id="proposals-tbody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- CONSULTATIONS -->
@@ -2072,6 +2098,76 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div style="display:flex;justify-content:flex-end;gap:8px;">
       <a id="scan-viewer-download" href="" download="고객데이터원본.jpg" class="btn btn-ghost btn-sm" style="border-color:#a5f3fc;color:#0891b2;">⬇️ 다운로드</a>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('scan-viewer')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 가입제안서 추가/수정 -->
+<div class="modal-overlay" id="modal-proposal" onclick="if(event.target===this)closeModal('proposal')">
+  <div class="modal-box" style="width:500px;">
+    <h3 id="proposal-modal-title">📋 가입제안서 추가</h3>
+
+    <!-- PDF 업로드 & AI 파싱 -->
+    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">🤖 PDF 업로드 → AI 자동 파싱</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="flex:1;padding:8px 12px;border:1.5px dashed #93c5fd;border-radius:8px;cursor:pointer;font-size:12px;color:#2563eb;text-align:center;background:#fff;">
+          📎 PDF 파일 선택
+          <input type="file" id="proposal-pdf-input" accept=".pdf" style="display:none;" onchange="handleProposalPdf(this)">
+        </label>
+        <button id="proposal-ai-btn" class="btn btn-primary btn-sm" onclick="parseProposalPdf()" style="display:none;font-size:12px;">AI 파싱</button>
+      </div>
+      <div id="proposal-pdf-msg" style="font-size:11px;color:#64748b;margin-top:6px;"></div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>고객 선택 *</label>
+        <div style="position:relative;">
+          <input type="text" id="proposal-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
+            oninput="filterProposalCustomers(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('proposal-cust-dd');if(d)d.style.display='none';},200)"
+            onfocus="filterProposalCustomers(this.value)">
+          <input type="hidden" id="proposal-cust-id">
+          <div id="proposal-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>작성일</label>
+        <input type="date" id="proposal-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>제목 *</label>
+      <input type="text" id="proposal-title" placeholder="예: 현대해상 어린이보험 제안서">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>보험사</label>
+        <input type="text" id="proposal-insurer" placeholder="현대해상">
+      </div>
+      <div class="form-group">
+        <label>상품명</label>
+        <input type="text" id="proposal-product" placeholder="굿앤굿어린이CI보험">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>월 보험료 (원)</label>
+        <input type="number" id="proposal-premium" placeholder="50000">
+      </div>
+      <div class="form-group">
+        <label>파일 링크 (OneDrive 등)</label>
+        <input type="url" id="proposal-fileurl" placeholder="https://...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <textarea id="proposal-memo" rows="2" placeholder="제안서 요약 또는 메모..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('proposal')">취소</button>
+      <button class="btn btn-primary" onclick="saveProposal()">저장</button>
     </div>
   </div>
 </div>
@@ -3588,7 +3684,7 @@ async function aiSalesReport() {
 
 function clearAllFilters() {
   // 검색창 초기화
-  ["search-enrolled","search-prospect","search-contracts","search-consultations"].forEach(id => {
+  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
@@ -3625,6 +3721,7 @@ function showPage(name, pushHistory=true){
   if(name==="calendar")renderCalendar();
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
+  if(name==="proposals")renderProposalsPage();
   if(pushHistory && history.state?.page !== name) {
     history.pushState({page:name}, "", "#"+name);
   }
@@ -4437,6 +4534,7 @@ function renderDetail(id){
   // 이재사항
   renderMedicals(c);
   renderAnalysisFiles(c);
+  renderProposals(c);
   renderOneDriveLink(c);
   renderFamilyList(c);
   renderTimeline(c);
@@ -6026,6 +6124,212 @@ function deleteAnalysisFile(id) {
   autoSave();
 }
 
+// ─── 가입제안서 ────────────────────────────────────────────
+let _proposalEditId = null;
+let _proposalPdfText = "";
+
+function openProposalModal(id = null) {
+  _proposalEditId = id;
+  _proposalPdfText = "";
+  document.getElementById("proposal-modal-title").textContent = id ? "📋 가입제안서 수정" : "📋 가입제안서 추가";
+  document.getElementById("proposal-pdf-input").value = "";
+  document.getElementById("proposal-pdf-msg").textContent = "";
+  document.getElementById("proposal-ai-btn").style.display = "none";
+  document.getElementById("proposal-date").value = new Date().toISOString().slice(0,10);
+
+  if (id) {
+    // 수정: 기존 데이터 로드
+    let found = null;
+    customers.forEach(c => { const p = (c.proposals||[]).find(x=>x.id===id); if(p) found={...p, cid:c.id, cname:c.name}; });
+    if (found) {
+      document.getElementById("proposal-cust-search").value = found.cname;
+      document.getElementById("proposal-cust-id").value = String(found.cid);
+      document.getElementById("proposal-title").value = found.title||"";
+      document.getElementById("proposal-insurer").value = found.insurer||"";
+      document.getElementById("proposal-product").value = found.product||"";
+      document.getElementById("proposal-premium").value = found.premium||"";
+      document.getElementById("proposal-date").value = found.date||"";
+      document.getElementById("proposal-fileurl").value = found.fileUrl||"";
+      document.getElementById("proposal-memo").value = found.memo||"";
+    }
+  } else {
+    ["proposal-cust-search","proposal-title","proposal-insurer","proposal-product","proposal-premium","proposal-fileurl","proposal-memo"].forEach(id=>{document.getElementById(id).value="";});
+    document.getElementById("proposal-cust-id").value = "";
+    // 현재 보고 있는 고객이 있으면 기본 선택
+    if (currentCustomerId) {
+      const c = customers.find(x=>x.id===currentCustomerId);
+      if (c) { document.getElementById("proposal-cust-search").value = c.name; document.getElementById("proposal-cust-id").value = String(c.id); }
+    }
+  }
+  openModal("proposal");
+}
+
+function filterProposalCustomers(q) {
+  const dd = document.getElementById("proposal-cust-dd");
+  const list = q.trim() ? customers.filter(c=>c.name.includes(q)||(c.phone||"").includes(q)) : customers;
+  dd.innerHTML = list.slice(0,20).map(c=>`
+    <div data-cid="${c.id}" data-cname="${c.name}"
+      style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600;">${c.name}</span>
+      <span style="color:var(--text2);font-size:12px;margin-left:6px;">${c.phone||""}</span>
+    </div>`).join("");
+  dd.style.display = "";
+  dd.onclick = e => {
+    const item = e.target.closest("[data-cid]"); if(!item) return;
+    document.getElementById("proposal-cust-search").value = item.dataset.cname;
+    document.getElementById("proposal-cust-id").value = item.dataset.cid;
+    dd.style.display = "none";
+  };
+  document.getElementById("proposal-cust-id").value = "";
+}
+
+function handleProposalPdf(input) {
+  const file = input.files[0]; if(!file) return;
+  const msg = document.getElementById("proposal-pdf-msg");
+  msg.textContent = "⏳ PDF 읽는 중...";
+  document.getElementById("proposal-ai-btn").style.display = "none";
+  _proposalPdfText = "";
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const pdfjsLib = window.pdfjsLib || window["pdfjs-dist/build/pdf"];
+      if (!pdfjsLib) { msg.textContent = "❌ PDF.js 라이브러리가 없습니다."; return; }
+      const pdf = await pdfjsLib.getDocument({data: new Uint8Array(e.target.result)}).promise;
+      let text = "";
+      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(s=>s.str).join(" ") + "\n";
+      }
+      _proposalPdfText = text.trim();
+      if (_proposalPdfText.length < 50) { msg.textContent = "⚠️ 텍스트를 추출할 수 없습니다 (이미지 PDF)."; return; }
+      msg.textContent = `✅ ${pdf.numPages}페이지 읽기 완료 — AI 파싱 버튼을 누르세요`;
+      document.getElementById("proposal-ai-btn").style.display = "";
+    } catch(err) { msg.textContent = "❌ " + err.message; }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function parseProposalPdf() {
+  if (!_proposalPdfText) return;
+  const msg = document.getElementById("proposal-pdf-msg");
+  const btn = document.getElementById("proposal-ai-btn");
+  btn.disabled = true; btn.textContent = "⏳ AI 분석 중...";
+  const prompt = `다음 보험 제안서/증권 텍스트에서 정보를 추출하여 JSON으로만 응답하세요. 없는 값은 빈 문자열로:
+{"title":"제안서 제목","insurer":"보험사","product":"상품명","premium":월보험료숫자,"memo":"핵심 내용 2~3줄 요약"}
+
+텍스트:
+${_proposalPdfText.slice(0, 3000)}`;
+  try {
+    const result = await callGemini(prompt);
+    const m = result.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("JSON 파싱 실패");
+    const d = JSON.parse(m[0]);
+    if (d.title)   document.getElementById("proposal-title").value   = d.title;
+    if (d.insurer) document.getElementById("proposal-insurer").value = d.insurer;
+    if (d.product) document.getElementById("proposal-product").value = d.product;
+    if (d.premium) document.getElementById("proposal-premium").value = d.premium;
+    if (d.memo)    document.getElementById("proposal-memo").value    = d.memo;
+    msg.textContent = "✅ 자동 입력 완료! 내용을 확인 후 저장하세요.";
+    msg.style.color = "#16a34a";
+  } catch(e) {
+    msg.textContent = "❌ AI 파싱 실패: " + e.message;
+    msg.style.color = "#dc2626";
+  }
+  btn.disabled = false; btn.textContent = "AI 파싱";
+}
+
+function saveProposal() {
+  const cidRaw = document.getElementById("proposal-cust-id").value;
+  if (!cidRaw) { alert("고객을 선택하세요."); return; }
+  const title = document.getElementById("proposal-title").value.trim();
+  if (!title) { alert("제목을 입력하세요."); return; }
+  const c = customers.find(x=>String(x.id)===String(cidRaw));
+  if (!c) { alert("고객을 찾을 수 없습니다."); return; }
+  if (!c.proposals) c.proposals = [];
+
+  const data = {
+    id: _proposalEditId || (Date.now()+Math.random()),
+    title,
+    insurer: document.getElementById("proposal-insurer").value.trim(),
+    product: document.getElementById("proposal-product").value.trim(),
+    premium: parseInt(document.getElementById("proposal-premium").value)||0,
+    date: document.getElementById("proposal-date").value,
+    fileUrl: document.getElementById("proposal-fileurl").value.trim(),
+    memo: document.getElementById("proposal-memo").value.trim(),
+  };
+
+  if (_proposalEditId) {
+    const idx = c.proposals.findIndex(x=>x.id===_proposalEditId);
+    if (idx>=0) c.proposals[idx] = data;
+  } else {
+    c.proposals.push(data);
+  }
+  closeModal("proposal");
+  renderProposals(c);
+  renderProposalsPage();
+  autoSave();
+  showToast("✅ 가입제안서가 저장되었습니다.");
+}
+
+function deleteProposal(cid, id) {
+  if (!confirm("이 제안서를 삭제하시겠습니까?")) return;
+  const c = customers.find(x=>String(x.id)===String(cid)); if(!c) return;
+  c.proposals = (c.proposals||[]).filter(x=>x.id!==id);
+  renderProposals(c);
+  renderProposalsPage();
+  autoSave();
+}
+
+function renderProposals(c) {
+  const el = document.getElementById("det-proposals-list"); if(!el) return;
+  const list = c.proposals||[];
+  if (!list.length) { el.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">등록된 제안서가 없습니다.</div>`; return; }
+  el.innerHTML = list.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(p=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fafbfc;margin-bottom:5px;">
+      <span style="font-size:18px;flex-shrink:0;">📋</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:1px;">${p.insurer||""}${p.product?" · "+p.product:""}${p.premium?" · "+p.premium.toLocaleString()+"원/월":""}</div>
+        ${p.memo?`<div style="font-size:11px;color:#64748b;margin-top:2px;">${p.memo}</div>`:""}
+      </div>
+      <span style="font-size:10px;color:#94a3b8;flex-shrink:0;">${p.date||""}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        ${p.fileUrl?`<a href="${p.fileUrl}" target="_blank" rel="noopener" style="text-decoration:none;"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#2563eb;">📎</button></a>`:""}
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 6px;" onclick="openProposalModal(${p.id})">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 6px;color:var(--red);" onclick="deleteProposal(${c.id},${p.id})">🗑️</button>
+      </div>
+    </div>`).join("");
+}
+
+function renderProposalsPage() {
+  const tbody = document.getElementById("proposals-tbody"); if(!tbody) return;
+  const q = (document.getElementById("search-proposals")?.value||"").trim();
+  let rows = [];
+  customers.forEach(c => (c.proposals||[]).forEach(p => rows.push({...p, cname:c.name, cid:c.id})));
+  if (q) rows = rows.filter(r => r.cname.includes(q)||r.title.includes(q)||(r.product||"").includes(q));
+  rows.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><span>📋</span>제안서 없음</div></td></tr>`; return; }
+  tbody.innerHTML = rows.map(p=>`
+    <tr class="clickable" onclick="goToDetail(${p.cid})">
+      <td><strong>${p.cname}</strong></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.title}</td>
+      <td>${p.insurer||"-"}</td>
+      <td>${p.product||"-"}</td>
+      <td>${p.premium?p.premium.toLocaleString()+"원":"-"}</td>
+      <td style="color:var(--text2);font-size:12px;">${p.date||"-"}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.memo||"-"}</td>
+      <td>${p.fileUrl?`<a href="${p.fileUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;font-size:11px;font-weight:600;text-decoration:none;">📎 보기</a>`:`<span style="color:#cbd5e1;font-size:11px;">-</span>`}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="openProposalModal(${p.id})">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;color:var(--red);" onclick="deleteProposal(${p.cid},${p.id})">🗑️</button>
+      </td>
+    </tr>`).join("");
+}
+// ──────────────────────────────────────────────────────────
+
 function renderAnalysisFiles(c) {
   const el = document.getElementById("det-analysis-list");
   if(!el) return;
@@ -7494,6 +7798,8 @@ toggleProspectFields();
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script>
 // ─── EXCEL UPLOAD STATE ────────────────────────────────────────
 let uploadType = "가입";
