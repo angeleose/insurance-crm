@@ -3060,7 +3060,8 @@ JSON만 출력하세요.`;
   try {
     const key = localStorage.getItem("gemini_api_key");
     if(!key) { alert("⚙️ 설정 탭에서 Gemini API 키를 먼저 입력해 주세요."); showPage("settings"); return; }
-    const res = await fetch(`${GEMINI_API}?key=${key}`, {
+    const endpoint = await resolveGeminiEndpoint(key);
+    const res = await fetch(`${endpoint}?key=${key}`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ contents: [{ parts: [
@@ -3069,7 +3070,7 @@ JSON만 출력하세요.`;
       ]}]})
     });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error?.message || "AI 응답 오류");
+    if(!res.ok) { _geminiEndpoint = null; throw new Error(data.error?.message || "AI 응답 오류"); }
 
     // JSON 파싱 — 여러 방법으로 시도
     let text = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
@@ -3452,7 +3453,22 @@ function updateGeminiKeyStatus() {
   el.style.color = key ? "#16a34a" : "#dc2626";
 }
 
-const GEMINI_API = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+let _geminiEndpoint = null;
+
+async function resolveGeminiEndpoint(key) {
+  if (_geminiEndpoint) return _geminiEndpoint;
+  const res = await fetch(`${GEMINI_BASE}/models?key=${key}`);
+  const data = await res.json();
+  const models = (data.models || []).filter(m => m.supportedGenerationMethods?.includes("generateContent"));
+  const prefer = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro", "gemini-1.0-pro"];
+  for (const name of prefer) {
+    const m = models.find(m => m.name.includes(name));
+    if (m) { _geminiEndpoint = `${GEMINI_BASE}/${m.name}:generateContent`; return _geminiEndpoint; }
+  }
+  if (models[0]) { _geminiEndpoint = `${GEMINI_BASE}/${models[0].name}:generateContent`; return _geminiEndpoint; }
+  throw new Error("사용 가능한 Gemini 모델이 없습니다. API 키를 확인해 주세요.");
+}
 
 async function callGemini(prompt) {
   const key = localStorage.getItem("gemini_api_key");
@@ -3461,13 +3477,14 @@ async function callGemini(prompt) {
     showPage("settings"); return null;
   }
   try {
-    const res = await fetch(`${GEMINI_API}?key=${key}`, {
+    const endpoint = await resolveGeminiEndpoint(key);
+    const res = await fetch(`${endpoint}?key=${key}`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     const data = await res.json();
-    if(!res.ok) throw new Error(data.error?.message || "AI 응답 오류");
+    if(!res.ok) { _geminiEndpoint = null; throw new Error(data.error?.message || "AI 응답 오류"); }
     return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } catch(e) {
     throw new Error(e.message || "오류가 발생했습니다.");
