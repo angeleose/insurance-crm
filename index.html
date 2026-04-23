@@ -1966,6 +1966,18 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <button class="btn btn-ghost" onclick="clearGeminiKey()" style="padding:9px 14px;font-size:13px;color:#dc2626;">삭제</button>
       </div>
       <div id="gemini-key-status" style="margin-top:8px;font-size:12px;color:var(--text2);"></div>
+      <div style="margin-top:12px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Gemini 모델 선택</label>
+        <select id="gemini-model-select" onchange="saveGeminiModel()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);">
+          <option value="">자동 탐지 (권장)</option>
+          <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (무료 30 RPM)</option>
+          <option value="gemini-2.0-flash">gemini-2.0-flash (무료 15 RPM)</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash (무료 15 RPM)</option>
+          <option value="gemini-1.5-flash-8b">gemini-1.5-flash-8b (무료 15 RPM)</option>
+          <option value="gemini-pro">gemini-pro</option>
+        </select>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">quota 오류 시 다른 모델을 선택해 보세요.</div>
+      </div>
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;">
@@ -3451,6 +3463,15 @@ function updateGeminiKeyStatus() {
   const key = localStorage.getItem("gemini_api_key");
   el.textContent = key ? `✅ API 키 저장됨 (${key.slice(0,8)}...)` : "❌ API 키 없음 — 저장 후 AI 기능을 사용하세요.";
   el.style.color = key ? "#16a34a" : "#dc2626";
+  const sel = document.getElementById("gemini-model-select");
+  if(sel) sel.value = localStorage.getItem("gemini_model") || "";
+}
+
+function saveGeminiModel() {
+  const v = document.getElementById("gemini-model-select").value;
+  if(v) localStorage.setItem("gemini_model", v); else localStorage.removeItem("gemini_model");
+  _geminiEndpoint = null;
+  showToast("✅ 모델 설정이 저장되었습니다.");
 }
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -3458,10 +3479,12 @@ let _geminiEndpoint = null;
 
 async function resolveGeminiEndpoint(key) {
   if (_geminiEndpoint) return _geminiEndpoint;
+  const manual = localStorage.getItem("gemini_model");
+  if (manual) { _geminiEndpoint = `${GEMINI_BASE}/models/${manual}:generateContent`; return _geminiEndpoint; }
   const res = await fetch(`${GEMINI_BASE}/models?key=${key}`);
   const data = await res.json();
   const models = (data.models || []).filter(m => m.supportedGenerationMethods?.includes("generateContent"));
-  const prefer = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro", "gemini-1.0-pro"];
+  const prefer = ["gemini-2.0-flash-lite", "gemini-1.5-flash-8b", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-pro", "gemini-1.0-pro"];
   for (const name of prefer) {
     const m = models.find(m => m.name.includes(name));
     if (m) { _geminiEndpoint = `${GEMINI_BASE}/${m.name}:generateContent`; return _geminiEndpoint; }
