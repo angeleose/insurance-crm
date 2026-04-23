@@ -1398,6 +1398,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
           <button onclick="setTlFilter('followup')"    id="tlf-followup"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">📞 팔로업</button>
           <button onclick="setTlFilter('message')"     id="tlf-message"      class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">💌 메시지</button>
           <button onclick="setTlFilter('calendar')"    id="tlf-calendar"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">🗓️ 캘린더</button>
+          <button onclick="setTlFilter('task')"        id="tlf-task"         class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">☑️ Task</button>
           <button onclick="setTlFilter('register')"    id="tlf-register"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">🌱 등록</button>
         </div>
       </div>
@@ -1653,14 +1654,6 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div style="display:flex;justify-content:flex-end;padding:10px 0;" id="tasks-footer"></div>
 
-    <!-- 완료 히스토리 -->
-    <div class="card" style="margin-top:16px;" id="task-history-card">
-      <div class="card-title" style="justify-content:space-between;">
-        <span>✅ 완료 히스토리</span>
-        <span id="task-history-count" style="font-size:12px;color:var(--text2);font-weight:500;"></span>
-      </div>
-      <div id="task-history-list"></div>
-    </div>
   </div>
 
   <!-- CONTRACTS -->
@@ -3793,57 +3786,7 @@ function renderTasksPage() {
   const total = rows.length, done = rows.filter(t=>t.done).length;
   document.getElementById("tasks-footer").innerHTML =
     `<span style="font-size:13px;color:var(--text2);">전체 <strong>${total}</strong>건 · 완료 <strong style="color:#10b981;">${done}</strong>건 · 미완료 <strong style="color:#f59e0b;">${total-done}</strong>건</span>`;
-  renderTaskHistory();
   updateSidebar();
-}
-
-let _taskHistoryExpanded = false;
-
-function renderTaskHistory() {
-  const listEl = document.getElementById("task-history-list");
-  const countEl = document.getElementById("task-history-count");
-  if (!listEl) return;
-
-  // 완료된 task 전체 수집, doneAt 내림차순 정렬
-  let history = [];
-  customers.forEach(c => {
-    (c.tasks||[]).filter(t=>t.done).forEach(t => history.push({...t, cname:c.name, cid:c.id}));
-  });
-  standaloneTasks.filter(t=>t.done).forEach(t => history.push({...t, cname:null}));
-  history.sort((a,b) => (b.doneAt||"").localeCompare(a.doneAt||""));
-
-  countEl.textContent = history.length + "건";
-
-  if (!history.length) {
-    listEl.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">완료된 Task가 없습니다.</div>`;
-    return;
-  }
-
-  const LIMIT = 5;
-  const visible = _taskHistoryExpanded ? history : history.slice(0, LIMIT);
-  const hasMore = history.length > LIMIT;
-
-  const itemHtml = item => {
-    const doneDate = item.doneAt ? item.doneAt.slice(0,10) : "-";
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);">
-      <span style="color:#10b981;font-size:15px;flex-shrink:0;">✅</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;text-decoration:line-through;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.title}</div>
-        ${item.cname ? `<div style="font-size:11px;color:#64748b;margin-top:1px;">👤 ${item.cname}</div>` : ""}
-      </div>
-      <div style="font-size:11px;color:#94a3b8;flex-shrink:0;text-align:right;">
-        ${doneDate}
-      </div>
-    </div>`;
-  };
-
-  listEl.innerHTML = visible.map(itemHtml).join("")
-    + (hasMore ? `<div style="margin-top:8px;text-align:center;">
-        <button onclick="_taskHistoryExpanded=!_taskHistoryExpanded;renderTaskHistory()"
-          style="font-size:12px;padding:5px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text2);cursor:pointer;font-family:inherit;">
-          ${_taskHistoryExpanded ? "▲ 접기" : `▼ 더보기 (${history.length - LIMIT}건 더)`}
-        </button>
-      </div>` : "");
 }
 
 function toggleTaskPage(src, cid, tId) {
@@ -5873,7 +5816,7 @@ function checkCardOverflow(key) {
 
 function setTlFilter(f) {
   tlFilter = f;
-  ["all","consult","contract","followup","message","calendar","register"].forEach(k=>{
+  ["all","consult","contract","followup","message","calendar","task","register"].forEach(k=>{
     const btn = document.getElementById("tlf-"+k);
     if(!btn) return;
     const on = k===f;
@@ -5978,6 +5921,18 @@ function renderTimeline(c) {
       tag:"🗓️ 캘린더", tagBg:"#f5f3ff", tagColor:"#6d28d9",
       text:`${e.time?e.time+" ":""}${e.title}`,
       sub: e.memo||null
+    });
+  });
+
+  // 4) 완료된 Task
+  (c.tasks||[]).filter(t=>t.done && t.doneAt).forEach(t=>{
+    const date = t.doneAt.slice(0,10);
+    items.push({
+      type:"task", date, sortKey:t.doneAt,
+      dot:"#10b981",
+      tag:"☑️ Task 완료", tagBg:"#ecfdf5", tagColor:"#065f46",
+      text:t.title,
+      sub: t.memo||null
     });
   });
 
