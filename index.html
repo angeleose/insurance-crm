@@ -3059,21 +3059,20 @@ JSON만 출력하세요.`;
 
   try {
     const key = localStorage.getItem("gemini_api_key");
-    const res = await fetch(GAS_URL, {
+    if(!key) { alert("⚙️ 설정 탭에서 Gemini API 키를 먼저 입력해 주세요."); showPage("settings"); return; }
+    const res = await fetch(`${GEMINI_API}?key=${key}`, {
       method: "POST",
-      body: JSON.stringify({
-        action: "gemini",
-        apiKey: key,
-        prompt: prompt,
-        imageBase64: scanImageBase64,
-        mimeType: scanMimeType
-      })
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ contents: [{ parts: [
+        { text: prompt },
+        { inlineData: { mimeType: scanMimeType, data: scanImageBase64 } }
+      ]}]})
     });
     const data = await res.json();
-    if(!data.ok) throw new Error(data.error);
+    if(!res.ok) throw new Error(data.error?.message || "AI 응답 오류");
 
     // JSON 파싱 — 여러 방법으로 시도
-    let text = data.text.trim();
+    let text = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
     let info = null;
 
     // 방법 1: ```json 블록 제거 후 파싱
@@ -3453,6 +3452,8 @@ function updateGeminiKeyStatus() {
   el.style.color = key ? "#16a34a" : "#dc2626";
 }
 
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
 async function callGemini(prompt) {
   const key = localStorage.getItem("gemini_api_key");
   if(!key) {
@@ -3460,13 +3461,14 @@ async function callGemini(prompt) {
     showPage("settings"); return null;
   }
   try {
-    const res = await fetch(GAS_URL, {
+    const res = await fetch(`${GEMINI_API}?key=${key}`, {
       method: "POST",
-      body: JSON.stringify({ action: "gemini", apiKey: key, prompt: prompt })
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
     const data = await res.json();
-    if(!data.ok) throw new Error(data.error || "AI 응답 오류");
-    return data.text;
+    if(!res.ok) throw new Error(data.error?.message || "AI 응답 오류");
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } catch(e) {
     throw new Error(e.message || "오류가 발생했습니다.");
   }
