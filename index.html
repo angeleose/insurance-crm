@@ -2119,17 +2119,12 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <div class="modal-box" style="width:500px;">
     <h3 id="proposal-modal-title">📋 가입제안서 추가</h3>
 
-    <!-- PDF 업로드 & AI 파싱 -->
-    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">🤖 PDF 업로드 → AI 자동 파싱</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <label style="flex:1;padding:8px 12px;border:1.5px dashed #93c5fd;border-radius:8px;cursor:pointer;font-size:12px;color:#2563eb;text-align:center;background:#fff;">
-          📎 PDF 파일 선택
-          <input type="file" id="proposal-pdf-input" accept=".pdf" style="display:none;" onchange="handleProposalPdf(this)">
-        </label>
-        <button id="proposal-ai-btn" class="btn btn-primary btn-sm" onclick="parseProposalPdf()" style="display:none;font-size:12px;">AI 파싱</button>
-      </div>
-      <div id="proposal-pdf-msg" style="font-size:11px;color:#64748b;margin-top:6px;"></div>
+    <!-- 텍스트 자동 파싱 -->
+    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:6px;">📝 텍스트 입력 → 자동 입력</div>
+      <textarea id="proposal-quick-text" rows="3" placeholder="예) 삼성생명 종신보험 월150000원&#10;보험사·상품명·보험료를 자유롭게 적으면 아래 항목에 자동으로 채워집니다."
+        style="width:100%;font-size:12px;padding:8px;border:1.5px solid #86efac;border-radius:7px;resize:vertical;background:#fff;"
+        oninput="autoFillProposalFromText(this.value)"></textarea>
     </div>
 
     <div class="form-row">
@@ -6168,15 +6163,11 @@ function deleteAnalysisFile(id) {
 
 // ─── 가입제안서 ────────────────────────────────────────────
 let _proposalEditId = null;
-let _proposalPdfText = "";
 
 function openProposalModal(id = null) {
   _proposalEditId = id;
-  _proposalPdfText = "";
   document.getElementById("proposal-modal-title").textContent = id ? "📋 가입제안서 수정" : "📋 가입제안서 추가";
-  document.getElementById("proposal-pdf-input").value = "";
-  document.getElementById("proposal-pdf-msg").textContent = "";
-  document.getElementById("proposal-ai-btn").style.display = "none";
+  document.getElementById("proposal-quick-text").value = "";
   document.getElementById("proposal-date").value = new Date().toISOString().slice(0,10);
 
   if (id) {
@@ -6226,61 +6217,38 @@ function filterProposalCustomers(q) {
   document.getElementById("proposal-cust-id").value = "";
 }
 
-function handleProposalPdf(input) {
-  const file = input.files[0]; if(!file) return;
-  const msg = document.getElementById("proposal-pdf-msg");
-  msg.textContent = "⏳ PDF 읽는 중...";
-  document.getElementById("proposal-ai-btn").style.display = "none";
-  _proposalPdfText = "";
+function autoFillProposalFromText(text) {
+  if (!text.trim()) return;
 
-  const reader = new FileReader();
-  reader.onload = async e => {
-    try {
-      const pdfjsLib = window.pdfjsLib || window["pdfjs-dist/build/pdf"];
-      if (!pdfjsLib) { msg.textContent = "❌ PDF.js 라이브러리가 없습니다."; return; }
-      const pdf = await pdfjsLib.getDocument({data: new Uint8Array(e.target.result)}).promise;
-      let text = "";
-      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(s=>s.str).join(" ") + "\n";
-      }
-      _proposalPdfText = text.trim();
-      if (_proposalPdfText.length < 50) { msg.textContent = "⚠️ 텍스트를 추출할 수 없습니다 (이미지 PDF)."; return; }
-      msg.textContent = `✅ ${pdf.numPages}페이지 읽기 완료 — AI 파싱 버튼을 누르세요`;
-      document.getElementById("proposal-ai-btn").style.display = "";
-    } catch(err) { msg.textContent = "❌ " + err.message; }
-  };
-  reader.readAsArrayBuffer(file);
-}
+  const INSURERS = ["삼성생명","삼성화재","한화생명","한화손해보험","교보생명","현대해상","DB손해보험","DB생명","KB손해보험","KB생명","메리츠화재","흥국화재","흥국생명","롯데손해보험","NH농협생명","NH농협손해보험","신한라이프","AIA생명","라이나생명","처브라이프","오렌지라이프","미래에셋생명","동양생명","ABL생명","KDB생명","DGB생명","푸본현대생명","하나생명","MG손해보험","카디프생명","BNP파리바카디프","교보"];
 
-async function parseProposalPdf() {
-  if (!_proposalPdfText) return;
-  const msg = document.getElementById("proposal-pdf-msg");
-  const btn = document.getElementById("proposal-ai-btn");
-  btn.disabled = true; btn.textContent = "⏳ AI 분석 중...";
-  const prompt = `다음 보험 제안서/증권 텍스트에서 정보를 추출하여 JSON으로만 응답하세요. 없는 값은 빈 문자열로:
-{"title":"제안서 제목","insurer":"보험사","product":"상품명","premium":월보험료숫자,"memo":"핵심 내용 2~3줄 요약"}
-
-텍스트:
-${_proposalPdfText.slice(0, 3000)}`;
-  try {
-    const result = await callGemini(prompt);
-    const m = result.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error("JSON 파싱 실패");
-    const d = JSON.parse(m[0]);
-    if (d.title)   document.getElementById("proposal-title").value   = d.title;
-    if (d.insurer) document.getElementById("proposal-insurer").value = d.insurer;
-    if (d.product) document.getElementById("proposal-product").value = d.product;
-    if (d.premium) document.getElementById("proposal-premium").value = d.premium;
-    if (d.memo)    document.getElementById("proposal-memo").value    = d.memo;
-    msg.textContent = "✅ 자동 입력 완료! 내용을 확인 후 저장하세요.";
-    msg.style.color = "#16a34a";
-  } catch(e) {
-    msg.textContent = "❌ AI 파싱 실패: " + e.message;
-    msg.style.color = "#dc2626";
+  // 보험사
+  let insurer = "";
+  for (const ins of INSURERS) {
+    if (text.includes(ins)) { insurer = ins; break; }
   }
-  btn.disabled = false; btn.textContent = "AI 파싱";
+
+  // 보험료: 숫자만원 / 숫자,숫자원 / 숫자원
+  let premium = "";
+  const manMatch = text.match(/(\d[\d,]*)\s*만\s*원/);
+  const wonMatch = text.match(/월\s*[\s:：]?\s*(\d[\d,]+)\s*원/) || text.match(/(\d[\d,]{3,})\s*원/);
+  if (manMatch) premium = String(parseInt(manMatch[1].replace(/,/g,"")) * 10000);
+  else if (wonMatch) premium = wonMatch[1].replace(/,/g,"");
+
+  // 제목: 첫 줄 (최대 60자)
+  const firstLine = text.split(/\n/)[0].trim().slice(0, 60);
+
+  // 상품명: 보험|보장|플랜 앞 단어 포함 구
+  let product = "";
+  const prodMatch = text.match(/([가-힣\w\s]{2,20}(?:보험|보장|플랜|연금|저축|종신|실손|암보험|치아|간병|펫))/);
+  if (prodMatch) product = prodMatch[1].trim();
+
+  if (insurer) document.getElementById("proposal-insurer").value = insurer;
+  if (product && !document.getElementById("proposal-product").value) document.getElementById("proposal-product").value = product;
+  if (premium) document.getElementById("proposal-premium").value = premium;
+  if (firstLine && !document.getElementById("proposal-title").value) document.getElementById("proposal-title").value = firstLine;
+  // 전체 텍스트를 메모에도 저장
+  if (!document.getElementById("proposal-memo").value) document.getElementById("proposal-memo").value = text.trim();
 }
 
 function saveProposal() {
