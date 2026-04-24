@@ -7745,7 +7745,7 @@ toggleProspectFields();
           onblur="setTimeout(()=>{const d=document.getElementById('income-customer-list');if(d)d.style.display='none';},150)"
           style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg1);color:var(--text1);">
         <input type="hidden" id="income-customer-id">
-        <div id="income-customer-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--border);border-radius:8px;margin-top:2px;max-height:180px;overflow-y:auto;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
+        <div id="income-customer-list" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -9876,15 +9876,26 @@ function updateIncomeCategories() {
   sel.innerHTML = incomeCats[type].map(c=>`<option>${c}</option>`).join("");
 }
 
+function _positionIncomeCustomerList() {
+  const input = document.getElementById("income-customer-search");
+  const rect = input.getBoundingClientRect();
+  const el = document.getElementById("income-customer-list");
+  el.style.top = (rect.bottom + 2) + "px";
+  el.style.left = rect.left + "px";
+  el.style.width = rect.width + "px";
+}
+
 function filterIncomeCustomers(q) {
   const filtered = q.trim() ? customers.filter(c=>c.name.includes(q.trim())) : customers;
   _renderIncomeCustomerList(filtered);
+  _positionIncomeCustomerList();
   document.getElementById("income-customer-list").style.display = "";
 }
 
 function showIncomeCustomerList(q) {
   const filtered = q.trim() ? customers.filter(c=>c.name.includes(q.trim())) : customers;
   _renderIncomeCustomerList(filtered);
+  _positionIncomeCustomerList();
   document.getElementById("income-customer-list").style.display = "";
 }
 
