@@ -1816,7 +1816,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="card" style="margin-top:16px;padding:0;overflow:hidden;" id="income-table-wrap">
       <div style="padding:16px 20px 0;font-size:13px;font-weight:700;">전체 내역</div>
       <table>
-        <thead><tr><th>날짜</th><th>구분</th><th>카테고리</th><th>내용</th><th>금액</th><th></th></tr></thead>
+        <thead><tr><th>날짜</th><th>구분</th><th>카테고리</th><th>내용</th><th>연결고객</th><th>금액</th><th></th></tr></thead>
         <tbody id="income-tbody"></tbody>
       </table>
     </div>
@@ -7738,9 +7738,15 @@ toggleProspectFields();
     </div>
     <div class="form-group">
       <label>연결 고객 <span style="font-size:11px;font-weight:400;color:var(--text2);">선택사항</span></label>
-      <select id="income-customer">
-        <option value="">— 없음</option>
-      </select>
+      <div style="position:relative;">
+        <input type="text" id="income-customer-search" placeholder="이름으로 검색..." autocomplete="off"
+          oninput="filterIncomeCustomers(this.value)"
+          onfocus="showIncomeCustomerList(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('income-customer-list');if(d)d.style.display='none';},150)"
+          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--bg1);color:var(--text1);">
+        <input type="hidden" id="income-customer-id">
+        <div id="income-customer-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg1);border:1px solid var(--border);border-radius:8px;margin-top:2px;max-height:180px;overflow-y:auto;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,0.14);"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('income')">취소</button>
@@ -9814,7 +9820,7 @@ function renderIncomePage() {
   } else {
     const tbody = document.getElementById("income-tbody");
     tbody.innerHTML = !sorted.length
-      ? `<tr><td colspan="6"><div class="empty"><span>💵</span>내역 없음</div></td></tr>`
+      ? `<tr><td colspan="7"><div class="empty"><span>💵</span>내역 없음</div></td></tr>`
       : sorted.map(r => {
           const col = r.type==="수익" ? "var(--green)" : "var(--red)";
           const cname = r.cid ? (customers.find(c=>c.id===r.cid)?.name||"-") : "-";
@@ -9823,6 +9829,7 @@ function renderIncomePage() {
             <td><span style="padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;background:${r.type==="수익"?"#d1fae5":"#fee2e2"};color:${r.type==="수익"?"#065f46":"#991b1b"};">${r.type}</span></td>
             <td><span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${incomeCatColor[r.category]||"#e2e8f0"}22;color:${incomeCatColor[r.category]||"#64748b"};">${r.category}</span></td>
             <td>${r.memo||"-"}</td>
+            <td style="font-size:12px;color:var(--text2);">${cname}</td>
             <td style="font-weight:800;color:${col};">${r.type==="수익"?"+":"-"}${r.amount.toLocaleString()}원</td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red);" onclick="event.stopPropagation();deleteIncome(${r.id})">🗑️</button></td>
           </tr>`;
@@ -9839,9 +9846,9 @@ function openIncomeModal() {
   document.getElementById("income-memo").value = "";
   document.querySelector("input[name=income-type][value=수익]").checked = true;
   updateIncomeCategories();
-  const sel = document.getElementById("income-customer");
-  sel.innerHTML = `<option value="">— 없음</option>` +
-    customers.map(c=>`<option value="${c.id}">${c.name} (${c.type})</option>`).join("");
+  document.getElementById("income-customer-search").value = "";
+  document.getElementById("income-customer-id").value = "";
+  document.getElementById("income-customer-list").style.display = "none";
   openModal("income");
 }
 
@@ -9856,9 +9863,10 @@ function openEditIncome(id) {
   document.getElementById("income-category").value = r.category;
   document.getElementById("income-amount").value = r.amount;
   document.getElementById("income-memo").value = r.memo||"";
-  const sel = document.getElementById("income-customer");
-  sel.innerHTML = `<option value="">— 없음</option>` +
-    customers.map(c=>`<option value="${c.id}"${c.id===r.cid?" selected":""}>${c.name} (${c.type})</option>`).join("");
+  const linkedCust = r.cid ? customers.find(c=>c.id==r.cid) : null;
+  document.getElementById("income-customer-search").value = linkedCust ? linkedCust.name : "";
+  document.getElementById("income-customer-id").value = r.cid || "";
+  document.getElementById("income-customer-list").style.display = "none";
   openModal("income");
 }
 
@@ -9868,14 +9876,47 @@ function updateIncomeCategories() {
   sel.innerHTML = incomeCats[type].map(c=>`<option>${c}</option>`).join("");
 }
 
+function filterIncomeCustomers(q) {
+  const filtered = q.trim() ? customers.filter(c=>c.name.includes(q.trim())) : customers;
+  _renderIncomeCustomerList(filtered);
+  document.getElementById("income-customer-list").style.display = "";
+}
+
+function showIncomeCustomerList(q) {
+  const filtered = q.trim() ? customers.filter(c=>c.name.includes(q.trim())) : customers;
+  _renderIncomeCustomerList(filtered);
+  document.getElementById("income-customer-list").style.display = "";
+}
+
+function _renderIncomeCustomerList(list) {
+  const el = document.getElementById("income-customer-list");
+  const noneHtml = `<div onmousedown="selectIncomeCustomer('')" style="padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">— 없음 (연결 해제)</div>`;
+  const itemsHtml = list.length
+    ? list.map(c => {
+        const badge = c.type==="가입"
+          ? `<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#d1fae5;color:#065f46;margin-left:5px;">가입</span>`
+          : `<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#ede9fe;color:#6d28d9;margin-left:5px;">가망</span>`;
+        return `<div onmousedown="selectIncomeCustomer(${c.id})" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">${c.name}${badge}</div>`;
+      }).join("")
+    : `<div style="padding:8px 12px;font-size:13px;color:var(--text2);">검색 결과 없음</div>`;
+  el.innerHTML = noneHtml + itemsHtml;
+}
+
+function selectIncomeCustomer(id) {
+  const cust = id ? customers.find(c=>c.id==id) : null;
+  document.getElementById("income-customer-id").value = id || "";
+  document.getElementById("income-customer-search").value = cust ? cust.name : "";
+  document.getElementById("income-customer-list").style.display = "none";
+}
+
 function saveIncome() {
   const type     = document.querySelector("input[name=income-type]:checked").value;
   const date     = document.getElementById("income-date").value;
   const category = document.getElementById("income-category").value;
   const amount   = parseInt(document.getElementById("income-amount").value);
   const memo     = document.getElementById("income-memo").value.trim();
-  const cidVal   = document.getElementById("income-customer").value;
-  const cid      = cidVal ? parseInt(cidVal) : null;
+  const cidVal   = document.getElementById("income-customer-id").value;
+  const cid      = cidVal ? Number(cidVal) : null;
 
   if(!date || !amount || isNaN(amount)) { alert("날짜와 금액을 입력하세요."); return; }
 
