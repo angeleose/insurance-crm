@@ -1827,9 +1827,12 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
 
   <!-- EXPERIENCE PAGE -->
   <div class="page" id="page-experience">
-    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
       <div><h2>🎯 체험단 관리</h2><p>업체별 AI 블로그 · 인스타 릴스 · 유튜브 숏츠를 바로 생성하세요.</p></div>
-      <button class="btn btn-primary" onclick="openAddExperience()">+ 업체 추가</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openQuickExpAi()">✨ AI 글쓰기</button>
+        <button class="btn btn-ghost" onclick="openAddExperience()">+ 업체 저장</button>
+      </div>
     </div>
     <div id="experience-list"></div>
   </div>
@@ -7819,9 +7822,42 @@ toggleProspectFields();
 
 <!-- MODAL: EXPERIENCE AI -->
 <div class="modal-overlay" id="modal-exp-ai">
-  <div class="modal-box" style="width:600px;max-height:85vh;overflow-y:auto;">
-    <h3 id="exp-ai-title">🤖 AI 콘텐츠 생성</h3>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+  <div class="modal-box" style="width:620px;max-height:88vh;overflow-y:auto;">
+    <h3 id="exp-ai-title">✨ AI 콘텐츠 생성</h3>
+
+    <!-- 업체 정보 입력 (퀵 모드일 때 표시) -->
+    <div id="exp-ai-info-form" style="background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">업체명 *</label>
+          <input type="text" id="exp-ai-biz" placeholder="예: 스타벅스 강남점" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">카테고리</label>
+          <select id="exp-ai-cat" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+            <option>맛집/카페</option><option>뷰티/화장품</option><option>여행/숙소</option>
+            <option>제품/쇼핑</option><option>공연/전시</option><option>운동/스포츠</option><option>교육/체험</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">글쓰기 톤</label>
+        <select id="exp-ai-tone" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+          <option value="따뜻하고 감성적인">감성적</option>
+          <option value="유쾌하고 재미있는">유쾌한</option>
+          <option value="전문적이고 신뢰감 있는">전문적</option>
+          <option value="솔직하고 담백한">솔직한</option>
+          <option value="MZ 감성의 트렌디한">트렌디</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">체험 메모 <span style="font-weight:400;">(선택)</span></label>
+        <textarea id="exp-ai-memo" rows="2" placeholder="맛있었던 메뉴, 분위기, 특이사항 등 자유롭게..." style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;background:var(--bg1);color:var(--text1);"></textarea>
+      </div>
+    </div>
+
+    <!-- 플랫폼 탭 -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
       <button id="exp-tab-blog" class="btn btn-primary btn-sm" onclick="switchExpAiTab('blog')">📝 네이버 블로그</button>
       <button id="exp-tab-insta" class="btn btn-ghost btn-sm" onclick="switchExpAiTab('insta')">📸 인스타그램</button>
       <button id="exp-tab-youtube" class="btn btn-ghost btn-sm" onclick="switchExpAiTab('youtube')">🎬 유튜브 숏츠</button>
@@ -10120,12 +10156,31 @@ function deleteExperience(id) {
   autoSave();
 }
 
+function openQuickExpAi() {
+  expAiItem = null;
+  expAiContent = { blog:'', insta:'', youtube:'' };
+  document.getElementById('exp-ai-title').textContent = '✨ AI 콘텐츠 생성';
+  document.getElementById('exp-ai-biz').value = '';
+  document.getElementById('exp-ai-cat').value = '맛집/카페';
+  document.getElementById('exp-ai-tone').value = '따뜻하고 감성적인';
+  document.getElementById('exp-ai-memo').value = '';
+  document.getElementById('exp-ai-info-form').style.display = '';
+  _renderExpAiAreas();
+  switchExpAiTab('blog');
+  openModal('exp-ai');
+}
+
 function openExpAi(id) {
   const item = experienceItems.find(x=>x.id===id);
   if (!item) return;
   expAiItem = item;
   expAiContent = { blog:'', insta:'', youtube:'' };
-  document.getElementById('exp-ai-title').textContent = `🤖 ${item.bizName} — AI 콘텐츠`;
+  document.getElementById('exp-ai-title').textContent = `✨ ${item.bizName} — AI 콘텐츠`;
+  document.getElementById('exp-ai-biz').value = item.bizName;
+  document.getElementById('exp-ai-cat').value = item.category;
+  document.getElementById('exp-ai-tone').value = item.tone;
+  document.getElementById('exp-ai-memo').value = item.memo || '';
+  document.getElementById('exp-ai-info-form').style.display = '';
   _renderExpAiAreas();
   switchExpAiTab('blog');
   openModal('exp-ai');
@@ -10161,8 +10216,11 @@ function _renderExpAiAreas() {
 }
 
 async function generateExpContent(platform) {
-  if (!expAiItem) return;
-  const { bizName, category, tone, memo } = expAiItem;
+  const bizName = document.getElementById('exp-ai-biz').value.trim();
+  if (!bizName) { alert('업체명을 입력하세요.'); return; }
+  const category = document.getElementById('exp-ai-cat').value;
+  const tone = document.getElementById('exp-ai-tone').value;
+  const memo = document.getElementById('exp-ai-memo').value.trim();
   const area = document.getElementById(`exp-ai-area-${platform}`);
   const labels = {blog:'블로그',insta:'인스타그램',youtube:'유튜브 숏츠'};
   area.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2);">⏳ ${labels[platform]} 글 생성 중...</div>`;
