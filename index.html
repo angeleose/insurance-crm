@@ -988,6 +988,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="sb-section" style="margin-top:6px">정보</div>
     <div class="nav-item" data-page="board" onclick="closeMobileDrawer()"><span class="icon">📌</span> 정보게시판</div>
     <div class="nav-item" data-page="income" onclick="closeMobileDrawer()"><span class="icon">💵</span> 수익 관리</div>
+    <div class="nav-item" data-page="experience" onclick="closeMobileDrawer()"><span class="icon">🎯</span> 체험단 관리</div>
     <div class="sb-section" style="margin-top:6px">시스템</div>
     <div class="nav-item" data-page="settings" onclick="closeMobileDrawer()"><span class="icon">⚙️</span> 설정</div>
     <div class="nav-item" data-page="backlog" onclick="closeMobileDrawer();openBacklogWithAuth()"><span class="icon">🗂️</span> 개발 백로그</div>
@@ -1083,6 +1084,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="sb-group" id="sbg-info">
       <div class="nav-item" data-page="board"><span class="icon">📌</span> 정보게시판</div>
       <div class="nav-item" data-page="income"><span class="icon">💵</span> 수익 관리</div>
+      <div class="nav-item" data-page="experience"><span class="icon">🎯</span> 체험단 관리</div>
     </div>
 
     <div class="sb-section" style="margin-top:6px">시스템</div>
@@ -1821,6 +1823,15 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       </table>
     </div>
     <div id="income-mob-list" style="display:none;"></div>
+  </div>
+
+  <!-- EXPERIENCE PAGE -->
+  <div class="page" id="page-experience">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><h2>🎯 체험단 관리</h2><p>업체별 AI 블로그 · 인스타 릴스 · 유튜브 숏츠를 바로 생성하세요.</p></div>
+      <button class="btn btn-primary" onclick="openAddExperience()">+ 업체 추가</button>
+    </div>
+    <div id="experience-list"></div>
   </div>
 
   <!-- BACKLOG PAGE -->
@@ -2957,6 +2968,7 @@ const incomeCatColor = {
 };
 
 let customers = [];
+let experienceItems = [];
 
 // ─── 알림 규칙 설정 ───────────────────────────────────────
 // 알림 규칙 배열 — type: 'builtin'(기본) / 'custom_rule'(사용자 추가)
@@ -3755,6 +3767,7 @@ function showPage(name, pushHistory=true){
   if(name==="consultations")renderConsultations();
   if(name==="board")renderBoard();
   if(name==="income")renderIncomePage();
+  if(name==="experience")renderExperiencePage();
   if(name==="calendar")renderCalendar();
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
@@ -5546,7 +5559,7 @@ function deduplicateContracts() {
 async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
-  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = [];
+  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 전체 데이터가 초기화되었습니다.");
@@ -7537,6 +7550,7 @@ async function saveToFirestore() {
     calEvents,
     msgTemplates,
     myContacts,
+    experienceItems,
     updatedAt: new Date().toISOString()
   }));
   showSyncToast("💾 저장 중...", false, true);
@@ -7571,6 +7585,7 @@ async function loadFromFirestore() {
       if (p.backlogItems)    backlogItems    = p.backlogItems;
       if (p.calEvents)       calEvents       = p.calEvents;
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
+      if (p.experienceItems) experienceItems = p.experienceItems;
       // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
@@ -7751,6 +7766,71 @@ toggleProspectFields();
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('income')">취소</button>
       <button class="btn btn-primary" id="income-modal-btn" onclick="saveIncome()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXPERIENCE ADD/EDIT -->
+<div class="modal-overlay" id="modal-experience">
+  <div class="modal-box" style="width:480px;">
+    <h3 id="exp-modal-title">🎯 업체 추가</h3>
+    <div class="form-group">
+      <label>업체명 *</label>
+      <input type="text" id="exp-biz-name" placeholder="예: 강남 스타벅스 리저브, 이니스프리 홍대점">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group">
+        <label>카테고리 *</label>
+        <select id="exp-category">
+          <option>맛집/카페</option>
+          <option>뷰티/화장품</option>
+          <option>여행/숙소</option>
+          <option>제품/쇼핑</option>
+          <option>공연/전시</option>
+          <option>운동/스포츠</option>
+          <option>교육/체험</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>날짜</label>
+        <input type="date" id="exp-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>글쓰기 톤</label>
+      <select id="exp-tone">
+        <option value="따뜻하고 감성적인">감성적</option>
+        <option value="유쾌하고 재미있는">유쾌한</option>
+        <option value="전문적이고 신뢰감 있는">전문적</option>
+        <option value="솔직하고 담백한">솔직한</option>
+        <option value="MZ 감성의 트렌디한">트렌디</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>체험 메모 <span style="font-size:11px;font-weight:400;color:var(--text2);">선택사항 — AI가 이 내용을 바탕으로 글을 씁니다</span></label>
+      <textarea id="exp-memo" rows="4" placeholder="맛있었던 메뉴, 분위기, 서비스, 특이사항 등 자유롭게 메모하세요..." style="resize:vertical;"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('experience')">취소</button>
+      <button class="btn btn-primary" onclick="saveExperience()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXPERIENCE AI -->
+<div class="modal-overlay" id="modal-exp-ai">
+  <div class="modal-box" style="width:600px;max-height:85vh;overflow-y:auto;">
+    <h3 id="exp-ai-title">🤖 AI 콘텐츠 생성</h3>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button id="exp-tab-blog" class="btn btn-primary btn-sm" onclick="switchExpAiTab('blog')">📝 네이버 블로그</button>
+      <button id="exp-tab-insta" class="btn btn-ghost btn-sm" onclick="switchExpAiTab('insta')">📸 인스타그램</button>
+      <button id="exp-tab-youtube" class="btn btn-ghost btn-sm" onclick="switchExpAiTab('youtube')">🎬 유튜브 숏츠</button>
+    </div>
+    <div id="exp-ai-area-blog"></div>
+    <div id="exp-ai-area-insta" style="display:none;"></div>
+    <div id="exp-ai-area-youtube" style="display:none;"></div>
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeModal('exp-ai')">닫기</button>
     </div>
   </div>
 </div>
@@ -9947,6 +10027,258 @@ function deleteIncome(id) {
   incomeRecords = incomeRecords.filter(x=>x.id!==id);
   renderIncomePage();
   autoSave();
+}
+// ──────────────────────────────────────────────────────────
+
+// ─── 체험단 관리 ──────────────────────────────────────────
+const _expCatColor = {'맛집/카페':'#ef4444','뷰티/화장품':'#ec4899','여행/숙소':'#3b82f6','제품/쇼핑':'#f59e0b','공연/전시':'#8b5cf6','운동/스포츠':'#10b981','교육/체험':'#0ea5e9'};
+let expEditId = null;
+let expAiItem = null;
+let expAiActiveTab = 'blog';
+let expAiContent = { blog:'', insta:'', youtube:'' };
+
+function renderExperiencePage() {
+  const list = document.getElementById('experience-list');
+  if (!list) return;
+  if (!experienceItems.length) {
+    list.innerHTML = `<div class="card"><div class="empty"><span>🎯</span>등록된 업체가 없어요. + 업체 추가를 눌러 시작하세요.</div></div>`;
+    return;
+  }
+  list.innerHTML = experienceItems.map(item => {
+    const col = _expCatColor[item.category] || '#64748b';
+    const memoHtml = item.memo ? `<div style="font-size:12px;color:var(--text2);margin-top:4px;white-space:pre-line;line-height:1.5;">${item.memo.slice(0,100)}${item.memo.length>100?'…':''}</div>` : '';
+    return `<div class="card" style="margin-bottom:12px;padding:16px 20px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
+            <strong style="font-size:15px;">${item.bizName}</strong>
+            <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${col}22;color:${col};font-weight:700;">${item.category}</span>
+            ${item.date?`<span style="font-size:11px;color:var(--text2);">${item.date}</span>`:''}
+          </div>
+          ${memoHtml}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openExpAi(${item.id})">🤖 AI 글쓰기</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditExperience(${item.id})">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="deleteExperience(${item.id})">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddExperience() {
+  expEditId = null;
+  document.getElementById('exp-modal-title').textContent = '🎯 업체 추가';
+  document.getElementById('exp-biz-name').value = '';
+  document.getElementById('exp-category').value = '맛집/카페';
+  document.getElementById('exp-tone').value = '따뜻하고 감성적인';
+  document.getElementById('exp-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('exp-memo').value = '';
+  openModal('experience');
+}
+
+function openEditExperience(id) {
+  const item = experienceItems.find(x=>x.id===id);
+  if (!item) return;
+  expEditId = id;
+  document.getElementById('exp-modal-title').textContent = '✏️ 업체 수정';
+  document.getElementById('exp-biz-name').value = item.bizName;
+  document.getElementById('exp-category').value = item.category;
+  document.getElementById('exp-tone').value = item.tone;
+  document.getElementById('exp-date').value = item.date || '';
+  document.getElementById('exp-memo').value = item.memo || '';
+  openModal('experience');
+}
+
+function saveExperience() {
+  const bizName = document.getElementById('exp-biz-name').value.trim();
+  if (!bizName) { alert('업체명을 입력하세요.'); return; }
+  const obj = {
+    bizName,
+    category: document.getElementById('exp-category').value,
+    tone: document.getElementById('exp-tone').value,
+    date: document.getElementById('exp-date').value,
+    memo: document.getElementById('exp-memo').value.trim(),
+  };
+  if (expEditId) {
+    const item = experienceItems.find(x=>x.id===expEditId);
+    if (item) Object.assign(item, obj);
+  } else {
+    obj.id = experienceItems.length ? Math.max(...experienceItems.map(x=>x.id))+1 : 1;
+    experienceItems.push(obj);
+  }
+  closeModal('experience');
+  renderExperiencePage();
+  autoSave();
+}
+
+function deleteExperience(id) {
+  if (!confirm('이 업체를 삭제할까요?')) return;
+  experienceItems = experienceItems.filter(x=>x.id!==id);
+  renderExperiencePage();
+  autoSave();
+}
+
+function openExpAi(id) {
+  const item = experienceItems.find(x=>x.id===id);
+  if (!item) return;
+  expAiItem = item;
+  expAiContent = { blog:'', insta:'', youtube:'' };
+  document.getElementById('exp-ai-title').textContent = `🤖 ${item.bizName} — AI 콘텐츠`;
+  _renderExpAiAreas();
+  switchExpAiTab('blog');
+  openModal('exp-ai');
+}
+
+function switchExpAiTab(tab) {
+  expAiActiveTab = tab;
+  ['blog','insta','youtube'].forEach(t => {
+    document.getElementById(`exp-tab-${t}`).className = t===tab ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+    document.getElementById(`exp-ai-area-${t}`).style.display = t===tab ? '' : 'none';
+  });
+}
+
+function _renderExpAiAreas() {
+  const labels = {blog:'블로그 글',insta:'인스타그램 글',youtube:'유튜브 숏츠 대본'};
+  const icons  = {blog:'📝',insta:'📸',youtube:'🎬'};
+  ['blog','insta','youtube'].forEach(t => {
+    const area = document.getElementById(`exp-ai-area-${t}`);
+    if (expAiContent[t]) {
+      area.innerHTML = `<div style="position:relative;">
+        <pre style="white-space:pre-wrap;font-size:13px;line-height:1.7;background:var(--bg2);padding:16px;border-radius:10px;max-height:360px;overflow-y:auto;font-family:inherit;">${expAiContent[t].replace(/&/g,'&amp;').replace(/</g,'&lt;')}</pre>
+        <button class="btn btn-ghost btn-sm" onclick="copyExpAiContent('${t}')" style="position:absolute;top:8px;right:8px;background:var(--bg1);">📋 복사</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%;" onclick="generateExpContent('${t}')">🔄 다시 생성</button>`;
+    } else {
+      area.innerHTML = `<div style="text-align:center;padding:36px 16px;">
+        <div style="font-size:40px;margin-bottom:12px;">${icons[t]}</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">${expAiItem ? expAiItem.bizName+' — '+expAiItem.category : ''}</p>
+        <button class="btn btn-primary" onclick="generateExpContent('${t}')">✨ ${labels[t]} 생성하기</button>
+      </div>`;
+    }
+  });
+}
+
+async function generateExpContent(platform) {
+  if (!expAiItem) return;
+  const { bizName, category, tone, memo } = expAiItem;
+  const area = document.getElementById(`exp-ai-area-${platform}`);
+  const labels = {blog:'블로그',insta:'인스타그램',youtube:'유튜브 숏츠'};
+  area.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2);">⏳ ${labels[platform]} 글 생성 중...</div>`;
+  let prompt;
+  if (platform==='blog') prompt = _expNaverPrompt(memo, category, tone, bizName);
+  else if (platform==='insta') prompt = _expInstaPrompt(memo, category, tone, bizName);
+  else prompt = _expYoutubePrompt(memo, category, tone, bizName);
+  try {
+    const result = await callGemini(prompt);
+    if (!result) return;
+    expAiContent[platform] = result;
+    _renderExpAiAreas();
+    switchExpAiTab(platform);
+  } catch(e) {
+    area.innerHTML = `<div style="color:var(--red);padding:16px;border-radius:10px;background:#fee2e2;">❌ 오류: ${e.message}</div>`;
+  }
+}
+
+function copyExpAiContent(platform) {
+  const text = expAiContent[platform];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(()=>showToast('📋 복사됐어요!'));
+}
+
+function _expNaverPrompt(memo, cat, tone, bizName) {
+  return `당신은 네이버 블로그 체험단 전문 작가입니다.
+업체명: ${bizName}
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo||'(메모 없음 — 업체명과 카테고리를 기반으로 작성하세요)'}
+
+다음 형식으로 작성하세요:
+
+[제목]
+(클릭을 유도하는 매력적인 제목 - 핵심 키워드 포함, 30자 이내)
+
+[본문]
+■ (소제목 1 - 방문 배경 또는 첫인상)
+(2-3문단, 감성적이고 생생하게)
+
+■ (소제목 2 - 주요 내용/메뉴/제품/서비스 상세)
+(2-3문단, 구체적인 묘사)
+
+■ (소제목 3 - 분위기/환경/특이사항)
+(1-2문단)
+
+■ 총평
+(별점: ★★★★☆ 또는 ★★★★★, 한줄 요약, 추천 대상)
+
+[해시태그]
+(관련 해시태그 20개 이상, # 포함, 공백으로 구분)
+
+※ 글자수는 800-1200자 사이로 작성하세요.
+※ 자연스럽고 진정성 있게, 과도한 광고성 표현은 피하세요.`;
+}
+
+function _expInstaPrompt(memo, cat, tone, bizName) {
+  return `당신은 인스타그램 체험단 인플루언서입니다.
+업체명: ${bizName}
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo||'(메모 없음 — 업체명과 카테고리를 기반으로 작성하세요)'}
+
+다음 형식으로 작성하세요:
+
+[첫줄 훅]
+(시선을 사로잡는 한 줄 - 이모지 포함, 질문/감탄/반전 활용)
+
+[본문]
+(3-5줄, 감성적이고 공감가는 내용, 적절한 이모지 사용)
+.
+.
+.
+
+[해시태그]
+(인기 해시태그 + 틈새 해시태그 혼합 25개 이상, # 포함)
+
+※ 전체 본문은 150-250자 이내로 간결하게 (해시태그 제외).
+※ MZ감성, 공감가는 표현 사용.`;
+}
+
+function _expYoutubePrompt(memo, cat, tone, bizName) {
+  return `당신은 유튜브 숏츠 전문 영상 작가입니다.
+업체명: ${bizName}
+카테고리: ${cat}
+글쓰기 톤: ${tone} 스타일
+체험 메모: ${memo||'(메모 없음 — 업체명과 카테고리를 기반으로 작성하세요)'}
+
+다음 형식으로 작성하세요:
+
+[영상 제목]
+(클릭률 높은 숏츠 제목, 30자 이내, 이모지 포함)
+
+[대본]
+🎬 [훅 - 0~3초]
+(첫 3초 안에 시청자를 사로잡는 강렬한 한마디)
+
+📍 [소개 - 4~10초]
+(장소/제품/서비스 한 줄 소개)
+
+✨ [핵심 포인트 1 - 11~25초]
+(가장 인상적인 포인트 설명)
+
+🔥 [핵심 포인트 2 - 26~40초]
+(두 번째 하이라이트)
+
+💬 [솔직 한마디 - 41~52초]
+(진솔한 총평, 누구에게 추천하는지)
+
+📢 [CTA - 53~60초]
+(구독/좋아요/저장 유도 멘트)
+
+[설명란 해시태그]
+(5-10개)
+
+※ 대본은 실제 말하는 것처럼 구어체로 작성하세요.`;
 }
 // ──────────────────────────────────────────────────────────
 
