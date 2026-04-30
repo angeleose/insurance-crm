@@ -1778,37 +1778,53 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
 
   <!-- INCOME MANAGEMENT -->
   <div class="page" id="page-income">
-    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
-      <div><h2>💵 수익 관리</h2><p>월별·분기별·연간 수익과 지출을 관리하세요.</p></div>
-      <button class="btn btn-primary" onclick="openIncomeModal()">+ 내역 추가</button>
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+      <div><h2>💰 수익·지출 관리</h2><p>월별·분기별·연간 수익과 지출을 관리하세요.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openIncomeModal()">📈 수익 추가</button>
+        <button class="btn btn-ghost" style="border-color:var(--red);color:var(--red);" onclick="openExpenseModal()">📉 지출 추가</button>
+      </div>
     </div>
 
     <!-- 기간 탭 -->
-    <div style="display:flex;gap:8px;margin-bottom:18px;" id="income-period-tabs">
+    <div style="display:flex;gap:8px;margin-bottom:10px;" id="income-period-tabs">
       <button class="filter-btn active" onclick="setIncomePeriod('monthly')">월별</button>
       <button class="filter-btn" onclick="setIncomePeriod('quarterly')">분기별</button>
       <button class="filter-btn" onclick="setIncomePeriod('yearly')">연간</button>
     </div>
 
+    <!-- 수익/지출 타입 필터 -->
+    <div style="display:flex;gap:6px;margin-bottom:18px;" id="income-type-filter-btns">
+      <button class="filter-btn active" onclick="setIncomeTypeFilter('all')">전체</button>
+      <button class="filter-btn" style="color:var(--green);" onclick="setIncomeTypeFilter('수익')">📈 수익</button>
+      <button class="filter-btn" style="color:var(--red);" onclick="setIncomeTypeFilter('지출')">📉 지출</button>
+    </div>
+
     <!-- 요약 카드 -->
     <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;" id="income-summary-cards"></div>
 
-    <!-- 월/분기 선택 -->
+    <!-- 월/분기/연도 선택 -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <button onclick="shiftIncomePeriod(-1)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:16px;">‹</button>
-      <span id="income-period-label" style="font-size:15px;font-weight:700;min-width:100px;text-align:center;"></span>
+      <span id="income-period-label" style="font-size:15px;font-weight:700;min-width:110px;text-align:center;"></span>
       <button onclick="shiftIncomePeriod(1)" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:16px;">›</button>
     </div>
+
+    <!-- 연간 월별 상세 테이블 (연간 모드에서만 표시) -->
+    <div id="income-yearly-breakdown" style="display:none;margin-bottom:16px;"></div>
+
+    <!-- 연간 차트 -->
+    <div id="income-yearly-chart" class="card" style="display:none;margin-bottom:16px;"></div>
 
     <!-- 수익 / 지출 카드 나란히 -->
     <div class="dash-grid" style="gap:16px;">
       <div class="card" id="income-in-card">
-        <div class="card-title" style="color:var(--green);">📈 수익</div>
+        <div class="card-title" style="color:var(--green);">📈 수익 카테고리별</div>
         <div id="income-in-list"></div>
         <div id="income-in-total" style="border-top:1.5px solid var(--border);margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:15px;"></div>
       </div>
       <div class="card" id="income-out-card">
-        <div class="card-title" style="color:var(--red);">📉 지출</div>
+        <div class="card-title" style="color:var(--red);">📉 지출 카테고리별</div>
         <div id="income-out-list"></div>
         <div id="income-out-total" style="border-top:1.5px solid var(--border);margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:15px;"></div>
       </div>
@@ -1816,7 +1832,9 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
 
     <!-- 내역 테이블 -->
     <div class="card" style="margin-top:16px;padding:0;overflow:hidden;" id="income-table-wrap">
-      <div style="padding:16px 20px 0;font-size:13px;font-weight:700;">전체 내역</div>
+      <div style="padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+        <span id="income-table-label" style="font-size:13px;font-weight:700;">전체 내역</span>
+      </div>
       <table>
         <thead><tr><th>날짜</th><th>구분</th><th>카테고리</th><th>내용</th><th>연결고객</th><th>금액</th><th></th></tr></thead>
         <tbody id="income-tbody"></tbody>
@@ -2959,15 +2977,16 @@ let incomePeriodMode = "monthly";
 let incomeYear = new Date().getFullYear();
 let incomeMonth = new Date().getMonth() + 1;
 let incomeQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+let incomeTypeFilter = "all";
 
 const incomeCats = {
-  "수익": ["월수입", "기타 수입"],
-  "지출": ["마케팅/광고비", "박람회", "DB", "교통비", "식비/미팅비", "교육비", "선물", "사무용품", "기타 지출"]
+  "수익": ["초회보험료", "수당", "정착지원금", "환급금", "월수입", "기타 수입"],
+  "지출": ["마케팅/광고비", "박람회", "DB", "교통비", "식비/미팅비", "교육비", "선물", "사무용품", "통신비", "기타 지출"]
 };
 const incomeCatColor = {
-  "월수입":"#10b981","기타 수입":"#3b82f6",
+  "초회보험료":"#10b981","수당":"#059669","정착지원금":"#0d9488","환급금":"#0891b2","월수입":"#3b82f6","기타 수입":"#6366f1",
   "마케팅/광고비":"#ef4444","박람회":"#e11d48","DB":"#0ea5e9","교통비":"#f97316","식비/미팅비":"#f59e0b",
-  "교육비":"#8b5cf6","선물":"#ec4899","사무용품":"#64748b","기타 지출":"#94a3b8"
+  "교육비":"#8b5cf6","선물":"#ec4899","사무용품":"#64748b","통신비":"#475569","기타 지출":"#94a3b8"
 };
 
 let customers = [];
@@ -9769,6 +9788,64 @@ function confirmDeletePost(id) {
 // incomeRecords moved to top
 
 
+function setIncomeTypeFilter(type) {
+  incomeTypeFilter = type;
+  document.querySelectorAll("#income-type-filter-btns .filter-btn").forEach((b, i) => {
+    b.classList.toggle("active", (type==="all"&&i===0)||(type==="수익"&&i===1)||(type==="지출"&&i===2));
+  });
+  renderIncomePage();
+}
+
+function openExpenseModal() {
+  openIncomeModal();
+  document.querySelector("input[name=income-type][value=지출]").checked = true;
+  updateIncomeCategories();
+  document.getElementById("income-modal-title").textContent = "📉 지출 추가";
+}
+
+function renderIncomeYearlyBreakdown() {
+  const months = Array.from({length:12},(_,i)=>i+1);
+  const rows = months.map(m => {
+    const mRecs = incomeRecords.filter(r => {
+      const d = new Date(r.date);
+      return d.getFullYear()===incomeYear && d.getMonth()+1===m;
+    });
+    const mIn  = mRecs.filter(r=>r.type==="수익").reduce((s,r)=>s+r.amount,0);
+    const mOut = mRecs.filter(r=>r.type==="지출").reduce((s,r)=>s+r.amount,0);
+    const mNet = mIn - mOut;
+    return { m, mIn, mOut, mNet };
+  });
+  const totalIn  = rows.reduce((s,r)=>s+r.mIn,0);
+  const totalOut = rows.reduce((s,r)=>s+r.mOut,0);
+  const totalNet = totalIn - totalOut;
+
+  return `<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:16px 20px 12px;font-size:13px;font-weight:700;">📅 ${incomeYear}년 월별 상세</div>
+    <table>
+      <thead><tr>
+        <th>월</th>
+        <th style="color:var(--green);">수익</th>
+        <th style="color:var(--red);">지출</th>
+        <th>순이익</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r=>`<tr style="opacity:${r.mIn||r.mOut?1:0.35};">
+          <td style="font-weight:600;color:var(--text2);">${r.m}월</td>
+          <td style="color:var(--green);font-weight:700;">${r.mIn?"+"+r.mIn.toLocaleString()+"원":"-"}</td>
+          <td style="color:var(--red);">${r.mOut?r.mOut.toLocaleString()+"원":"-"}</td>
+          <td style="font-weight:800;color:${r.mNet>=0?"var(--green)":"var(--red)"};">${r.mIn||r.mOut?(r.mNet>=0?"+":"")+r.mNet.toLocaleString()+"원":"-"}</td>
+        </tr>`).join("")}
+        <tr style="font-weight:800;background:var(--bg2);">
+          <td>합계</td>
+          <td style="color:var(--green);">+${totalIn.toLocaleString()}원</td>
+          <td style="color:var(--red);">${totalOut.toLocaleString()}원</td>
+          <td style="color:${totalNet>=0?"var(--green)":"var(--red)"};">${totalNet>=0?"+":""}${totalNet.toLocaleString()}원</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
 function setIncomePeriod(mode) {
   incomePeriodMode = mode;
   document.querySelectorAll("#income-period-tabs .filter-btn").forEach((b,i) => {
@@ -9861,24 +9938,18 @@ function renderIncomePage() {
   document.getElementById("income-in-total").innerHTML  = totalIn  ? `<span>합계</span><span style="color:var(--green);">${totalIn.toLocaleString()}원</span>`  : "";
   document.getElementById("income-out-total").innerHTML = totalOut ? `<span>합계</span><span style="color:var(--red);">${totalOut.toLocaleString()}원</span>` : "";
 
-  // 연간 모드: 월별 추이 차트
+  // 연간 모드: 월별 상세 테이블 + 차트
+  const yBreakdown = document.getElementById("income-yearly-breakdown");
   const yearlyChart = document.getElementById("income-yearly-chart");
   if(incomePeriodMode === "yearly") {
-    if(!yearlyChart) {
-      // 차트 컨테이너가 없으면 동적 생성
-      const chartDiv = document.createElement("div");
-      chartDiv.id = "income-yearly-chart";
-      chartDiv.className = "card";
-      chartDiv.style.marginTop = "16px";
-      document.getElementById("page-income").insertBefore(chartDiv, document.getElementById("income-table-wrap"));
-    }
+    yBreakdown.innerHTML = renderIncomeYearlyBreakdown();
+    yBreakdown.style.display = "";
     const months = Array.from({length:12},(_,i)=>i+1);
     const monthIn  = months.map(m => incomeRecords.filter(r=>r.type==="수익"&&new Date(r.date).getFullYear()===incomeYear&&new Date(r.date).getMonth()+1===m).reduce((s,r)=>s+r.amount,0));
     const monthOut = months.map(m => incomeRecords.filter(r=>r.type==="지출"&&new Date(r.date).getFullYear()===incomeYear&&new Date(r.date).getMonth()+1===m).reduce((s,r)=>s+r.amount,0));
     const maxVal = Math.max(...monthIn, ...monthOut, 1);
-    const barW = 100/12;
-    document.getElementById("income-yearly-chart").innerHTML = `
-      <div class="card-title">📅 ${incomeYear}년 월별 추이</div>
+    yearlyChart.innerHTML = `
+      <div class="card-title">📊 ${incomeYear}년 월별 추이</div>
       <div style="display:flex;align-items:flex-end;gap:4px;height:120px;padding-bottom:4px;">
         ${months.map((m,i)=>{
           const inH  = Math.round(monthIn[i]/maxVal*100);
@@ -9895,12 +9966,17 @@ function renderIncomePage() {
       <div style="display:flex;gap:12px;margin-top:8px;font-size:11px;font-weight:700;">
         <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block;"></span>수익</span>
         <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;background:var(--red);border-radius:2px;display:inline-block;"></span>지출</span>
-      </div>
-    `;
-    document.getElementById("income-yearly-chart").style.display = "";
+      </div>`;
+    yearlyChart.style.display = "";
   } else {
-    if(yearlyChart) yearlyChart.style.display = "none";
+    yBreakdown.style.display = "none";
+    yearlyChart.style.display = "none";
   }
+
+  // 내역 테이블 라벨
+  const labelMap = {"all":"전체 내역","수익":"📈 수익 내역","지출":"📉 지출 내역"};
+  const tblLabel = document.getElementById("income-table-label");
+  if(tblLabel) tblLabel.textContent = labelMap[incomeTypeFilter]||"전체 내역";
 
   // 테이블/모바일 카드
   const isMob = window.innerWidth <= 1024;
@@ -9909,7 +9985,10 @@ function renderIncomePage() {
   if(tableWrap) tableWrap.style.display = isMob ? "none" : "";
   if(mobList)   mobList.style.display   = isMob ? "" : "none";
 
-  const sorted = [...records].sort((a,b) => new Date(b.date)-new Date(a.date));
+  // 타입 필터 적용
+  const sorted = [...records]
+    .filter(r => incomeTypeFilter==="all" || r.type===incomeTypeFilter)
+    .sort((a,b) => new Date(b.date)-new Date(a.date));
 
   if(isMob) {
     mobList.innerHTML = !sorted.length
