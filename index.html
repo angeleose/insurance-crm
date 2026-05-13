@@ -2013,6 +2013,16 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;">
+      <div class="card-title">🏷️ 상담 단계 관리</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">단계명을 직접 수정하거나, 추가·삭제·순서 변경이 가능합니다.</p>
+      <div id="stage-setting-list"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <input type="text" id="new-stage-input" placeholder="새 단계명 입력..." onkeydown="if(event.key==='Enter')addCustomStage()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        <button class="btn btn-primary btn-sm" onclick="addCustomStage()">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;">
       <div class="card-title">📥 데이터 다운로드</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
         현재 CRM 데이터를 엑셀 파일로 다운로드합니다.<br>
@@ -2989,6 +2999,19 @@ const incomeCatColor = {
   "교육비":"#8b5cf6","선물":"#ec4899","사무용품":"#64748b","통신비":"#475569","기타 지출":"#94a3b8"
 };
 
+let customStages = ["초기접촉","니즈파악","설계중","계약검토"];
+const stagePalette = [
+  {bg:"#f0fdf4",color:"#15803d"},{bg:"#fef9c3",color:"#854d0e"},
+  {bg:"#fff7ed",color:"#c2410c"},{bg:"#fdf4ff",color:"#7e22ce"},
+  {bg:"#eff6ff",color:"#1d4ed8"},{bg:"#fdf2f8",color:"#9d174d"},
+  {bg:"#f0fdfa",color:"#0f766e"},{bg:"#fefce8",color:"#92400e"},
+];
+function getStageStyle(name){
+  const idx=customStages.indexOf(name);
+  if(idx<0) return "background:#f1f5f9;color:#64748b;";
+  const p=stagePalette[idx%stagePalette.length];
+  return `background:${p.bg};color:${p.color};`;
+}
 let customers = [];
 let experienceItems = [];
 
@@ -3028,6 +3051,72 @@ const fmtW=n=>n>=10000?(n/10000).toFixed(0)+"만":n.toLocaleString();
 const tagCls=t=>({VIP:"tag-vip",신규:"tag-new",갱신예정:"tag-renew",전환상담:"tag-convert",만기예정:"tag-expire"}[t]||"");
 const renderTags=tags=>(tags||[]).map(t=>`<span class="tag ${tagCls(t)}">${t}</span>`).join(" ");
 const stCls=s=>`stage-${s||"초기접촉"}`;
+
+function populateStageSelects(currentVal){
+  const opts = customStages.map(s=>`<option value="${s}">${s}</option>`).join("");
+  ["nc-stage","us-stage","ei-stage"].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cur=currentVal||el.value;
+    el.innerHTML=opts;
+    if(cur && customStages.includes(cur)) el.value=cur;
+  });
+}
+
+function renderStageSettings(){
+  const list=document.getElementById("stage-setting-list"); if(!list) return;
+  if(!customStages.length){ list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:8px 0;">단계가 없습니다.</div>`; return; }
+  list.innerHTML=customStages.map((s,i)=>{
+    const p=stagePalette[i%stagePalette.length];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+      <span style="width:11px;height:11px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
+      <input type="text" value="${s.replace(/"/g,'&quot;')}"
+        onblur="renameCustomStage(${i},this.value.trim())"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--bg1);color:var(--text1);">
+      <button onclick="moveCustomStage(${i},-1)" ${i===0?"disabled":""} title="위로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↑</button>
+      <button onclick="moveCustomStage(${i},1)" ${i===customStages.length-1?"disabled":""} title="아래로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↓</button>
+      <button onclick="deleteCustomStage(${i})" title="삭제" style="background:none;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--red);">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function addCustomStage(){
+  const input=document.getElementById("new-stage-input");
+  const name=input.value.trim();
+  if(!name){alert("단계명을 입력하세요.");return;}
+  if(customStages.includes(name)){alert("이미 있는 단계입니다.");return;}
+  customStages.push(name);
+  input.value="";
+  renderStageSettings(); populateStageSelects(); autoSave();
+}
+
+function renameCustomStage(idx, newName){
+  if(!newName||!customStages[idx]||newName===customStages[idx]) return;
+  if(customStages.includes(newName)){showToast("이미 있는 단계명이에요."); return;}
+  const oldName=customStages[idx];
+  customStages[idx]=newName;
+  customers.filter(c=>c.stage===oldName).forEach(c=>c.stage=newName);
+  renderStageSettings(); populateStageSelects(); autoSave();
+}
+
+function deleteCustomStage(idx){
+  const name=customStages[idx];
+  const count=customers.filter(c=>c.stage===name).length;
+  const msg=count
+    ? `"${name}" 단계를 삭제할까요?\n이 단계의 고객 ${count}명은 "${customStages[0]||""}" 단계로 변경됩니다.`
+    : `"${name}" 단계를 삭제할까요?`;
+  if(!confirm(msg)) return;
+  if(count && customStages[0]) customers.filter(c=>c.stage===name).forEach(c=>c.stage=customStages[0]);
+  customStages.splice(idx,1);
+  renderStageSettings(); populateStageSelects(); renderProspects(); autoSave();
+}
+
+function moveCustomStage(idx, dir){
+  const ni=idx+dir;
+  if(ni<0||ni>=customStages.length) return;
+  [customStages[idx],customStages[ni]]=[customStages[ni],customStages[idx]];
+  renderStageSettings(); populateStageSelects(); autoSave();
+}
 
 
 
@@ -3773,6 +3862,7 @@ function showPage(name, pushHistory=true){
   clearAllFilters();
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
+    renderStageSettings();
     const emailEl = document.getElementById("setting-user-email");
     if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
   }
@@ -4302,7 +4392,7 @@ function renderDashboard(){
       `🌱 가망 고객 현황${prInPeriod.length?"  ("+periodLabel+" 신규)":""}`);
   document.getElementById("dash-prospects").innerHTML = !prFiltered.length
     ? '<div class="empty"><span>🌱</span>가망 고객 없음</div>'
-    : prFiltered.slice(0,5).map(c=>`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.regDate||""} · ${c.interest||"-"}</p></div><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></div>`).join("");
+    : prFiltered.slice(0,5).map(c=>`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${c.id})">${c.name}</h4><p>${c.regDate||""} · ${c.interest||"-"}</p></div><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div>`).join("");
 }
 
 let enrolledPage = 1;
@@ -4494,7 +4584,7 @@ function renderEnrolledPagination(totalPages, total) {
 }
 
 function renderProspects(){
-  const stages=["전체","초기접촉","니즈파악","설계중","계약검토"];
+  const stages=["전체",...customStages];
   const sources=["전체","펫박람회","태아박람회","DB","SNS","광고","산모교실"];
   document.getElementById("stage-filters").innerHTML=
     stages.map(s=>`<button class="filter-btn ${s===activeStageFilter?"active":""}" onclick="activeStageFilter='${s}';renderProspects()">${s}</button>`).join("")+
@@ -4507,7 +4597,7 @@ function renderProspects(){
     (activeSourceFilter==="전체"||(c.source||"")=== activeSourceFilter)
   );
   // 정렬
-  const stageOrder = {"초기접촉":1,"니즈파악":2,"설계중":3,"계약검토":4};
+  const stageOrder = Object.fromEntries(customStages.map((s,i)=>[s,i+1]));
   list.sort((a,b)=>{
     switch(prospectSort){
       case "regDate_asc": return (a.regDate||"").localeCompare(b.regDate||"");
@@ -4531,8 +4621,9 @@ function renderProspects(){
         ? `<div class="empty"><span>🌱</span>가망 고객 없음</div>`
         : list.map(c=>{
             const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());
-            const stageMap={"초기접촉":["#f0fdf4","#15803d"],"니즈파악":["#fef9c3","#854d0e"],"설계중":["#fff7ed","#c2410c"],"계약검토":["#fdf4ff","#7e22ce"]};
-            const [stBg,stCol]=stageMap[c.stage||"초기접촉"]||["#f1f5f9","#64748b"];
+            const _si=customStages.indexOf(c.stage||customStages[0]||"초기접촉");
+            const _sp=stagePalette[_si>=0?_si%stagePalette.length:0]||{bg:"#f1f5f9",color:"#64748b"};
+            const [stBg,stCol]=[_sp.bg,_sp.color];
             return `<div class="mob-card" onclick="goToDetail(${c.id})">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
                 <div class="avatar 가망" style="width:42px;height:42px;font-size:17px;flex-shrink:0;">${c.name[0]}</div>
@@ -4554,7 +4645,7 @@ function renderProspects(){
     }
   } else {
     document.getElementById("prospect-tbody").innerHTML=!list.length?`<tr><td colspan="8"><div class="empty"><span>🌱</span>가망 고객 없음</div></td></tr>`:
-      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
+      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
   }
 }
 
@@ -4566,7 +4657,7 @@ function renderDetail(id){
   document.getElementById("det-avatar").className=`avatar ${c.type}`;
   document.getElementById("det-name").textContent=c.name;
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
-  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span>`:""}${renderTags(c.tags)}`;
+  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${renderTags(c.tags)}`;
   const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
   document.getElementById("det-actions").innerHTML=isPr?
     `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
@@ -4582,7 +4673,7 @@ function renderDetail(id){
   const memoViewEl = document.getElementById("det-memo-view");
   if(memoViewEl && !c.customerMemo) memoViewEl.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
 
-  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge ${stCls(c.stage)}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div></div></div>`:"";
+  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div></div></div>`:"";
   document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
@@ -5582,6 +5673,7 @@ async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
+  customStages = ["초기접촉","니즈파악","설계중","계약검토"];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 전체 데이터가 초기화되었습니다.");
@@ -7573,6 +7665,7 @@ async function saveToFirestore() {
     msgTemplates,
     myContacts,
     experienceItems,
+    customStages,
     updatedAt: new Date().toISOString()
   }));
   showSyncToast("💾 저장 중...", false, true);
@@ -7608,6 +7701,7 @@ async function loadFromFirestore() {
       if (p.calEvents)       calEvents       = p.calEvents;
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
       if (p.experienceItems) experienceItems = p.experienceItems;
+      if (p.customStages && p.customStages.length) customStages = p.customStages;
       // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
@@ -7634,6 +7728,7 @@ async function loadFromFirestore() {
     showSyncToast("❌ 불러오기 실패: " + e.message, true);
   } finally {
     const initPage = location.hash.slice(1) || "dashboard";
+    populateStageSelects();
     showPage(document.getElementById("page-"+initPage) ? initPage : "dashboard");
     updateSidebar();
   }
