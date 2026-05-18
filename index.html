@@ -4682,11 +4682,8 @@ function renderDetail(id){
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
   document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${isPr&&c.isFailed?`<span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ 실패 · ${c.failCategory||""}</span>`:""}${renderTags(c.tags)}`;
   const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
-  const failBtn=isPr?(c.isFailed
-    ?`<button class="btn btn-ghost btn-sm" onclick="clearFailReason()" style="border-color:#fca5a5;color:#ef4444;">↩ 실패 취소</button>`
-    :`<button class="btn btn-ghost btn-sm" onclick="openFailModal()" style="border-color:#fca5a5;color:#ef4444;">❌ 실패 처리</button>`):"";
   document.getElementById("det-actions").innerHTML=isPr?
-    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${failBtn}${scanBtn}`:
+    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
     `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`;
   document.getElementById("det-convert-banner").innerHTML=isPr?`<div class="convert-banner"><p>🎉 계약이 성사됐나요? 가입 고객으로 전환하면 계약 정보를 관리할 수 있어요.</p><button class="btn btn-primary btn-sm" onclick="openModal('convert')">전환하기</button></div>`:"";
   // 메모 렌더
@@ -4699,7 +4696,27 @@ function renderDetail(id){
   const memoViewEl = document.getElementById("det-memo-view");
   if(memoViewEl && !c.customerMemo) memoViewEl.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
 
-  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box" style="${c.isFailed?"border-color:#fca5a5;background:linear-gradient(135deg,#fff5f5,#fff1f1);":""}"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div>${c.isFailed?`<div class="info-item" style="grid-column:1/-1;margin-top:4px;padding-top:10px;border-top:1px dashed #fca5a5;"><div class="il" style="color:#ef4444;">실패 사유</div><div class="iv"><span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;margin-right:6px;">${c.failCategory||""}</span>${c.failNote?`<span style="font-size:13px;color:var(--text2);">${c.failNote}</span>`:""}</div></div>`:""}</div></div>`:"";
+  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box" style="${c.isFailed?"border-color:#fca5a5;background:linear-gradient(135deg,#fff5f5,#fff1f1);":""}">
+  <div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div>
+  <div class="info-grid">
+    <div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div>
+    <div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div>
+    <div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div>
+    <div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div>
+  </div>
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid ${c.isFailed?"#fca5a5":"var(--border)"};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    ${c.isFailed
+      ?`<div style="flex:1;min-width:0;">
+          <span style="display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;margin-right:6px;">❌ ${c.failCategory||"실패"}</span>
+          ${c.failNote?`<span style="font-size:13px;color:var(--text2);">${c.failNote}</span>`:""}
+        </div>
+        <button onclick="openFailModal()" style="flex-shrink:0;padding:5px 12px;border-radius:8px;border:1.5px solid #fca5a5;background:none;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;">✏️ 수정</button>
+        <button onclick="clearFailReason()" style="flex-shrink:0;padding:5px 12px;border-radius:8px;border:1.5px solid #fca5a5;background:none;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;">↩ 취소</button>`
+      :`<span style="font-size:12px;color:var(--text2);flex:1;">상담 실패 시 사유를 기록하세요</span>
+        <button onclick="openFailModal()" style="flex-shrink:0;padding:6px 16px;border-radius:8px;border:1.5px solid #fca5a5;background:#fff1f2;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer;">❌ 실패 처리</button>`
+    }
+  </div>
+</div>`:"";
   document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
