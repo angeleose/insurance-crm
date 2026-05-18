@@ -2023,6 +2023,16 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;">
+      <div class="card-title">📍 출처 카테고리 관리</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">출처명 수정·추가·삭제·순서 변경이 가능합니다. <b>장소기록</b> 체크 시 박람회/교실 등 장소 입력란이 표시됩니다.</p>
+      <div id="source-setting-list"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <input type="text" id="new-source-input" placeholder="새 출처명 입력..." onkeydown="if(event.key==='Enter')addCustomSource()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        <button class="btn btn-primary btn-sm" onclick="addCustomSource()">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;">
       <div class="card-title">📥 데이터 다운로드</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
         현재 CRM 데이터를 엑셀 파일로 다운로드합니다.<br>
@@ -2415,13 +2425,15 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="form-row">
       <div class="form-group"><label>출처</label>
-        <select id="nc-source">
+        <select id="nc-source" onchange="onSourceChange('nc-source','nc-source-venue-wrap')">
           <option value="">-- 선택 --</option>
-          <option>펫박람회</option><option>태아박람회</option><option>DB</option>
-          <option>SNS</option><option>광고</option><option>산모교실</option><option>지인소개</option>
         </select>
       </div>
       <div class="form-group"><label>직업</label><input type="text" id="nc-job" placeholder="회사원, 자영업 등"></div>
+    </div>
+    <div id="nc-source-venue-wrap" style="display:none;" class="form-group">
+      <label>장소 <span style="font-weight:400;color:var(--text2);">(킨텍스, 코엑스 등)</span></label>
+      <input type="text" id="nc-source-venue" placeholder="예: 킨텍스, 코엑스, 일산, 부산 벡스코...">
     </div>
 
     <!-- 계약 시작일 (가입 고객만) -->
@@ -2885,11 +2897,13 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="form-group">
       <label>출처</label>
-      <select id="ei-source">
+      <select id="ei-source" onchange="onSourceChange('ei-source','ei-source-venue-wrap')">
         <option value="">-- 선택 --</option>
-        <option>펫박람회</option><option>태아박람회</option><option>DB</option>
-        <option>SNS</option><option>광고</option><option>산모교실</option>
       </select>
+    </div>
+    <div id="ei-source-venue-wrap" style="display:none;" class="form-group">
+      <label>장소 <span style="font-weight:400;color:var(--text2);">(킨텍스, 코엑스 등)</span></label>
+      <input type="text" id="ei-source-venue" placeholder="예: 킨텍스, 코엑스, 일산, 부산 벡스코...">
     </div>
     <div class="form-group">
       <label>태그</label>
@@ -3032,6 +3046,100 @@ function getStageStyle(name){
   const p=stagePalette[idx%stagePalette.length];
   return `background:${p.bg};color:${p.color};`;
 }
+
+// ─── 출처 관리 ───────────────────────────────────────────────
+let customSources = [
+  {name:"펫박람회", needsVenue:true},
+  {name:"태아박람회", needsVenue:true},
+  {name:"DB", needsVenue:false},
+  {name:"SNS", needsVenue:false},
+  {name:"광고", needsVenue:false},
+  {name:"산모교실", needsVenue:true},
+  {name:"지인소개", needsVenue:false}
+];
+function getSourceNames(){ return customSources.map(s=>s.name); }
+function isVenueSource(name){ return !!(customSources.find(s=>s.name===name)?.needsVenue); }
+
+function populateSourceSelects(currentVal){
+  const opts=`<option value="">-- 선택 --</option>`+customSources.map(s=>`<option value="${s.name}">${s.name}</option>`).join("");
+  ["nc-source","ei-source"].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const cur=currentVal!==undefined?currentVal:(el.value||"");
+    el.innerHTML=opts;
+    if(cur) el.value=cur;
+  });
+}
+
+function onSourceChange(selectId, venueWrapId){
+  const sel=document.getElementById(selectId);
+  const wrap=document.getElementById(venueWrapId);
+  if(!sel||!wrap) return;
+  wrap.style.display=isVenueSource(sel.value)?"":"none";
+  if(!isVenueSource(sel.value)){
+    const inp=wrap.querySelector("input");
+    if(inp) inp.value="";
+  }
+}
+
+function renderSourceSettings(){
+  const list=document.getElementById("source-setting-list"); if(!list) return;
+  if(!customSources.length){ list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:8px 0;">출처가 없습니다.</div>`; return; }
+  list.innerHTML=customSources.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+    <input type="text" value="${s.name.replace(/"/g,'&quot;')}"
+      onblur="renameCustomSource(${i},this.value.trim())"
+      onkeydown="if(event.key==='Enter')this.blur()"
+      style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--bg1);color:var(--text1);">
+    <label title="장소 기록 필요" style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);white-space:nowrap;cursor:pointer;">
+      <input type="checkbox" ${s.needsVenue?"checked":""} onchange="toggleSourceVenue(${i},this.checked)" style="width:14px;height:14px;accent-color:var(--purple);cursor:pointer;"> 장소기록
+    </label>
+    <button onclick="moveCustomSource(${i},-1)" ${i===0?"disabled":""} title="위로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↑</button>
+    <button onclick="moveCustomSource(${i},1)" ${i===customSources.length-1?"disabled":""} title="아래로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↓</button>
+    <button onclick="deleteCustomSource(${i})" title="삭제" style="background:none;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--red);">✕</button>
+  </div>`).join("");
+}
+
+function addCustomSource(){
+  const input=document.getElementById("new-source-input");
+  const name=input.value.trim();
+  if(!name){alert("출처명을 입력하세요.");return;}
+  if(customSources.find(s=>s.name===name)){alert("이미 있는 출처입니다.");return;}
+  customSources.push({name,needsVenue:false});
+  input.value="";
+  renderSourceSettings(); populateSourceSelects(); autoSave();
+}
+
+function renameCustomSource(idx, newName){
+  if(!newName||!customSources[idx]||newName===customSources[idx].name) return;
+  if(customSources.find(s=>s.name===newName)){showToast("이미 있는 출처명이에요."); return;}
+  const oldName=customSources[idx].name;
+  customSources[idx].name=newName;
+  customers.filter(c=>c.source===oldName).forEach(c=>c.source=newName);
+  renderSourceSettings(); populateSourceSelects(); autoSave();
+}
+
+function deleteCustomSource(idx){
+  const name=customSources[idx].name;
+  const count=customers.filter(c=>c.source===name).length;
+  const msg=count?`"${name}" 출처를 삭제할까요?\n해당 고객 ${count}명의 출처는 비워집니다.`:`"${name}" 출처를 삭제할까요?`;
+  if(!confirm(msg)) return;
+  if(count) customers.filter(c=>c.source===name).forEach(c=>c.source="");
+  customSources.splice(idx,1);
+  renderSourceSettings(); populateSourceSelects(); autoSave();
+}
+
+function moveCustomSource(idx, dir){
+  const ni=idx+dir;
+  if(ni<0||ni>=customSources.length) return;
+  [customSources[idx],customSources[ni]]=[customSources[ni],customSources[idx]];
+  renderSourceSettings(); populateSourceSelects(); autoSave();
+}
+
+function toggleSourceVenue(idx, val){
+  customSources[idx].needsVenue=val;
+  autoSave();
+}
+// ─────────────────────────────────────────────────────────────
+
 let customers = [];
 let experienceItems = [];
 
@@ -3883,6 +3991,7 @@ function showPage(name, pushHistory=true){
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     renderStageSettings();
+    renderSourceSettings();
     const emailEl = document.getElementById("setting-user-email");
     if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
   }
@@ -4472,7 +4581,7 @@ function updateEnrolledDateUI() {
 function renderEnrolled(resetPage){
   if(resetPage) enrolledPage = 1;
   const tags=["전체","VIP","신규","갱신예정","전환상담","만기예정"];
-  const sources=["전체","펫박람회","태아박람회","DB","SNS","광고","산모교실"];
+  const sources=["전체",...getSourceNames()];
   const srcBadge=s=>s?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;">${s}</span>`:`<span style="color:var(--text2)">-</span>`;
   document.getElementById("tag-filters-enrolled").innerHTML=
     tags.map(t=>`<button class="filter-btn ${t===activeTagFilter?"active":""}" onclick="activeTagFilter='${t}';enrolledPage=1;renderEnrolled()">${t}</button>`).join("")+
@@ -4605,7 +4714,7 @@ function renderEnrolledPagination(totalPages, total) {
 
 function renderProspects(){
   const stages=["전체",...customStages];
-  const sources=["전체","펫박람회","태아박람회","DB","SNS","광고","산모교실"];
+  const sources=["전체",...getSourceNames()];
   const failCount=customers.filter(c=>c.type==="가망"&&c.isFailed).length;
   document.getElementById("stage-filters").innerHTML=
     stages.map(s=>`<button class="filter-btn ${s===activeStageFilter?"active":""}" onclick="activeStageFilter='${s}';renderProspects()">${s}</button>`).join("")+
@@ -4717,7 +4826,7 @@ function renderDetail(id){
     }
   </div>
 </div>`:"";
-  document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
+  document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>${c.sourceVenue?` <span style="font-size:12px;color:var(--text2);">· ${c.sourceVenue}</span>`:""}`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
   const cc=document.getElementById("det-contracts-card");
@@ -5237,6 +5346,8 @@ document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click
 function openAddModal(type){
   const r=document.querySelector(`input[name="nc-type"][value="${type}"]`);
   if(r){r.checked=true;toggleProspectFields();}
+  populateSourceSelects("");
+  const nsvw=document.getElementById("nc-source-venue-wrap");if(nsvw)nsvw.style.display="none";
   openModal("add-customer");
 }
 function toggleNcExtra() {
@@ -5263,7 +5374,7 @@ function addCustomer(){
   const tags=[...document.querySelectorAll(".nc-tag:checked")].map(c=>c.value);
   const todayStr=new Date().toISOString().slice(0,10);
   const contractStart = document.getElementById("nc-contract-start")?.value || "";
-  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,ssn:document.getElementById("nc-ssn").value.replace(/-/g,"")||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?(contractStart||todayStr):"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
+  const obj={id:Date.now(),type,name,birth:document.getElementById("nc-birth").value,phone,email:document.getElementById("nc-email").value,address:document.getElementById("nc-address").value,source:document.getElementById("nc-source").value,sourceVenue:document.getElementById("nc-source-venue").value.trim(),ssn:document.getElementById("nc-ssn").value.replace(/-/g,"")||"",contracts:[],consultations:[],tags:tags.length?tags:["신규"],joinDate:type==="가입"?(contractStart||todayStr):"",regDate:type==="가망"?todayStr:"",job:document.getElementById("nc-job").value};
   if(type==="가망"){obj.interest=document.getElementById("nc-interest").value;obj.stage=document.getElementById("nc-stage").value;obj.source=document.getElementById("nc-source").value;obj.memo=document.getElementById("nc-memo").value;}
   // 산모 정보
   obj.maternity = document.querySelector('input[name="nc-maternity"]:checked')?.value || "N";
@@ -5274,7 +5385,8 @@ function addCustomer(){
     obj.pregweek = document.getElementById("nc-pregweek").value;
   }
   customers.push(obj);
-  ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate","nc-contract-start"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate","nc-contract-start","nc-source-venue"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  const nsvw=document.getElementById("nc-source-venue-wrap");if(nsvw)nsvw.style.display="none";;
   document.getElementById("nc-ssn").value="";
   document.querySelectorAll(".nc-tag").forEach(cb=>cb.checked=false);
   // 더보기 접기
@@ -5759,6 +5871,7 @@ async function resetAllData() {
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
   customStages = ["초기접촉","니즈파악","설계중","계약검토"];
+  customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
   showToast("✅ 전체 데이터가 초기화되었습니다.");
@@ -6749,6 +6862,10 @@ function openEditInfo() {
   document.getElementById("ei-address").value = c.address || "";
   document.getElementById("ei-job").value = c.job || "";
   document.getElementById("ei-source").value = c.source || "";
+  const eiVenueWrap=document.getElementById("ei-source-venue-wrap");
+  if(eiVenueWrap){ eiVenueWrap.style.display=isVenueSource(c.source)?"":"none"; }
+  const eiVenueInp=document.getElementById("ei-source-venue");
+  if(eiVenueInp) eiVenueInp.value=c.sourceVenue||"";
   const ssnRaw = c.ssn||"";
   document.getElementById("ei-ssn").value = ssnRaw.length>=7 ? ssnRaw.slice(0,6)+"-"+ssnRaw.slice(6) : ssnRaw;
   document.querySelectorAll(".ei-tag").forEach(cb => cb.checked = (c.tags||[]).includes(cb.value));
@@ -6784,6 +6901,7 @@ function saveEditInfo() {
   c.address = document.getElementById("ei-address").value;
   c.job = document.getElementById("ei-job").value;
   c.source = document.getElementById("ei-source").value;
+  c.sourceVenue = isVenueSource(c.source) ? (document.getElementById("ei-source-venue").value.trim()) : "";
   c.ssn = document.getElementById("ei-ssn").value.replace(/-/g,"") || c.ssn || "";
   const tags = [...document.querySelectorAll(".ei-tag:checked")].map(cb => cb.value);
   c.tags = tags.length ? tags : c.tags;
@@ -7751,6 +7869,7 @@ async function saveToFirestore() {
     myContacts,
     experienceItems,
     customStages,
+    customSources,
     updatedAt: new Date().toISOString()
   }));
   showSyncToast("💾 저장 중...", false, true);
@@ -7787,6 +7906,7 @@ async function loadFromFirestore() {
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
       if (p.experienceItems) experienceItems = p.experienceItems;
       if (p.customStages && p.customStages.length) customStages = p.customStages;
+      if (p.customSources && p.customSources.length) customSources = p.customSources;
       // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
@@ -7814,6 +7934,7 @@ async function loadFromFirestore() {
   } finally {
     const initPage = location.hash.slice(1) || "dashboard";
     populateStageSelects();
+    populateSourceSelects();
     showPage(document.getElementById("page-"+initPage) ? initPage : "dashboard");
     updateSidebar();
   }
