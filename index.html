@@ -2842,6 +2842,26 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   </div>
 </div>
 
+<!-- MODAL: FAIL REASON -->
+<div class="modal-overlay" id="modal-fail-reason">
+  <div class="modal-box" style="width:420px;">
+    <h3>❌ 상담 실패 처리</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">실패 카테고리를 선택하고 사유를 기록해 두세요.</p>
+    <div class="form-group">
+      <label>실패 카테고리 *</label>
+      <div id="fail-category-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label>사유 메모 <span style="font-weight:400;color:var(--text2);">(선택)</span></label>
+      <input type="text" id="fail-note" placeholder="구체적인 사유를 입력하세요...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('fail-reason')">취소</button>
+      <button class="btn btn-sm" onclick="saveFailReason()" style="background:#ef4444;color:#fff;border-color:#ef4444;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;">실패 처리</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: EDIT INFO -->
 <div class="modal-overlay" id="modal-edit-info">
   <div class="modal-box" style="width:520px;">
@@ -4586,16 +4606,19 @@ function renderEnrolledPagination(totalPages, total) {
 function renderProspects(){
   const stages=["전체",...customStages];
   const sources=["전체","펫박람회","태아박람회","DB","SNS","광고","산모교실"];
+  const failCount=customers.filter(c=>c.type==="가망"&&c.isFailed).length;
   document.getElementById("stage-filters").innerHTML=
     stages.map(s=>`<button class="filter-btn ${s===activeStageFilter?"active":""}" onclick="activeStageFilter='${s}';renderProspects()">${s}</button>`).join("")+
+    `<button class="filter-btn ${activeStageFilter==="__failed__"?"active":""}" onclick="activeStageFilter='__failed__';renderProspects()" style="${activeStageFilter==="__failed__"?"background:#fee2e2;color:#ef4444;border:1.5px solid #ef4444;":""}">❌ 실패${failCount?` (${failCount})`:""}</button>`+
     `<span style="width:1px;background:var(--border);margin:0 4px;display:inline-block;height:20px;vertical-align:middle;"></span>`+
     sources.map(s=>`<button class="filter-btn ${s===activeSourceFilter?"active":""}" style="${s!=="전체"&&s===activeSourceFilter?"background:#f0e6ff;color:var(--purple);border:1.5px solid var(--purple);":""}" onclick="activeSourceFilter='${s}';renderProspects()">${s==="전체"?"전체출처":s}</button>`).join("");
   const q=document.getElementById("search-prospect").value.trim();
-  const list=customers.filter(c=>c.type==="가망").filter(c=>
-    (!q||c.name.includes(q)||c.phone.includes(q))&&
-    (activeStageFilter==="전체"||(c.stage||"초기접촉")===activeStageFilter)&&
-    (activeSourceFilter==="전체"||(c.source||"")=== activeSourceFilter)
-  );
+  const list=customers.filter(c=>c.type==="가망").filter(c=>{
+    const nameOk=!q||c.name.includes(q)||c.phone.includes(q);
+    const srcOk=activeSourceFilter==="전체"||(c.source||"")===activeSourceFilter;
+    if(activeStageFilter==="__failed__") return nameOk&&c.isFailed&&srcOk;
+    return nameOk&&!c.isFailed&&(activeStageFilter==="전체"||(c.stage||"초기접촉")===activeStageFilter)&&srcOk;
+  });
   // 정렬
   const stageOrder = Object.fromEntries(customStages.map((s,i)=>[s,i+1]));
   list.sort((a,b)=>{
@@ -4630,7 +4653,7 @@ function renderProspects(){
                 <div style="flex:1;min-width:0;">
                   <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
                     <strong style="font-size:15px;">${c.name}</strong>
-                    <span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${stBg};color:${stCol};">${c.stage||"초기접촉"}</span>
+                    ${c.isFailed?`<span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ ${c.failCategory||"실패"}</span>`:`<span style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${stBg};color:${stCol};">${c.stage||"초기접촉"}</span>`}
                   </div>
                   <div style="font-size:12px;color:var(--text2);">${c.phone}</div>
                 </div>
@@ -4645,7 +4668,7 @@ function renderProspects(){
     }
   } else {
     document.getElementById("prospect-tbody").innerHTML=!list.length?`<tr><td colspan="8"><div class="empty"><span>🌱</span>가망 고객 없음</div></td></tr>`:
-      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
+      list.map(c=>{const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());return`<tr class="clickable" onclick="goToDetail(${c.id})" style="${c.isFailed?"opacity:.7;":""}"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="prospect-check" data-id="${c.id}" onchange="updateProspectSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td style="color:var(--purple);font-weight:600">${c.interest||"-"}</td><td>${c.isFailed?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ ${c.failCategory||"실패"}</span>`:`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`}</td><td style="color:var(--text2);font-size:12px;">${c.regDate||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td><td style="color:var(--blue);font-weight:700;font-size:12px">${nf?nf.followUp:"-"}</td></tr>`;}).join("");
   }
 }
 
@@ -4657,10 +4680,13 @@ function renderDetail(id){
   document.getElementById("det-avatar").className=`avatar ${c.type}`;
   document.getElementById("det-name").textContent=c.name;
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
-  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${renderTags(c.tags)}`;
+  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${isPr&&c.isFailed?`<span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ 실패 · ${c.failCategory||""}</span>`:""}${renderTags(c.tags)}`;
   const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
+  const failBtn=isPr?(c.isFailed
+    ?`<button class="btn btn-ghost btn-sm" onclick="clearFailReason()" style="border-color:#fca5a5;color:#ef4444;">↩ 실패 취소</button>`
+    :`<button class="btn btn-ghost btn-sm" onclick="openFailModal()" style="border-color:#fca5a5;color:#ef4444;">❌ 실패 처리</button>`):"";
   document.getElementById("det-actions").innerHTML=isPr?
-    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
+    `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${failBtn}${scanBtn}`:
     `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`;
   document.getElementById("det-convert-banner").innerHTML=isPr?`<div class="convert-banner"><p>🎉 계약이 성사됐나요? 가입 고객으로 전환하면 계약 정보를 관리할 수 있어요.</p><button class="btn btn-primary btn-sm" onclick="openModal('convert')">전환하기</button></div>`:"";
   // 메모 렌더
@@ -4673,7 +4699,7 @@ function renderDetail(id){
   const memoViewEl = document.getElementById("det-memo-view");
   if(memoViewEl && !c.customerMemo) memoViewEl.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
 
-  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div></div></div>`:"";
+  document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box" style="${c.isFailed?"border-color:#fca5a5;background:linear-gradient(135deg,#fff5f5,#fff1f1);":""}"><div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div><div class="info-grid"><div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div><div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div><div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div><div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div>${c.isFailed?`<div class="info-item" style="grid-column:1/-1;margin-top:4px;padding-top:10px;border-top:1px dashed #fca5a5;"><div class="il" style="color:#ef4444;">실패 사유</div><div class="iv"><span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;margin-right:6px;">${c.failCategory||""}</span>${c.failNote?`<span style="font-size:13px;color:var(--text2);">${c.failNote}</span>`:""}</div></div>`:""}</div></div>`:"";
   document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
@@ -5390,6 +5416,48 @@ function updateStage(){
   c.stage=document.getElementById("us-stage").value;
   closeModal("update-stage");renderDetail(currentCustomerId);renderProspects();autoSave();
 }
+
+// ─── 실패 처리 ─────────────────────────────────────────────────
+const failCategories=["보험료 부담","니즈 불일치","타사 계약","연락 두절","시기 이슈","자사고객","관심 없음","기타"];
+let _failCatSelected="";
+
+function openFailModal(){
+  const c=customers.find(x=>x.id===currentCustomerId);if(!c)return;
+  _failCatSelected=c.failCategory||"";
+  document.getElementById("fail-note").value=c.failNote||"";
+  renderFailCategoryChips();
+  openModal("fail-reason");
+}
+
+function renderFailCategoryChips(){
+  document.getElementById("fail-category-chips").innerHTML=failCategories.map(cat=>`<button
+    onmousedown="_failCatSelected='${cat}';renderFailCategoryChips()"
+    style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${_failCatSelected===cat?"#ef4444":"var(--border)"};background:${_failCatSelected===cat?"#fee2e2":"var(--bg1)"};color:${_failCatSelected===cat?"#ef4444":"var(--text2)"};">${cat}</button>`).join("");
+}
+
+function saveFailReason(){
+  const c=customers.find(x=>x.id===currentCustomerId);if(!c)return;
+  if(!_failCatSelected){showToast("카테고리를 선택하세요.");return;}
+  c.isFailed=true;
+  c.failCategory=_failCatSelected;
+  c.failNote=document.getElementById("fail-note").value.trim();
+  closeModal("fail-reason");
+  renderDetail(currentCustomerId);
+  renderProspects();
+  autoSave();
+  showToast("실패 처리되었습니다.");
+}
+
+function clearFailReason(){
+  const c=customers.find(x=>x.id===currentCustomerId);if(!c)return;
+  if(!confirm("실패 처리를 취소하시겠습니까?"))return;
+  c.isFailed=false;c.failCategory="";c.failNote="";
+  renderDetail(currentCustomerId);
+  renderProspects();
+  autoSave();
+  showToast("실패 취소되었습니다.");
+}
+// ──────────────────────────────────────────────────────────────
 
 // ─── 이재사항 빠른 파싱 ───────────────────────────────────────
 
