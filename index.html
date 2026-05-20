@@ -1884,6 +1884,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
               <th style="padding:10px 14px;text-align:left;font-weight:700;">이름</th>
               <th style="padding:10px 12px;text-align:left;font-weight:700;">상품</th>
               <th style="padding:10px 12px;text-align:left;font-weight:700;">보험사</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:700;">증권번호</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;">결제일</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;">마지막 결제</th>
               <th style="padding:10px 12px;text-align:center;font-weight:700;">다음 예정일</th>
@@ -1918,6 +1919,15 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
           <tbody id="cardinfo-body"></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- 보험사별 카드납 방법 -->
+    <div class="card" style="padding:0;overflow:hidden;margin-top:20px;">
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+        <div class="card-title" style="margin:0;">📝 보험사별 카드납 방법</div>
+        <button class="btn btn-ghost btn-sm" onclick="showAddNoteForm()">+ 보험사 추가</button>
+      </div>
+      <div id="cardnotes-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
     </div>
   </div>
 
@@ -5672,6 +5682,7 @@ function updateStage(){
 // ─── 카드 결제 ─────────────────────────────────────────────────
 let cardPayRecords = [];  // {id,name,productType,insurer,contractNo,payDay,nextPayDate,lastPayDate,memo}
 let cardInfoRecords = []; // {id,name,insurer,cardInfo,cardExpiry,payDay,birth}
+let cardPayNotes = {};    // {insurer: noteText}
 let _cpFilterMode = "all";
 
 const _cpInsurerColors={"DB손해":"#3b82f6","현대해상":"#f59e0b","삼성화재":"#ef4444","KB손해":"#8b5cf6","메리츠":"#10b981","한화":"#f97316","흥국화재":"#06b6d4","롯데손해":"#e11d48"};
@@ -5733,7 +5744,7 @@ function renderCardPayPage(){
 
   const tdSt="padding:11px 12px;border-bottom:1px solid var(--border);";
   if(!filtered.length){
-    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--text2);font-size:13px;">${cardPayRecords.length?"해당 항목 없음":"+ 항목 추가를 눌러 입력하세요"}</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:36px;color:var(--text2);font-size:13px;">${cardPayRecords.length?"해당 항목 없음":"+ 항목 추가를 눌러 입력하세요"}</td></tr>`;
   } else {
     tbody.innerHTML=filtered.map(r=>{
       const st=cpGetStatus(r);
@@ -5742,6 +5753,7 @@ function renderCardPayPage(){
         <td style="${tdSt}font-weight:600;">${r.name}</td>
         <td style="${tdSt}">${_cpProductBadge(r.productType)}</td>
         <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
+        <td style="${tdSt}font-size:12px;color:var(--text2);font-family:monospace;">${r.contractNo||"-"}</td>
         <td style="${tdSt}text-align:center;font-weight:700;color:var(--text2);">${r.payDay?r.payDay+"일":"-"}</td>
         <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.lastPayDate||"-"}</td>
         <td style="${tdSt}text-align:center;font-size:13px;font-weight:700;">${r.nextPayDate||"-"}</td>
@@ -5757,23 +5769,129 @@ function renderCardPayPage(){
 
   // 카드 정보 테이블
   const citbody=document.getElementById("cardinfo-body");
-  if(!citbody) return;
-  if(!cardInfoRecords.length){
-    citbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">카드 정보 없음</td></tr>`;
-    return;
+  if(citbody){
+    if(!cardInfoRecords.length){
+      citbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">카드 정보 없음</td></tr>`;
+    } else {
+      citbody.innerHTML=cardInfoRecords.map(r=>`<tr style="border-bottom:1px solid var(--border);">
+        <td style="${tdSt}font-weight:600;">${r.name}</td>
+        <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
+        <td style="${tdSt}font-size:13px;">${r.cardInfo||"-"}</td>
+        <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.cardExpiry||"-"}</td>
+        <td style="${tdSt}text-align:center;">${r.payDay?r.payDay+"일":"-"}</td>
+        <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.birth||"-"}</td>
+        <td style="${tdSt}text-align:center;">
+          <button onclick="openCardInfoModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
+          <button onclick="deleteCardInfo(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
+        </td>
+      </tr>`).join("");
+    }
   }
-  citbody.innerHTML=cardInfoRecords.map(r=>`<tr style="border-bottom:1px solid var(--border);">
-    <td style="${tdSt}font-weight:600;">${r.name}</td>
-    <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
-    <td style="${tdSt}font-size:13px;">${r.cardInfo||"-"}</td>
-    <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.cardExpiry||"-"}</td>
-    <td style="${tdSt}text-align:center;">${r.payDay?r.payDay+"일":"-"}</td>
-    <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.birth||"-"}</td>
-    <td style="${tdSt}text-align:center;">
-      <button onclick="openCardInfoModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
-      <button onclick="deleteCardInfo(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
-    </td>
-  </tr>`).join("");
+  renderCardPayNotes();
+}
+
+function _noteEsc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function _noteId(ins){ return ins.replace(/[^a-zA-Z0-9가-힣]/g,"_"); }
+
+function renderCardPayNotes(){
+  const el=document.getElementById("cardnotes-body");
+  if(!el) return;
+  const keys=Object.keys(cardPayNotes);
+  const noteViewSt="padding:10px 12px;border-radius:8px;background:var(--bg2);font-size:13px;line-height:1.75;white-space:pre-wrap;min-height:36px;word-break:break-word;";
+  const taSt="width:100%;min-height:120px;padding:10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit;";
+  const btnE="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--text2);";
+  const btnD="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;color:#ef4444;";
+  const btnS="padding:5px 14px;border-radius:8px;border:1.5px solid #22c55e;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:700;cursor:pointer;";
+  const btnC="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:none;font-size:12px;cursor:pointer;color:var(--text2);";
+  let html="";
+  if(!keys.length){
+    html=`<div style="text-align:center;color:var(--text2);font-size:13px;padding:20px 0;">보험사를 추가해 카드납 방법을 정리하세요.</div>`;
+  } else {
+    keys.forEach(ins=>{
+      const col=_cpInsurerColors[ins]||"#64748b";
+      const nid=_noteId(ins);
+      const safe=ins.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+      html+=`<div style="border:1.5px solid ${col}44;border-radius:12px;padding:14px 16px;background:${col}0d;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-weight:700;color:${col};font-size:14px;">${_noteEsc(ins)}</span>
+          <div style="display:flex;gap:6px;">
+            <button onclick="startEditNote('${safe}')" style="${btnE}">✏️ 수정</button>
+            <button onclick="deleteCardPayNote('${safe}')" style="${btnD}">🗑️ 삭제</button>
+          </div>
+        </div>
+        <div id="note-view-${nid}" style="${noteViewSt}">${_noteEsc(cardPayNotes[ins]||"")}</div>
+        <div id="note-edit-area-${nid}" style="display:none;">
+          <textarea id="note-ta-${nid}" style="${taSt}"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+            <button onclick="cancelEditNote('${safe}')" style="${btnC}">취소</button>
+            <button onclick="saveCardPayNote('${safe}')" style="${btnS}">💾 저장</button>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+  html+=`<div id="add-note-form" style="display:none;border:1.5px dashed var(--border);border-radius:12px;padding:14px 16px;background:var(--bg2);">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">새 보험사 카드납 방법 추가</div>
+    <input id="add-note-insurer" type="text" placeholder="보험사명 (예: DB손해, 현대해상)" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;margin-bottom:8px;box-sizing:border-box;" />
+    <textarea id="add-note-text" placeholder="카드납 방법을 자유롭게 입력하세요..." style="width:100%;min-height:100px;padding:10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;line-height:1.7;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button onclick="hideAddNoteForm()" style="${btnC}">취소</button>
+      <button onclick="saveNewNote()" style="${btnS}">+ 추가</button>
+    </div>
+  </div>`;
+  el.innerHTML=html;
+}
+
+function showAddNoteForm(){
+  renderCardPayNotes();
+  const f=document.getElementById("add-note-form");
+  if(f){ f.style.display="block"; const inp=document.getElementById("add-note-insurer"); if(inp) inp.focus(); }
+}
+function hideAddNoteForm(){
+  const f=document.getElementById("add-note-form");
+  if(f) f.style.display="none";
+}
+function saveNewNote(){
+  const ins=(document.getElementById("add-note-insurer").value||"").trim();
+  if(!ins){ alert("보험사명을 입력하세요."); return; }
+  const text=(document.getElementById("add-note-text").value||"").trim();
+  cardPayNotes[ins]=text;
+  renderCardPayNotes();
+  autoSave();
+  showToast(`✅ "${ins}" 카드납 방법이 추가되었습니다.`);
+}
+function startEditNote(ins){
+  const nid=_noteId(ins);
+  const view=document.getElementById("note-view-"+nid);
+  const edit=document.getElementById("note-edit-area-"+nid);
+  const ta=document.getElementById("note-ta-"+nid);
+  if(!view||!edit||!ta) return;
+  ta.value=cardPayNotes[ins]||"";
+  view.style.display="none";
+  edit.style.display="block";
+  ta.focus();
+}
+function cancelEditNote(ins){
+  const nid=_noteId(ins);
+  const view=document.getElementById("note-view-"+nid);
+  const edit=document.getElementById("note-edit-area-"+nid);
+  if(!view||!edit) return;
+  view.style.display="block";
+  edit.style.display="none";
+}
+function saveCardPayNote(ins){
+  const nid=_noteId(ins);
+  const ta=document.getElementById("note-ta-"+nid);
+  if(!ta) return;
+  cardPayNotes[ins]=ta.value;
+  renderCardPayNotes();
+  autoSave();
+}
+function deleteCardPayNote(ins){
+  if(!confirm(`"${ins}" 카드납 방법을 삭제할까요?`)) return;
+  delete cardPayNotes[ins];
+  renderCardPayNotes();
+  autoSave();
 }
 
 function confirmCardPayment(id){
@@ -8288,6 +8406,7 @@ async function saveToFirestore() {
     customSources,
     cardPayRecords,
     cardInfoRecords,
+    cardPayNotes,
     updatedAt: new Date().toISOString()
   }));
   showSyncToast("💾 저장 중...", false, true);
@@ -8327,6 +8446,7 @@ async function loadFromFirestore() {
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
+      if (p.cardPayNotes)    cardPayNotes    = p.cardPayNotes;
       // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
