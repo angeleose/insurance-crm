@@ -989,6 +989,8 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="board" onclick="closeMobileDrawer()"><span class="icon">📌</span> 정보게시판</div>
     <div class="nav-item" data-page="income" onclick="closeMobileDrawer()"><span class="icon">💵</span> 수익 관리</div>
     <div class="nav-item" data-page="experience" onclick="closeMobileDrawer()"><span class="icon">🎯</span> 체험단 관리</div>
+    <div class="sb-section" style="margin-top:6px">업무</div>
+    <div class="nav-item" data-page="cardpay" onclick="closeMobileDrawer()"><span class="icon">💳</span> 카드 결제</div>
     <div class="sb-section" style="margin-top:6px">시스템</div>
     <div class="nav-item" data-page="settings" onclick="closeMobileDrawer()"><span class="icon">⚙️</span> 설정</div>
     <div class="nav-item" data-page="backlog" onclick="closeMobileDrawer();openBacklogWithAuth()"><span class="icon">🗂️</span> 개발 백로그</div>
@@ -1085,6 +1087,13 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="nav-item" data-page="board"><span class="icon">📌</span> 정보게시판</div>
       <div class="nav-item" data-page="income"><span class="icon">💵</span> 수익 관리</div>
       <div class="nav-item" data-page="experience"><span class="icon">🎯</span> 체험단 관리</div>
+    </div>
+
+    <div class="sb-section collapsible" style="margin-top:6px" onclick="toggleSbSection(this)">
+      <span>업무</span><span class="sb-arrow">▾</span>
+    </div>
+    <div class="sb-group" id="sbg-work">
+      <div class="nav-item" data-page="cardpay"><span class="icon">💳</span> 카드 결제</div>
     </div>
 
     <div class="sb-section" style="margin-top:6px">시스템</div>
@@ -1846,6 +1855,54 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       </div>
     </div>
     <div id="experience-list"></div>
+  </div>
+
+  <!-- CARDPAY PAGE -->
+  <div class="page" id="page-cardpay">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div><h2>💳 카드 결제</h2><p>보험료 카드 결제 현황을 월별로 관리하세요.</p></div>
+    </div>
+
+    <!-- 체크리스트 -->
+    <div class="card" style="padding:0;margin-bottom:20px;overflow:hidden;">
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin:0;">📋 카드결제 체크리스트</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="cp-year" onchange="renderCardPayPage()" style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-weight:600;"></select>
+          <button class="btn btn-primary btn-sm" onclick="openCardPayRowModal()">+ 행 추가</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table id="cardpay-checklist-table" style="min-width:700px;border-collapse:collapse;width:100%;">
+          <thead id="cardpay-checklist-head"></thead>
+          <tbody id="cardpay-checklist-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 카드 정보 -->
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+        <div class="card-title" style="margin:0;">💳 카드 정보</div>
+        <button class="btn btn-ghost btn-sm" onclick="openCardInfoModal()">+ 추가</button>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table id="cardinfo-table" style="min-width:600px;border-collapse:collapse;width:100%;">
+          <thead>
+            <tr style="background:var(--bg2);font-size:12px;color:var(--text2);">
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">이름</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">보험사</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">카드 정보</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">유효기간</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">결제일</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">생년월일</th>
+              <th style="padding:10px 14px;text-align:center;font-weight:700;">관리</th>
+            </tr>
+          </thead>
+          <tbody id="cardinfo-body"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- BACKLOG PAGE -->
@@ -2843,6 +2900,49 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('update-stage')">취소</button>
       <button class="btn btn-purple" onclick="updateStage()">변경</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CARDPAY ROW -->
+<div class="modal-overlay" id="modal-cardpay-row">
+  <div class="modal-box" style="width:460px;">
+    <h3 id="cardpay-row-modal-title">📋 체크리스트 행 추가</h3>
+    <input type="hidden" id="cp-row-id">
+    <div class="form-row">
+      <div class="form-group"><label>이름 *</label><input type="text" id="cp-row-name" placeholder="고객명 또는 계약명"></div>
+      <div class="form-group"><label>상품유형</label><input type="text" id="cp-row-product" placeholder="펫, 태아실손 등"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>보험사</label><input type="text" id="cp-row-insurer" placeholder="DB손해, 현대해상 등"></div>
+      <div class="form-group"><label>계약번호</label><input type="text" id="cp-row-contractno" placeholder="320251195541"></div>
+    </div>
+    <div class="form-group"><label>결제시작일</label><input type="date" id="cp-row-startdate"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('cardpay-row')">취소</button>
+      <button class="btn btn-primary" onclick="saveCardPayRow()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CARDINFO -->
+<div class="modal-overlay" id="modal-cardinfo">
+  <div class="modal-box" style="width:460px;">
+    <h3 id="cardinfo-modal-title">💳 카드 정보 추가</h3>
+    <input type="hidden" id="ci-id">
+    <div class="form-row">
+      <div class="form-group"><label>이름 *</label><input type="text" id="ci-name" placeholder="고객명"></div>
+      <div class="form-group"><label>보험사</label><input type="text" id="ci-insurer" placeholder="DB, 현대해상 등"></div>
+    </div>
+    <div class="form-group"><label>카드 정보</label><input type="text" id="ci-cardinfo" placeholder="카드번호 뒷 4자리 또는 카드사명"></div>
+    <div class="form-row">
+      <div class="form-group"><label>유효기간</label><input type="text" id="ci-expiry" placeholder="MM/YY"></div>
+      <div class="form-group"><label>결제일</label><input type="text" id="ci-payday" placeholder="10일, 20일 등"></div>
+    </div>
+    <div class="form-group"><label>생년월일</label><input type="date" id="ci-birth"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('cardinfo')">취소</button>
+      <button class="btn btn-primary" onclick="saveCardInfo()">저장</button>
     </div>
   </div>
 </div>
@@ -4002,6 +4102,7 @@ function showPage(name, pushHistory=true){
   if(name==="board")renderBoard();
   if(name==="income")renderIncomePage();
   if(name==="experience")renderExperiencePage();
+  if(name==="cardpay")renderCardPayPage();
   if(name==="calendar")renderCalendar();
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
@@ -5531,6 +5632,195 @@ function updateStage(){
   c.stage=document.getElementById("us-stage").value;
   closeModal("update-stage");renderDetail(currentCustomerId);renderProspects();autoSave();
 }
+
+// ─── 카드 결제 ─────────────────────────────────────────────────
+let cardPayRecords = [];  // {id, name, productType, insurer, contractNo, startDate, checks:{}}
+let cardInfoRecords = []; // {id, name, insurer, cardInfo, cardExpiry, payDay, birth}
+
+const _cpInsurerColors = {
+  "DB손해":"#3b82f6","현대해상":"#f59e0b","삼성화재":"#ef4444","KB손해":"#8b5cf6",
+  "메리츠":"#10b981","한화":"#f97316","흥국화재":"#06b6d4","롯데손해":"#e11d48"
+};
+function _cpInsurerBadge(s){
+  if(!s) return "";
+  const col=_cpInsurerColors[s]||"#64748b";
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`;
+}
+const _cpProductColors={"펫":"#f97316","태아실손":"#ec4899","태아종합":"#8b5cf6","실손보험":"#3b82f6","종합보험":"#10b981","운전자보험":"#0891b2","치아보험":"#d97706","암보험":"#ef4444"};
+function _cpProductBadge(s){
+  if(!s) return "";
+  const col=_cpProductColors[s]||"#64748b";
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`;
+}
+
+function renderCardPayPage(){
+  const yearSel=document.getElementById("cp-year"); if(!yearSel) return;
+  const curYear=new Date().getFullYear();
+  if(!yearSel.options.length){
+    for(let y=curYear-1;y<=curYear+1;y++) yearSel.add(new Option(y+"년",y));
+    yearSel.value=curYear;
+  }
+  const year=parseInt(yearSel.value)||curYear;
+  const months=[1,2,3,4,5,6,7,8,9,10,11,12];
+  const tdSt="padding:10px 8px;border-bottom:1px solid var(--border);text-align:center;";
+  const thSt="padding:10px 8px;text-align:center;font-weight:700;font-size:12px;color:var(--text2);background:var(--bg2);";
+
+  // 헤더
+  document.getElementById("cardpay-checklist-head").innerHTML=`<tr>
+    <th style="${thSt}text-align:left;padding-left:16px;">이름</th>
+    <th style="${thSt}">상품유형</th>
+    <th style="${thSt}">보험사</th>
+    <th style="${thSt}">계약번호</th>
+    <th style="${thSt}">결제시작일</th>
+    ${months.map(m=>`<th style="${thSt}">${String(year).slice(2)}-${m}</th>`).join("")}
+    <th style="${thSt}">관리</th>
+  </tr>`;
+
+  // 바디
+  const tbody=document.getElementById("cardpay-checklist-body");
+  if(!cardPayRecords.length){
+    tbody.innerHTML=`<tr><td colspan="${5+months.length+1}" style="text-align:center;padding:32px;color:var(--text2);font-size:13px;">항목 없음 — 위 <b>+ 행 추가</b>를 눌러 입력하세요</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=cardPayRecords.map(r=>{
+    const key=id=>r.id+"_"+year+"_"+id;
+    const checks=r.checks||{};
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="${tdSt}text-align:left;padding-left:16px;font-weight:600;">${r.name}</td>
+      <td style="${tdSt}">${_cpProductBadge(r.productType)}</td>
+      <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
+      <td style="${tdSt}font-size:12px;color:var(--text2);">${r.contractNo||"-"}</td>
+      <td style="${tdSt}font-size:12px;color:var(--text2);">${r.startDate||"-"}</td>
+      ${months.map(m=>{
+        const ck=`${year}-${m}`;
+        const checked=checks[ck]||false;
+        return `<td style="${tdSt}"><input type="checkbox" ${checked?"checked":""}
+          onchange="toggleCardPayCheck(${r.id},${year},${m},this.checked)"
+          style="width:16px;height:16px;cursor:pointer;accent-color:#3b82f6;"></td>`;
+      }).join("")}
+      <td style="${tdSt}">
+        <button onclick="openCardPayRowModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
+        <button onclick="deleteCardPayRow(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  // 카드 정보 테이블
+  const citbody=document.getElementById("cardinfo-body");
+  if(!citbody) return;
+  if(!cardInfoRecords.length){
+    citbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text2);font-size:13px;">카드 정보 없음</td></tr>`;
+    return;
+  }
+  citbody.innerHTML=cardInfoRecords.map(r=>`<tr style="border-bottom:1px solid var(--border);">
+    <td style="${tdSt}text-align:left;padding-left:16px;font-weight:600;">${r.name}</td>
+    <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
+    <td style="${tdSt}font-size:13px;">${r.cardInfo||"-"}</td>
+    <td style="${tdSt}font-size:12px;color:var(--text2);">${r.cardExpiry||"-"}</td>
+    <td style="${tdSt}font-size:13px;">${r.payDay||"-"}</td>
+    <td style="${tdSt}font-size:12px;color:var(--text2);">${r.birth||"-"}</td>
+    <td style="${tdSt}">
+      <button onclick="openCardInfoModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
+      <button onclick="deleteCardInfo(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
+    </td>
+  </tr>`).join("");
+}
+
+function toggleCardPayCheck(rid, year, month, val){
+  const r=cardPayRecords.find(x=>x.id===rid); if(!r) return;
+  if(!r.checks) r.checks={};
+  r.checks[`${year}-${month}`]=val;
+  autoSave();
+}
+
+function openCardPayRowModal(id){
+  document.getElementById("cp-row-id").value=id||"";
+  document.getElementById("cardpay-row-modal-title").textContent=id?"📋 행 수정":"📋 체크리스트 행 추가";
+  if(id){
+    const r=cardPayRecords.find(x=>x.id===id)||{};
+    document.getElementById("cp-row-name").value=r.name||"";
+    document.getElementById("cp-row-product").value=r.productType||"";
+    document.getElementById("cp-row-insurer").value=r.insurer||"";
+    document.getElementById("cp-row-contractno").value=r.contractNo||"";
+    document.getElementById("cp-row-startdate").value=r.startDate||"";
+  } else {
+    ["cp-row-name","cp-row-product","cp-row-insurer","cp-row-contractno","cp-row-startdate"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  }
+  openModal("cardpay-row");
+}
+
+function saveCardPayRow(){
+  const name=document.getElementById("cp-row-name").value.trim();
+  if(!name){alert("이름을 입력하세요.");return;}
+  const id=parseInt(document.getElementById("cp-row-id").value)||0;
+  const data={
+    name, productType:document.getElementById("cp-row-product").value.trim(),
+    insurer:document.getElementById("cp-row-insurer").value.trim(),
+    contractNo:document.getElementById("cp-row-contractno").value.trim(),
+    startDate:document.getElementById("cp-row-startdate").value
+  };
+  if(id){
+    const r=cardPayRecords.find(x=>x.id===id);
+    if(r) Object.assign(r,data);
+  } else {
+    cardPayRecords.push({id:Date.now(),checks:{},...data});
+  }
+  closeModal("cardpay-row");
+  renderCardPayPage();
+  autoSave();
+}
+
+function deleteCardPayRow(id){
+  if(!confirm("이 항목을 삭제할까요?")) return;
+  cardPayRecords=cardPayRecords.filter(x=>x.id!==id);
+  renderCardPayPage(); autoSave();
+}
+
+function openCardInfoModal(id){
+  document.getElementById("ci-id").value=id||"";
+  document.getElementById("cardinfo-modal-title").textContent=id?"💳 카드 정보 수정":"💳 카드 정보 추가";
+  if(id){
+    const r=cardInfoRecords.find(x=>x.id===id)||{};
+    document.getElementById("ci-name").value=r.name||"";
+    document.getElementById("ci-insurer").value=r.insurer||"";
+    document.getElementById("ci-cardinfo").value=r.cardInfo||"";
+    document.getElementById("ci-expiry").value=r.cardExpiry||"";
+    document.getElementById("ci-payday").value=r.payDay||"";
+    document.getElementById("ci-birth").value=r.birth||"";
+  } else {
+    ["ci-name","ci-insurer","ci-cardinfo","ci-expiry","ci-payday","ci-birth"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  }
+  openModal("cardinfo");
+}
+
+function saveCardInfo(){
+  const name=document.getElementById("ci-name").value.trim();
+  if(!name){alert("이름을 입력하세요.");return;}
+  const id=parseInt(document.getElementById("ci-id").value)||0;
+  const data={
+    name, insurer:document.getElementById("ci-insurer").value.trim(),
+    cardInfo:document.getElementById("ci-cardinfo").value.trim(),
+    cardExpiry:document.getElementById("ci-expiry").value.trim(),
+    payDay:document.getElementById("ci-payday").value.trim(),
+    birth:document.getElementById("ci-birth").value
+  };
+  if(id){
+    const r=cardInfoRecords.find(x=>x.id===id);
+    if(r) Object.assign(r,data);
+  } else {
+    cardInfoRecords.push({id:Date.now(),...data});
+  }
+  closeModal("cardinfo");
+  renderCardPayPage();
+  autoSave();
+}
+
+function deleteCardInfo(id){
+  if(!confirm("이 카드 정보를 삭제할까요?")) return;
+  cardInfoRecords=cardInfoRecords.filter(x=>x.id!==id);
+  renderCardPayPage(); autoSave();
+}
+// ──────────────────────────────────────────────────────────────
 
 // ─── 실패 처리 ─────────────────────────────────────────────────
 const failCategories=["보험료 부담","니즈 불일치","타사 계약","연락 두절","시기 이슈","자사고객","관심 없음","기타"];
@@ -7935,6 +8225,8 @@ async function saveToFirestore() {
     experienceItems,
     customStages,
     customSources,
+    cardPayRecords,
+    cardInfoRecords,
     updatedAt: new Date().toISOString()
   }));
   showSyncToast("💾 저장 중...", false, true);
@@ -7972,6 +8264,8 @@ async function loadFromFirestore() {
       if (p.experienceItems) experienceItems = p.experienceItems;
       if (p.customStages && p.customStages.length) customStages = p.customStages;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
+      if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
+      if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
       // 계약 날짜 정규화 + 피보험자 태아 → 태아보험 마이그레이션
       let migrated = 0;
       customers.forEach(c => (c.contracts||[]).forEach(ct => {
