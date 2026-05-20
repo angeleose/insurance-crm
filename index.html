@@ -1093,7 +1093,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <span>업무</span><span class="sb-arrow">▾</span>
     </div>
     <div class="sb-group" id="sbg-work">
-      <div class="nav-item" data-page="cardpay"><span class="icon">💳</span> 카드 결제</div>
+      <div class="nav-item" data-page="cardpay"><span class="icon">💳</span> 카드 결제 <span class="notif" id="nb-cardpay" style="display:none;">0</span></div>
     </div>
 
     <div class="sb-section" style="margin-top:6px">시스템</div>
@@ -1860,22 +1860,38 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <!-- CARDPAY PAGE -->
   <div class="page" id="page-cardpay">
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-      <div><h2>💳 카드 결제</h2><p>보험료 카드 결제 현황을 월별로 관리하세요.</p></div>
+      <div><h2>💳 카드 결제</h2><p>결제 예정일을 관리하고 결제 완료 시 다음 예정일이 자동 계산됩니다.</p></div>
+      <button class="btn btn-primary" onclick="openCardPayRowModal()">+ 항목 추가</button>
     </div>
 
-    <!-- 체크리스트 -->
+    <!-- 결제 현황 요약 -->
+    <div id="cardpay-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;"></div>
+
+    <!-- 결제 목록 -->
     <div class="card" style="padding:0;margin-bottom:20px;overflow:hidden;">
-      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;">
-        <div class="card-title" style="margin:0;">📋 카드결제 체크리스트</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select id="cp-year" onchange="renderCardPayPage()" style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-weight:600;"></select>
-          <button class="btn btn-primary btn-sm" onclick="openCardPayRowModal()">+ 행 추가</button>
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+        <div class="card-title" style="margin:0;">📋 결제 목록</div>
+        <div style="display:flex;gap:8px;">
+          <button id="cp-filter-all"   class="filter-btn active" onclick="cpFilter('all')">전체</button>
+          <button id="cp-filter-due"   class="filter-btn" onclick="cpFilter('due')" style="color:#ef4444;">결제 필요</button>
+          <button id="cp-filter-ok"    class="filter-btn" onclick="cpFilter('ok')">정상</button>
         </div>
       </div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <table id="cardpay-checklist-table" style="min-width:700px;border-collapse:collapse;width:100%;">
-          <thead id="cardpay-checklist-head"></thead>
-          <tbody id="cardpay-checklist-body"></tbody>
+        <table style="min-width:660px;border-collapse:collapse;width:100%;">
+          <thead>
+            <tr style="background:var(--bg2);font-size:12px;color:var(--text2);">
+              <th style="padding:10px 14px;text-align:left;font-weight:700;">이름</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:700;">상품</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:700;">보험사</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">결제일</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">마지막 결제</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">다음 예정일</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">상태</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;"></th>
+            </tr>
+          </thead>
+          <tbody id="cardpay-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -1883,20 +1899,20 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <!-- 카드 정보 -->
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
-        <div class="card-title" style="margin:0;">💳 카드 정보</div>
+        <div class="card-title" style="margin:0;">🗂️ 카드 정보</div>
         <button class="btn btn-ghost btn-sm" onclick="openCardInfoModal()">+ 추가</button>
       </div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-        <table id="cardinfo-table" style="min-width:600px;border-collapse:collapse;width:100%;">
+        <table style="min-width:560px;border-collapse:collapse;width:100%;">
           <thead>
             <tr style="background:var(--bg2);font-size:12px;color:var(--text2);">
               <th style="padding:10px 14px;text-align:left;font-weight:700;">이름</th>
-              <th style="padding:10px 14px;text-align:left;font-weight:700;">보험사</th>
-              <th style="padding:10px 14px;text-align:left;font-weight:700;">카드 정보</th>
-              <th style="padding:10px 14px;text-align:left;font-weight:700;">유효기간</th>
-              <th style="padding:10px 14px;text-align:left;font-weight:700;">결제일</th>
-              <th style="padding:10px 14px;text-align:left;font-weight:700;">생년월일</th>
-              <th style="padding:10px 14px;text-align:center;font-weight:700;">관리</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:700;">보험사</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:700;">카드 정보</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">유효기간</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">결제일</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">생년월일</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;">관리</th>
             </tr>
           </thead>
           <tbody id="cardinfo-body"></tbody>
@@ -2907,7 +2923,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
 <!-- MODAL: CARDPAY ROW -->
 <div class="modal-overlay" id="modal-cardpay-row">
   <div class="modal-box" style="width:460px;">
-    <h3 id="cardpay-row-modal-title">📋 체크리스트 행 추가</h3>
+    <h3 id="cardpay-row-modal-title">💳 결제 항목 추가</h3>
     <input type="hidden" id="cp-row-id">
     <div class="form-row">
       <div class="form-group"><label>이름 *</label><input type="text" id="cp-row-name" placeholder="고객명 또는 계약명"></div>
@@ -2917,7 +2933,23 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="form-group"><label>보험사</label><input type="text" id="cp-row-insurer" placeholder="DB손해, 현대해상 등"></div>
       <div class="form-group"><label>계약번호</label><input type="text" id="cp-row-contractno" placeholder="320251195541"></div>
     </div>
-    <div class="form-group"><label>결제시작일</label><input type="date" id="cp-row-startdate"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>매월 결제일 *</label>
+        <select id="cp-row-payday" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+          <option value="">-- 선택 --</option>
+          <option value="10">10일</option>
+          <option value="20">20일</option>
+          <option value="25">25일</option>
+          <option value="1">1일</option>
+          <option value="5">5일</option>
+          <option value="15">15일</option>
+        </select>
+      </div>
+      <div class="form-group"><label>다음 결제 예정일</label><input type="date" id="cp-row-nextdate" placeholder="비워두면 자동 계산"></div>
+    </div>
+    <div class="form-group"><label>마지막 결제일 <span style="font-weight:400;color:var(--text2);">(선택)</span></label><input type="date" id="cp-row-lastdate"></div>
+    <div class="form-group"><label>메모</label><input type="text" id="cp-row-memo" placeholder="특이사항..."></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('cardpay-row')">취소</button>
       <button class="btn btn-primary" onclick="saveCardPayRow()">저장</button>
@@ -4153,6 +4185,10 @@ function updateSidebar(){
     + standaloneTasks.filter(t=>!t.done).length;
   const nb = document.getElementById("nb-tasks");
   if(pendingTasks>0){nb.textContent=pendingTasks;nb.style.display="";}else{nb.style.display="none";}
+  // 카드결제 알림 배지
+  const cpDue=cardPayRecords.filter(r=>{const s=cpGetStatus(r).code;return s==="overdue"||s==="today"||s==="soon";}).length;
+  const nbCp=document.getElementById("nb-cardpay");
+  if(nbCp){nbCp.textContent=cpDue;nbCp.style.display=cpDue?"":"";}
 }
 
 let activeTaskFilter = "미완료";
@@ -5634,76 +5670,90 @@ function updateStage(){
 }
 
 // ─── 카드 결제 ─────────────────────────────────────────────────
-let cardPayRecords = [];  // {id, name, productType, insurer, contractNo, startDate, checks:{}}
-let cardInfoRecords = []; // {id, name, insurer, cardInfo, cardExpiry, payDay, birth}
+let cardPayRecords = [];  // {id,name,productType,insurer,contractNo,payDay,nextPayDate,lastPayDate,memo}
+let cardInfoRecords = []; // {id,name,insurer,cardInfo,cardExpiry,payDay,birth}
+let _cpFilterMode = "all";
 
-const _cpInsurerColors = {
-  "DB손해":"#3b82f6","현대해상":"#f59e0b","삼성화재":"#ef4444","KB손해":"#8b5cf6",
-  "메리츠":"#10b981","한화":"#f97316","흥국화재":"#06b6d4","롯데손해":"#e11d48"
-};
-function _cpInsurerBadge(s){
-  if(!s) return "";
-  const col=_cpInsurerColors[s]||"#64748b";
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`;
-}
+const _cpInsurerColors={"DB손해":"#3b82f6","현대해상":"#f59e0b","삼성화재":"#ef4444","KB손해":"#8b5cf6","메리츠":"#10b981","한화":"#f97316","흥국화재":"#06b6d4","롯데손해":"#e11d48"};
+function _cpInsurerBadge(s){ if(!s)return""; const col=_cpInsurerColors[s]||"#64748b"; return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`; }
 const _cpProductColors={"펫":"#f97316","태아실손":"#ec4899","태아종합":"#8b5cf6","실손보험":"#3b82f6","종합보험":"#10b981","운전자보험":"#0891b2","치아보험":"#d97706","암보험":"#ef4444"};
-function _cpProductBadge(s){
-  if(!s) return "";
-  const col=_cpProductColors[s]||"#64748b";
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`;
+function _cpProductBadge(s){ if(!s)return""; const col=_cpProductColors[s]||"#64748b"; return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${col}22;color:${col};">${s}</span>`; }
+
+function cpCalcNextDate(payDay, fromDate){
+  // fromDate: YYYY-MM-DD or today; returns next month's payDay
+  const base = fromDate ? new Date(fromDate) : new Date();
+  const y = base.getFullYear(), m = base.getMonth(); // 0-based
+  const next = new Date(y, m+1, parseInt(payDay)||20);
+  return next.toISOString().slice(0,10);
+}
+
+function cpGetStatus(r){
+  if(!r.nextPayDate) return {code:"none",label:"예정없음",color:"#94a3b8"};
+  const today=new Date(); today.setHours(0,0,0,0);
+  const due=new Date(r.nextPayDate); due.setHours(0,0,0,0);
+  const diff=Math.ceil((due-today)/86400000);
+  if(diff<0)  return {code:"overdue",label:`${-diff}일 연체`,color:"#ef4444"};
+  if(diff===0) return {code:"today",  label:"오늘 결제",color:"#f97316"};
+  if(diff<=3)  return {code:"soon",   label:`D-${diff}`,color:"#f59e0b"};
+  return        {code:"ok",    label:`D-${diff}`,color:"#22c55e"};
+}
+
+function cpFilter(mode){
+  _cpFilterMode=mode;
+  ["all","due","ok"].forEach(m=>{
+    const b=document.getElementById("cp-filter-"+m);
+    if(b) b.className="filter-btn"+(m===mode?" active":"");
+  });
+  renderCardPayPage();
 }
 
 function renderCardPayPage(){
-  const yearSel=document.getElementById("cp-year"); if(!yearSel) return;
-  const curYear=new Date().getFullYear();
-  if(!yearSel.options.length){
-    for(let y=curYear-1;y<=curYear+1;y++) yearSel.add(new Option(y+"년",y));
-    yearSel.value=curYear;
-  }
-  const year=parseInt(yearSel.value)||curYear;
-  const months=[1,2,3,4,5,6,7,8,9,10,11,12];
-  const tdSt="padding:10px 8px;border-bottom:1px solid var(--border);text-align:center;";
-  const thSt="padding:10px 8px;text-align:center;font-weight:700;font-size:12px;color:var(--text2);background:var(--bg2);";
+  const sumEl=document.getElementById("cardpay-summary");
+  const tbody=document.getElementById("cardpay-tbody");
+  if(!sumEl||!tbody) return;
 
-  // 헤더
-  document.getElementById("cardpay-checklist-head").innerHTML=`<tr>
-    <th style="${thSt}text-align:left;padding-left:16px;">이름</th>
-    <th style="${thSt}">상품유형</th>
-    <th style="${thSt}">보험사</th>
-    <th style="${thSt}">계약번호</th>
-    <th style="${thSt}">결제시작일</th>
-    ${months.map(m=>`<th style="${thSt}">${String(year).slice(2)}-${m}</th>`).join("")}
-    <th style="${thSt}">관리</th>
-  </tr>`;
+  const overdue=cardPayRecords.filter(r=>cpGetStatus(r).code==="overdue"||cpGetStatus(r).code==="today");
+  const soon=cardPayRecords.filter(r=>cpGetStatus(r).code==="soon");
+  const ok=cardPayRecords.filter(r=>cpGetStatus(r).code==="ok");
+  sumEl.innerHTML=[
+    {label:"🔴 결제 필요",count:overdue.length,bg:"#fee2e2",col:"#ef4444"},
+    {label:"🟡 3일 이내",count:soon.length,bg:"#fef3c7",col:"#d97706"},
+    {label:"🟢 정상",count:ok.length,bg:"#dcfce7",col:"#16a34a"},
+  ].map(s=>`<div style="flex:1;min-width:100px;padding:14px 18px;border-radius:12px;background:${s.bg};border:1.5px solid ${s.col}33;">
+    <div style="font-size:12px;color:${s.col};font-weight:700;">${s.label}</div>
+    <div style="font-size:24px;font-weight:900;color:${s.col};margin-top:4px;">${s.count}</div>
+  </div>`).join("");
 
-  // 바디
-  const tbody=document.getElementById("cardpay-checklist-body");
-  if(!cardPayRecords.length){
-    tbody.innerHTML=`<tr><td colspan="${5+months.length+1}" style="text-align:center;padding:32px;color:var(--text2);font-size:13px;">항목 없음 — 위 <b>+ 행 추가</b>를 눌러 입력하세요</td></tr>`;
-    return;
+  const filtered=cardPayRecords.filter(r=>{
+    const st=cpGetStatus(r).code;
+    if(_cpFilterMode==="due") return st==="overdue"||st==="today"||st==="soon";
+    if(_cpFilterMode==="ok") return st==="ok"||st==="none";
+    return true;
+  });
+
+  const tdSt="padding:11px 12px;border-bottom:1px solid var(--border);";
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--text2);font-size:13px;">${cardPayRecords.length?"해당 항목 없음":"+ 항목 추가를 눌러 입력하세요"}</td></tr>`;
+  } else {
+    tbody.innerHTML=filtered.map(r=>{
+      const st=cpGetStatus(r);
+      const rowBg=st.code==="overdue"||st.code==="today"?"background:#fff5f5;":"";
+      return `<tr style="border-bottom:1px solid var(--border);${rowBg}">
+        <td style="${tdSt}font-weight:600;">${r.name}</td>
+        <td style="${tdSt}">${_cpProductBadge(r.productType)}</td>
+        <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
+        <td style="${tdSt}text-align:center;font-weight:700;color:var(--text2);">${r.payDay?r.payDay+"일":"-"}</td>
+        <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.lastPayDate||"-"}</td>
+        <td style="${tdSt}text-align:center;font-size:13px;font-weight:700;">${r.nextPayDate||"-"}</td>
+        <td style="${tdSt}text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${st.color}22;color:${st.color};">${st.label}</span></td>
+        <td style="${tdSt}text-align:center;white-space:nowrap;">
+          <button onclick="confirmCardPayment(${r.id})" style="padding:5px 12px;border-radius:8px;border:1.5px solid #22c55e;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:700;cursor:pointer;">✅ 결제완료</button>
+          <button onclick="openCardPayRowModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--text2);margin-left:4px;">✏️</button>
+          <button onclick="deleteCardPayRow(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:2px;">🗑️</button>
+        </td>
+      </tr>`;
+    }).join("");
   }
-  tbody.innerHTML=cardPayRecords.map(r=>{
-    const key=id=>r.id+"_"+year+"_"+id;
-    const checks=r.checks||{};
-    return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="${tdSt}text-align:left;padding-left:16px;font-weight:600;">${r.name}</td>
-      <td style="${tdSt}">${_cpProductBadge(r.productType)}</td>
-      <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
-      <td style="${tdSt}font-size:12px;color:var(--text2);">${r.contractNo||"-"}</td>
-      <td style="${tdSt}font-size:12px;color:var(--text2);">${r.startDate||"-"}</td>
-      ${months.map(m=>{
-        const ck=`${year}-${m}`;
-        const checked=checks[ck]||false;
-        return `<td style="${tdSt}"><input type="checkbox" ${checked?"checked":""}
-          onchange="toggleCardPayCheck(${r.id},${year},${m},this.checked)"
-          style="width:16px;height:16px;cursor:pointer;accent-color:#3b82f6;"></td>`;
-      }).join("")}
-      <td style="${tdSt}">
-        <button onclick="openCardPayRowModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
-        <button onclick="deleteCardPayRow(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
-      </td>
-    </tr>`;
-  }).join("");
 
   // 카드 정보 테이블
   const citbody=document.getElementById("cardinfo-body");
@@ -5713,38 +5763,46 @@ function renderCardPayPage(){
     return;
   }
   citbody.innerHTML=cardInfoRecords.map(r=>`<tr style="border-bottom:1px solid var(--border);">
-    <td style="${tdSt}text-align:left;padding-left:16px;font-weight:600;">${r.name}</td>
+    <td style="${tdSt}font-weight:600;">${r.name}</td>
     <td style="${tdSt}">${_cpInsurerBadge(r.insurer)}</td>
     <td style="${tdSt}font-size:13px;">${r.cardInfo||"-"}</td>
-    <td style="${tdSt}font-size:12px;color:var(--text2);">${r.cardExpiry||"-"}</td>
-    <td style="${tdSt}font-size:13px;">${r.payDay||"-"}</td>
-    <td style="${tdSt}font-size:12px;color:var(--text2);">${r.birth||"-"}</td>
-    <td style="${tdSt}">
+    <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.cardExpiry||"-"}</td>
+    <td style="${tdSt}text-align:center;">${r.payDay?r.payDay+"일":"-"}</td>
+    <td style="${tdSt}text-align:center;font-size:12px;color:var(--text2);">${r.birth||"-"}</td>
+    <td style="${tdSt}text-align:center;">
       <button onclick="openCardInfoModal(${r.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2);">✏️</button>
       <button onclick="deleteCardInfo(${r.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--red);margin-left:4px;">🗑️</button>
     </td>
   </tr>`).join("");
 }
 
-function toggleCardPayCheck(rid, year, month, val){
-  const r=cardPayRecords.find(x=>x.id===rid); if(!r) return;
-  if(!r.checks) r.checks={};
-  r.checks[`${year}-${month}`]=val;
+function confirmCardPayment(id){
+  const r=cardPayRecords.find(x=>x.id===id); if(!r) return;
+  const today=new Date().toISOString().slice(0,10);
+  r.lastPayDate=today;
+  r.nextPayDate=cpCalcNextDate(r.payDay, today);
+  renderCardPayPage();
+  updateSidebar();
   autoSave();
+  showToast(`✅ 결제완료! 다음 예정일: ${r.nextPayDate}`);
 }
 
 function openCardPayRowModal(id){
   document.getElementById("cp-row-id").value=id||"";
-  document.getElementById("cardpay-row-modal-title").textContent=id?"📋 행 수정":"📋 체크리스트 행 추가";
+  document.getElementById("cardpay-row-modal-title").textContent=id?"💳 결제 항목 수정":"💳 결제 항목 추가";
   if(id){
     const r=cardPayRecords.find(x=>x.id===id)||{};
     document.getElementById("cp-row-name").value=r.name||"";
     document.getElementById("cp-row-product").value=r.productType||"";
     document.getElementById("cp-row-insurer").value=r.insurer||"";
     document.getElementById("cp-row-contractno").value=r.contractNo||"";
-    document.getElementById("cp-row-startdate").value=r.startDate||"";
+    document.getElementById("cp-row-payday").value=r.payDay||"";
+    document.getElementById("cp-row-nextdate").value=r.nextPayDate||"";
+    document.getElementById("cp-row-lastdate").value=r.lastPayDate||"";
+    document.getElementById("cp-row-memo").value=r.memo||"";
   } else {
-    ["cp-row-name","cp-row-product","cp-row-insurer","cp-row-contractno","cp-row-startdate"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+    ["cp-row-name","cp-row-product","cp-row-insurer","cp-row-contractno","cp-row-memo","cp-row-nextdate","cp-row-lastdate"].forEach(i=>{const el=document.getElementById(i);if(el)el.value="";});
+    document.getElementById("cp-row-payday").value="";
   }
   openModal("cardpay-row");
 }
@@ -5752,28 +5810,31 @@ function openCardPayRowModal(id){
 function saveCardPayRow(){
   const name=document.getElementById("cp-row-name").value.trim();
   if(!name){alert("이름을 입력하세요.");return;}
+  const payDay=document.getElementById("cp-row-payday").value;
+  const lastDate=document.getElementById("cp-row-lastdate").value;
+  let nextDate=document.getElementById("cp-row-nextdate").value;
+  // 다음 예정일 미입력 시 자동 계산
+  if(!nextDate && payDay){
+    nextDate=cpCalcNextDate(payDay, lastDate||null);
+  }
   const id=parseInt(document.getElementById("cp-row-id").value)||0;
-  const data={
-    name, productType:document.getElementById("cp-row-product").value.trim(),
+  const data={name, productType:document.getElementById("cp-row-product").value.trim(),
     insurer:document.getElementById("cp-row-insurer").value.trim(),
     contractNo:document.getElementById("cp-row-contractno").value.trim(),
-    startDate:document.getElementById("cp-row-startdate").value
-  };
-  if(id){
-    const r=cardPayRecords.find(x=>x.id===id);
-    if(r) Object.assign(r,data);
-  } else {
-    cardPayRecords.push({id:Date.now(),checks:{},...data});
-  }
+    payDay, nextPayDate:nextDate, lastPayDate:lastDate,
+    memo:document.getElementById("cp-row-memo").value.trim()};
+  if(id){ const r=cardPayRecords.find(x=>x.id===id); if(r)Object.assign(r,data); }
+  else { cardPayRecords.push({id:Date.now(),...data}); }
   closeModal("cardpay-row");
   renderCardPayPage();
+  updateSidebar();
   autoSave();
 }
 
 function deleteCardPayRow(id){
   if(!confirm("이 항목을 삭제할까요?")) return;
   cardPayRecords=cardPayRecords.filter(x=>x.id!==id);
-  renderCardPayPage(); autoSave();
+  renderCardPayPage(); updateSidebar(); autoSave();
 }
 
 function openCardInfoModal(id){
