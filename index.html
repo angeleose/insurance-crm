@@ -1320,16 +1320,9 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="card" id="det-memo-card">
       <div class="card-title" style="justify-content:space-between;">
         <span>📝 메모</span>
-        <button class="btn btn-ghost btn-sm" id="det-memo-edit-btn" onclick="toggleMemoEdit()" style="font-size:12px;">✏️ 수정</button>
+        <button class="btn btn-ghost btn-sm" onclick="openAddMemoEntry()" style="font-size:12px;">+ 추가</button>
       </div>
-      <div id="det-memo-view" style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;min-height:36px;"></div>
-      <div id="det-memo-edit" style="display:none;">
-        <textarea id="det-memo-textarea" rows="4" style="width:100%;padding:10px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.7;box-sizing:border-box;" placeholder="고객에 대한 메모를 자유롭게 입력하세요..."></textarea>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-          <button class="btn btn-ghost btn-sm" onclick="cancelMemoEdit()" style="font-size:12px;">취소</button>
-          <button class="btn btn-primary btn-sm" onclick="saveMemo()" style="font-size:12px;">저장</button>
-        </div>
-      </div>
+      <div id="det-memo-list"></div>
     </div>
     <div class="card">
       <div class="card-title" style="justify-content:space-between;">
@@ -4796,14 +4789,7 @@ function renderDetail(id){
     `<button class="btn btn-ghost btn-sm" onclick="openAddContractFromDetail()">+ 계약 추가</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`;
   document.getElementById("det-convert-banner").innerHTML=isPr?`<div class="convert-banner"><p>🎉 계약이 성사됐나요? 가입 고객으로 전환하면 계약 정보를 관리할 수 있어요.</p><button class="btn btn-primary btn-sm" onclick="openModal('convert')">전환하기</button></div>`:"";
   // 메모 렌더
-  const memoView = document.getElementById("det-memo-view");
-  if(memoView) memoView.textContent = c.customerMemo || "";
-  const memoTA = document.getElementById("det-memo-textarea");
-  if(memoTA) memoTA.value = c.customerMemo || "";
-  const memoEdit = document.getElementById("det-memo-edit");
-  if(memoEdit) memoEdit.style.display = "none";
-  const memoViewEl = document.getElementById("det-memo-view");
-  if(memoViewEl && !c.customerMemo) memoViewEl.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
+  renderMemoList();
 
   document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box" style="${c.isFailed?"border-color:#fca5a5;background:linear-gradient(135deg,#fff5f5,#fff1f1);":""}">
   <div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div>
@@ -5706,7 +5692,7 @@ function downloadExcel(type) {
       "임신주차": c.pregweek || "",
       "태아유형": c.fetustype || "",
       "임신중독증": c.toxemia || "",
-      "메모": c.customerMemo || (c.memo||"")
+      "메모": (c.memoEntries||[]).map(e=>_fmtMemoTime(e.createdAt)+" "+e.text).join(" / ") || c.customerMemo || (c.memo||"")
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "고객목록");
     XLSX.writeFile(wb, `고객목록_${today}.xlsx`);
@@ -6221,34 +6207,113 @@ function deleteCalEvent(id) {
 
 
 // ─── 고객 메모 ────────────────────────────────────────────
-function toggleMemoEdit() {
-  const view = document.getElementById("det-memo-view");
-  const edit = document.getElementById("det-memo-edit");
-  const ta   = document.getElementById("det-memo-textarea");
-  const c    = customers.find(x=>x.id===currentCustomerId);
-  ta.value   = c?.customerMemo || "";
-  view.style.display = "none";
-  edit.style.display = "";
-  document.getElementById("det-memo-edit-btn").style.display = "none";
+// ─── 타임스탬프 메모 ──────────────────────────────────────────
+function _fmtMemoTime(iso){
+  const d=new Date(iso);
+  const mm=d.getMonth()+1, dd=d.getDate();
+  const hh=String(d.getHours()).padStart(2,"0"), mi=String(d.getMinutes()).padStart(2,"0");
+  return `${mm}월 ${dd}일 ${hh}:${mi}`;
 }
-function cancelMemoEdit() {
-  document.getElementById("det-memo-view").style.display = "";
-  document.getElementById("det-memo-edit").style.display = "none";
-  document.getElementById("det-memo-edit-btn").style.display = "";
-}
-function saveMemo() {
-  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
-  const val = document.getElementById("det-memo-textarea").value.trim();
-  c.customerMemo = val;
-  const memoView = document.getElementById("det-memo-view");
-  if(val) {
-    memoView.textContent = val;
-  } else {
-    memoView.innerHTML = '<span style="color:var(--text2);font-size:12px;">메모 없음 — ✏️ 수정을 눌러 입력하세요</span>';
+
+function _ensureMemoEntries(c){
+  if(!c.memoEntries){
+    c.memoEntries=[];
+    if(c.customerMemo){
+      c.memoEntries.push({id:Date.now(),text:c.customerMemo,createdAt:new Date().toISOString()});
+      delete c.customerMemo;
+    }
   }
-  cancelMemoEdit();
+}
+
+function renderMemoList(){
+  const c=customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  _ensureMemoEntries(c);
+  const list=document.getElementById("det-memo-list"); if(!list) return;
+  if(!c.memoEntries.length){
+    list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:4px 0 2px;">메모 없음 — 위 <b>+ 추가</b>를 눌러 입력하세요</div>`;
+    return;
+  }
+  list.innerHTML=c.memoEntries.slice().reverse().map(e=>`
+    <div id="memo-entry-${e.id}" style="border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--text2);">${_fmtMemoTime(e.createdAt)}</span>
+        ${e.updatedAt?`<span style="font-size:11px;color:var(--text2);opacity:.7;">(수정됨 ${_fmtMemoTime(e.updatedAt)})</span>`:""}
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button onclick="startEditMemoEntry(${e.id})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;color:var(--text2);">✏️</button>
+          <button onclick="deleteMemoEntry(${e.id})" style="background:none;border:1px solid #fca5a5;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;color:var(--red);">🗑️</button>
+        </div>
+      </div>
+      <div id="memo-text-${e.id}" style="font-size:13px;white-space:pre-wrap;line-height:1.7;">${e.text.replace(/</g,"&lt;")}</div>
+      <div id="memo-edit-${e.id}" style="display:none;">
+        <textarea rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.7;box-sizing:border-box;">${e.text.replace(/</g,"&lt;")}</textarea>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+          <button onclick="cancelEditMemoEntry(${e.id})" class="btn btn-ghost btn-sm" style="font-size:12px;">취소</button>
+          <button onclick="saveMemoEntry(${e.id},document.querySelector('#memo-edit-${e.id} textarea').value)" class="btn btn-primary btn-sm" style="font-size:12px;">저장</button>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function openAddMemoEntry(){
+  const c=customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  _ensureMemoEntries(c);
+  const newId=Date.now();
+  c.memoEntries.push({id:newId,text:"",createdAt:new Date().toISOString()});
+  renderMemoList();
+  // 바로 편집 모드로
+  startEditMemoEntry(newId);
+}
+
+function startEditMemoEntry(id){
+  const txtEl=document.getElementById(`memo-text-${id}`);
+  const editEl=document.getElementById(`memo-edit-${id}`);
+  if(!txtEl||!editEl) return;
+  txtEl.style.display="none";
+  editEl.style.display="";
+  const ta=editEl.querySelector("textarea");
+  if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length); }
+}
+
+function cancelEditMemoEntry(id){
+  const c=customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  _ensureMemoEntries(c);
+  const entry=c.memoEntries.find(e=>e.id===id);
+  if(entry&&!entry.text){ // 내용 없이 추가 취소 → 삭제
+    c.memoEntries=c.memoEntries.filter(e=>e.id!==id);
+    renderMemoList(); return;
+  }
+  const txtEl=document.getElementById(`memo-text-${id}`);
+  const editEl=document.getElementById(`memo-edit-${id}`);
+  if(txtEl) txtEl.style.display="";
+  if(editEl) editEl.style.display="none";
+}
+
+function saveMemoEntry(id, rawVal){
+  const c=customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  _ensureMemoEntries(c);
+  const val=rawVal.trim();
+  if(!val){
+    if(!confirm("내용이 비어있습니다. 삭제할까요?")) return;
+    c.memoEntries=c.memoEntries.filter(e=>e.id!==id);
+    renderMemoList(); autoSave(); return;
+  }
+  const entry=c.memoEntries.find(e=>e.id===id);
+  if(entry){
+    if(entry.text&&entry.text!==val) entry.updatedAt=new Date().toISOString();
+    entry.text=val;
+  }
+  renderMemoList();
   autoSave();
 }
+
+function deleteMemoEntry(id){
+  const c=customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  if(!confirm("이 메모를 삭제할까요?")) return;
+  _ensureMemoEntries(c);
+  c.memoEntries=c.memoEntries.filter(e=>e.id!==id);
+  renderMemoList(); autoSave();
+}
+// ──────────────────────────────────────────────────────────────
 // ──────────────────────────────────────────────────────────
 
 
