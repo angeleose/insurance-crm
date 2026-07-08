@@ -5566,7 +5566,7 @@ function addContract(){
     targetCid = parseInt(document.getElementById("ct-customer-id").value) || 0;
     if(!targetCid){
       const nm=(document.getElementById("ct-cust-search").value||"").trim();
-      const found=customers.find(c=>c.type==="가입"&&c.name===nm);
+      const found=customers.find(c=>c.name===nm);
       if(found) targetCid=found.id;
     }
   }
@@ -5601,8 +5601,7 @@ function openAddContractFromDetail(){
 }
 
 function openAddContractFromList(){
-  const enrolled = customers.filter(c=>c.type==="가입");
-  if(!enrolled.length){ alert("가입 고객이 없습니다."); return; }
+  if(!customers.length){ alert("고객이 없습니다."); return; }
   document.getElementById("ct-cust-search").value = "";
   document.getElementById("ct-customer-id").value = "";
   document.getElementById("ct-customer-wrap").style.display = "";
@@ -5618,10 +5617,10 @@ function openAddContractFromList(){
 function filterContractCustomers(q) {
   const dd = document.getElementById("ct-cust-dd");
   if(!dd) return;
-  const list = customers.filter(c=>c.type==="가입" && (!q || c.name.includes(q)));
+  const list = customers.filter(c=>!q || c.name.includes(q));
   if(!list.length){ dd.style.display="none"; return; }
-  // 정확히 일치하는 이름 하나면 자동 선택
-  if(list.length===1 && list[0].name===q){
+  if(list.length===1){
+    document.getElementById("ct-cust-search").value=list[0].name;
     document.getElementById("ct-customer-id").value=list[0].id;
     dd.style.display="none"; return;
   }
