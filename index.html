@@ -887,7 +887,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBuS-7fRBv_DsWjYV09FuKiti7W7uYkWX8",
@@ -902,7 +902,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     const app = initializeApp(firebaseConfig);
     window._fbDb = getFirestore(app);
     window._fbStorage = getStorage(app);
-    window._fbStorageFns = { ref, uploadString, getDownloadURL };
+    window._fbStorageFns = { ref, uploadBytes, getDownloadURL };
     window._fbFunctions = { doc, setDoc, getDoc, onSnapshot, collection, query, where };
     window._fbReady = true;
     window.dispatchEvent(new Event("firebase-ready"));
@@ -2298,8 +2298,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <input type="number" id="proposal-premium" placeholder="50000">
       </div>
       <div class="form-group">
-        <label>파일 링크 (OneDrive 등)</label>
-        <input type="url" id="proposal-fileurl" placeholder="https://...">
+        <label>📎 파일 첨부</label>
+        <div id="proposal-file-current" style="margin-bottom:6px;"></div>
+        <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;cursor:pointer;background:var(--bg2);">
+          <input type="file" id="proposal-file-input" style="display:none;" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" onchange="selectFileForUpload('proposal',this.files[0])">
+          📂 파일 선택
+        </label>
+        <div id="proposal-file-status" style="font-size:11px;margin-top:5px;"></div>
+        <input type="hidden" id="proposal-fileurl">
       </div>
     </div>
     <div class="form-group">
@@ -2393,11 +2399,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <input type="text" id="af-title" placeholder="예: 2026년 보장분석_김민준">
     </div>
     <div class="form-group">
-      <label>구글 드라이브 링크 *</label>
-      <input type="url" id="af-url" placeholder="https://drive.google.com/file/d/...">
-      <div style="font-size:11px;color:var(--text2);margin-top:5px;">
-        💡 구글 드라이브에서 파일 우클릭 → <strong>공유 가능한 링크 복사</strong> 후 붙여넣기
-      </div>
+      <label>📎 파일 첨부 *</label>
+      <div id="af-file-current" style="margin-bottom:6px;"></div>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;cursor:pointer;background:var(--bg2);">
+        <input type="file" id="af-file-input" style="display:none;" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" onchange="selectFileForUpload('af',this.files[0])">
+        📂 파일 선택 (PDF · 이미지 · Word)
+      </label>
+      <div id="af-file-status" style="font-size:11px;margin-top:5px;"></div>
+      <input type="hidden" id="af-url">
     </div>
     <div class="form-group">
       <label>메모</label>
@@ -2895,8 +2904,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <input type="date" id="ec-duedate" style="margin-top:6px;">
     </div>
     <div class="form-group" style="margin-top:4px;">
-      <label>📎 계약서 파일 링크 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(OneDrive, 구글드라이브 등)</span></label>
-      <input type="url" id="ec-fileurl" placeholder="https://...">
+      <label>📎 계약서 파일</label>
+      <div id="ec-file-current" style="margin-bottom:6px;"></div>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;cursor:pointer;background:var(--bg2);">
+        <input type="file" id="ec-file-input" style="display:none;" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" onchange="selectFileForUpload('ec',this.files[0])">
+        📂 파일 선택 (PDF · 이미지 · Word)
+      </label>
+      <div id="ec-file-status" style="font-size:11px;margin-top:5px;"></div>
+      <input type="hidden" id="ec-fileurl">
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('edit-contract')">취소</button>
@@ -6911,6 +6926,56 @@ function renderTimeline(c) {
 }
 // ──────────────────────────────────────────────────────────
 
+// ─── 파일 업로드 공통 ────────────────────────────────────────
+async function uploadFileToStorage(file, path) {
+  const { ref, uploadBytes, getDownloadURL } = window._fbStorageFns;
+  const storageRef = ref(window._fbStorage, path);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+}
+
+function renderFileUploadArea(prefix, url) {
+  const curr = document.getElementById(prefix+"-file-current");
+  if(!curr) return;
+  if(url) {
+    const raw = url.split("?")[0].split("%2F").pop();
+    const name = decodeURIComponent(raw).replace(/^\d+_/, "");
+    curr.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+      <a href="${url}" target="_blank" rel="noopener" style="color:#2563eb;font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${name||"파일 보기"}</a>
+      <button onclick="clearUploadedFile('${prefix}')" style="background:none;border:none;color:#94a3b8;font-size:14px;cursor:pointer;padding:0 2px;line-height:1;" title="파일 삭제">✕</button>
+    </div>`;
+  } else {
+    curr.innerHTML="";
+  }
+}
+
+async function selectFileForUpload(prefix, file) {
+  if(!file) return;
+  const status = document.getElementById(prefix+"-file-status");
+  const hidden = document.getElementById(prefix+"-fileurl") || document.getElementById(prefix+"-url");
+  if(status){ status.textContent="⏳ 업로드 중..."; status.style.color="#f59e0b"; }
+  try {
+    const userId = sessionStorage.getItem("crm_auth")||"rina";
+    const path = `users/${userId}/${prefix}/${Date.now()}_${file.name}`;
+    const url = await uploadFileToStorage(file, path);
+    if(hidden) hidden.value = url;
+    if(status){ status.textContent=`✅ ${file.name}`; status.style.color="#16a34a"; }
+    renderFileUploadArea(prefix, url);
+  } catch(e) {
+    if(status){ status.textContent=`❌ 업로드 실패: ${e.message}`; status.style.color="#ef4444"; }
+  }
+}
+
+function clearUploadedFile(prefix) {
+  const hidden = document.getElementById(prefix+"-fileurl") || document.getElementById(prefix+"-url");
+  if(hidden) hidden.value="";
+  renderFileUploadArea(prefix, "");
+  const inp = document.getElementById(prefix+"-file-input");
+  if(inp) inp.value="";
+  const status = document.getElementById(prefix+"-file-status");
+  if(status) status.textContent="";
+}
+
 // ─── 보장분석 파일 ────────────────────────────────────────
 let analysisEditId = null;
 
@@ -6926,10 +6991,12 @@ function openAnalysisModal(id=null) {
     document.getElementById("af-title").value = f.title;
     document.getElementById("af-url").value = f.url;
     document.getElementById("af-memo").value = f.memo||"";
+    renderFileUploadArea("af", f.url||"");
   } else {
     document.getElementById("af-title").value = "";
     document.getElementById("af-url").value = "";
     document.getElementById("af-memo").value = "";
+    renderFileUploadArea("af", "");
   }
   openModal("analysis");
 }
@@ -6938,7 +7005,7 @@ function saveAnalysisFile() {
   const title = document.getElementById("af-title").value.trim();
   const url   = document.getElementById("af-url").value.trim();
   const memo  = document.getElementById("af-memo").value.trim();
-  if(!title || !url) { alert("제목과 링크를 입력하세요."); return; }
+  if(!title) { alert("제목을 입력하세요."); return; }
   const c = customers.find(x=>x.id===currentCustomerId);
   if(!c) return;
   if(!c.analysisFiles) c.analysisFiles = [];
@@ -6986,10 +7053,12 @@ function openProposalModal(id = null) {
       document.getElementById("proposal-date").value = found.date||"";
       document.getElementById("proposal-fileurl").value = found.fileUrl||"";
       document.getElementById("proposal-memo").value = found.memo||"";
+      renderFileUploadArea("proposal", found.fileUrl||"");
     }
   } else {
     ["proposal-cust-search","proposal-title","proposal-insurer","proposal-product","proposal-premium","proposal-fileurl","proposal-memo"].forEach(id=>{document.getElementById(id).value="";});
     document.getElementById("proposal-cust-id").value = "";
+    renderFileUploadArea("proposal", "");
     // 현재 보고 있는 고객이 있으면 기본 선택
     if (currentCustomerId) {
       const c = customers.find(x=>x.id===currentCustomerId);
@@ -7259,6 +7328,7 @@ function openEditContract(ctId) {
   document.getElementById("ec-start").value = ct.start||"";
   document.getElementById("ec-end").value = ct.end||"";
   document.getElementById("ec-fileurl").value = ct.fileUrl||"";
+  renderFileUploadArea("ec", ct.fileUrl||"");
   openModal("edit-contract");
   document.getElementById("modal-edit-contract")._editId = ctId;
 }
