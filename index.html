@@ -2623,7 +2623,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <input type="text" id="ct-insured" placeholder="예: 홍길동, 태아" oninput="onCtInsuredInput()">
     </div>
     <div class="form-row">
-      <div class="form-group"><label>종류</label><select id="ct-type" onchange="document.getElementById('ct-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option></select></div>
+      <div class="form-group"><label>종류</label><select id="ct-type" onchange="document.getElementById('ct-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option><option>화재보험</option></select></div>
       <div class="form-group"><label>상품명</label><input type="text" id="ct-product" placeholder="5세대 실손"></div>
     </div>
     <div class="form-row">
@@ -2835,7 +2835,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <input type="text" id="ec-insured" placeholder="예: 홍길동, 태아" oninput="onEcInsuredInput()">
     </div>
     <div class="form-row">
-      <div class="form-group"><label>종류</label><select id="ec-type" onchange="document.getElementById('ec-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option></select></div>
+      <div class="form-group"><label>종류</label><select id="ec-type" onchange="document.getElementById('ec-duedate-wrap').style.display=this.value==='태아보험'?'':'none';"><option>실손보험</option><option>종신보험</option><option>암보험</option><option>태아보험</option><option>치아보험</option><option>정기보험</option><option>연금보험</option><option>건강보험</option><option>펫보험</option><option>간병보험</option><option>화재보험</option></select></div>
       <div class="form-group"><label>상품명</label><input type="text" id="ec-product" placeholder="5세대 실손"></div>
     </div>
     <div class="form-row">
@@ -5065,7 +5065,7 @@ function renderFollowup(){
 }
 
 function renderContracts(){
-  const types = ["전체","실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험"];
+  const types = ["전체","실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","화재보험"];
   const q = (document.getElementById("search-contracts").value||"").trim();
   const allItems = customers
     .filter(c=>c.type==="가입")
