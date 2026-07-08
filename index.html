@@ -6954,6 +6954,11 @@ async function selectFileForUpload(prefix, file) {
   const status = document.getElementById(prefix+"-file-status");
   const hidden = document.getElementById(prefix+"-fileurl") || document.getElementById(prefix+"-url");
   if(status){ status.textContent="⏳ 업로드 중..."; status.style.color="#f59e0b"; }
+  // 제목 필드가 비어 있으면 파일명(확장자 제외)으로 자동 채우기
+  const titleEl = document.getElementById(prefix+"-title");
+  if(titleEl && !titleEl.value.trim()) {
+    titleEl.value = file.name.replace(/\.[^.]+$/, "");
+  }
   try {
     const userId = sessionStorage.getItem("crm_auth")||"rina";
     const path = `users/${userId}/${prefix}/${Date.now()}_${file.name}`;
