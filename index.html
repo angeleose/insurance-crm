@@ -2616,7 +2616,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <h3 style="margin-bottom:14px;">📄 계약 추가</h3>
     <div class="form-group" id="ct-customer-wrap" style="display:none;">
       <label>고객 선택 *</label>
-      <select id="ct-customer-id" style="width:100%;"></select>
+      <div style="position:relative;">
+        <input type="text" id="ct-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
+          oninput="filterContractCustomers(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('ct-cust-dd');if(d)d.style.display='none';},200)"
+          onfocus="filterContractCustomers(this.value)">
+        <input type="hidden" id="ct-customer-id">
+        <div id="ct-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+      </div>
     </div>
     <div class="form-group">
       <label>피보험자</label>
@@ -5556,7 +5563,7 @@ function addContract(){
   const customerWrap = document.getElementById("ct-customer-wrap");
   let targetCid = currentCustomerId;
   if(customerWrap && customerWrap.style.display !== "none") {
-    targetCid = parseInt(document.getElementById("ct-customer-id").value);
+    targetCid = parseInt(document.getElementById("ct-customer-id").value) || 0;
   }
   const c=customers.find(x=>x.id===targetCid);
   if(!c){alert("고객을 선택하세요.");return;}
@@ -5589,11 +5596,10 @@ function openAddContractFromDetail(){
 }
 
 function openAddContractFromList(){
-  // 고객 선택 드롭다운 채우기
   const enrolled = customers.filter(c=>c.type==="가입");
   if(!enrolled.length){ alert("가입 고객이 없습니다."); return; }
-  const sel = document.getElementById("ct-customer-id");
-  sel.innerHTML = enrolled.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
+  document.getElementById("ct-cust-search").value = "";
+  document.getElementById("ct-customer-id").value = "";
   document.getElementById("ct-customer-wrap").style.display = "";
   // 입력 초기화
   ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate"].forEach(id=>document.getElementById(id).value="");
@@ -5602,6 +5608,17 @@ function openAddContractFromList(){
   document.getElementById("ct-type").value = "실손보험";
   document.getElementById("ct-duedate-wrap").style.display = "none";
   openModal("add-contract");
+}
+
+function filterContractCustomers(q) {
+  const dd = document.getElementById("ct-cust-dd");
+  if(!dd) return;
+  const list = customers.filter(c=>c.type==="가입" && (!q || c.name.includes(q)));
+  if(!list.length){ dd.style.display="none"; return; }
+  dd.style.display="block";
+  dd.innerHTML = list.map(c=>`<div style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
+    onmousedown="document.getElementById('ct-cust-search').value='${c.name}';document.getElementById('ct-customer-id').value='${c.id}';document.getElementById('ct-cust-dd').style.display='none';"
+  >${c.name}</div>`).join("");
 }
 
 function filterConsultCustomers(q) {
