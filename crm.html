@@ -339,6 +339,19 @@
     font-family: inherit;
   }
   .dark-toggle:hover { background: rgba(255,255,255,.14); }
+
+  /* 사이드바 상단 바로가기 아이콘 */
+  .sb-shortcuts { display: flex; gap: 8px; padding: 0 18px 16px; }
+  .sb-shortcut {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 9px 4px; border-radius: 10px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    color: rgba(255,255,255,.75); text-decoration: none; text-align: center;
+    transition: background .15s ease, color .15s ease;
+  }
+  .sb-shortcut:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .sb-shortcut .ico { font-size: 17px; line-height: 1; }
+  .sb-shortcut .lbl { font-size: 10.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .mob-dark-btn {
     width: 34px; height: 34px;
     background: rgba(255,255,255,.1);
@@ -970,6 +983,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="sb-logo-text"><h1>보험 CRM</h1><p id="sb-user-name" style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">로그인 중...</p></div>
     </div>
   </div>
+  <div class="sb-shortcuts">
+    <a class="sb-shortcut" href="https://nsso.meritzfire.com/LoginServer/loginFormPageMulti.jsp?InitechEamNoCacheNonce=HjWHZ5nj5CllYJUV5jxPXA%3D%3D" target="_blank" rel="noopener noreferrer" title="메리츠 보장분석">
+      <span class="ico">📊</span><span class="lbl">메리츠 보장분석</span>
+    </a>
+    <a class="sb-shortcut" href="https://www.easypaper.co.kr/ezp-2/login" target="_blank" rel="noopener noreferrer" title="이지페이퍼">
+      <span class="ico">📝</span><span class="lbl">이지페이퍼</span>
+    </a>
+  </div>
   <nav class="sb-nav">
     <div class="sb-section">메인</div>
     <div class="nav-item" data-page="dashboard" onclick="closeMobileDrawer()"><span class="icon">📊</span> 대시보드</div>
@@ -1053,6 +1074,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="sb-logo-icon">🛡</div>
       <div class="sb-logo-text"><h1>보험 CRM</h1><p id="sb-user-name" style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">로그인 중...</p></div>
     </div>
+  </div>
+  <div class="sb-shortcuts">
+    <a class="sb-shortcut" href="https://nsso.meritzfire.com/LoginServer/loginFormPageMulti.jsp?InitechEamNoCacheNonce=HjWHZ5nj5CllYJUV5jxPXA%3D%3D" target="_blank" rel="noopener noreferrer" title="메리츠 보장분석">
+      <span class="ico">📊</span><span class="lbl">메리츠 보장분석</span>
+    </a>
+    <a class="sb-shortcut" href="https://www.easypaper.co.kr/ezp-2/login" target="_blank" rel="noopener noreferrer" title="이지페이퍼">
+      <span class="ico">📝</span><span class="lbl">이지페이퍼</span>
+    </a>
   </div>
   <nav class="sb-nav">
     <div class="sb-section">메인</div>
