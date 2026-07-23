@@ -112,8 +112,27 @@
   #step-title-input:focus{border-bottom-color:var(--purple-light);}
   .detail-sub{font-size:12px;color:var(--text2);margin-bottom:18px;}
 
+  .detail-section-label{font-size:11.5px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:16px 0 8px;display:flex;align-items:center;justify-content:space-between;}
+  .detail-section-label:first-of-type{margin-top:4px;}
+  .detail-section-label .cnt{font-size:11px;font-weight:800;color:var(--purple);background:var(--purple-bg);padding:2px 8px;border-radius:20px;text-transform:none;letter-spacing:0;}
+
+  .checklist-wrap{border:1.5px solid var(--border);border-radius:12px;padding:10px;}
+  .checklist-items{display:flex;flex-direction:column;gap:2px;}
+  .checklist-item{display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:8px;}
+  .checklist-item:hover{background:var(--bg);}
+  .checklist-item input[type="checkbox"]{width:16px;height:16px;flex-shrink:0;accent-color:var(--purple);cursor:pointer;}
+  .checklist-item .ctext{flex:1;font-size:13px;line-height:1.5;word-break:break-word;cursor:pointer;}
+  .checklist-item.checked .ctext{color:var(--text2);text-decoration:line-through;}
+  .checklist-item .cdel{background:none;border:none;color:var(--text2);font-size:12px;opacity:0;flex-shrink:0;padding:2px 4px;}
+  .checklist-item:hover .cdel{opacity:1;}
+  .checklist-item .cdel:hover{color:var(--red);}
+  .checklist-empty{font-size:12px;color:var(--text2);padding:10px 6px;text-align:center;}
+  .checklist-add-row{display:flex;gap:6px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--border);}
+  .checklist-add-row input{flex:1;font-size:12.5px;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;}
+  .checklist-add-row button{background:var(--purple);color:#fff;border:none;border-radius:8px;padding:0 12px;font-size:13px;font-weight:800;}
+
   #step-memo{
-    width:100%;min-height:220px;border:1.5px solid var(--border);border-radius:12px;padding:14px;
+    width:100%;min-height:140px;border:1.5px solid var(--border);border-radius:12px;padding:14px;
     font-size:13.5px;line-height:1.7;resize:vertical;outline:none;color:var(--text);
   }
   #step-memo:focus{border-color:var(--purple-light);}
@@ -347,13 +366,33 @@ function renderStepDetail(){
     return;
   }
   const idx = combo.steps.findIndex(s=>s.id===step.id);
+  const checklist = step.checklist || [];
+  const checkedCount = checklist.filter(c=>c.checked).length;
   detailEl.innerHTML = `
     <div class="detail-head">
       <span class="badge-num">${idx+1}</span>
       <input type="text" id="step-title-input" value="${escapeAttr(step.title)}" onchange="renameStep('${step.id}', this.value)">
     </div>
     <div class="detail-sub">${state.consultType} · ${state.insuranceType} 프로세스의 ${idx+1}번째 단계</div>
-    <textarea id="step-memo" placeholder="이 단계에서 할 일, 스크립트, 체크포인트 등을 자유롭게 적어보세요." onchange="saveMemo('${step.id}', this.value)">${escapeHtml(step.memo||"")}</textarea>
+
+    <div class="detail-section-label">✅ 체크리스트 (할 일)${checklist.length ? `<span class="cnt">${checkedCount}/${checklist.length}</span>` : ``}</div>
+    <div class="checklist-wrap">
+      <div class="checklist-items">
+        ${checklist.length ? checklist.map(c => `
+          <div class="checklist-item ${c.checked?'checked':''}">
+            <input type="checkbox" ${c.checked?'checked':''} onchange="toggleChecklistItem('${step.id}','${c.id}')">
+            <span class="ctext" onclick="toggleChecklistItem('${step.id}','${c.id}')">${escapeHtml(c.text)}</span>
+            <button class="cdel" onclick="deleteChecklistItem('${step.id}','${c.id}')" title="삭제">🗑</button>
+          </div>`).join("") : `<div class="checklist-empty">아직 체크리스트 항목이 없어요. 아래에서 추가해 보세요.</div>`}
+      </div>
+      <div class="checklist-add-row">
+        <input type="text" id="checklist-add-input" placeholder="할 일 추가 후 Enter (예: 니즈 파악 질문하기)" onkeydown="if(event.key==='Enter')addChecklistItem('${step.id}')">
+        <button onclick="addChecklistItem('${step.id}')">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="detail-section-label">📝 스크립트 / 메모</div>
+    <textarea id="step-memo" placeholder="이 단계에서 사용할 스크립트나 메모를 자유롭게 적어보세요." onchange="saveMemo('${step.id}', this.value)">${escapeHtml(step.memo||"")}</textarea>
     <div class="detail-footer">
       <button class="btn ${step.done?'btn-complete':'btn-complete undone'}" onclick="toggleDone('${step.id}')">
         ${step.done ? '✓ 완료됨' : '이 단계 완료하기'}
@@ -393,7 +432,7 @@ function addStep(){
   const title = input.value.trim();
   if(!title) return;
   const combo = getCombo();
-  const step = { id: uid(), title, memo:"", done:false, refs:[] };
+  const step = { id: uid(), title, memo:"", done:false, refs:[], checklist:[] };
   combo.steps.push(step);
   if(!state.currentStepId) state.currentStepId = step.id;
   input.value = "";
@@ -446,6 +485,40 @@ function deleteStep(id){
   if(state.currentStepId===id) state.currentStepId = combo.steps[0]?.id || null;
   saveAll();
   renderProcess();
+}
+
+// ── 체크리스트 CRUD ───────────────────────────────────────
+function addChecklistItem(stepId){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===stepId);
+  if(!step) return;
+  const input = document.getElementById("checklist-add-input");
+  const text = input.value.trim();
+  if(!text) return;
+  if(!step.checklist) step.checklist = [];
+  step.checklist.push({ id: uid(), text, checked:false });
+  saveAll();
+  renderStepDetail();
+  const newInput = document.getElementById("checklist-add-input");
+  if(newInput) newInput.focus();
+}
+function toggleChecklistItem(stepId, itemId){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===stepId);
+  if(!step) return;
+  const item = (step.checklist||[]).find(c=>c.id===itemId);
+  if(!item) return;
+  item.checked = !item.checked;
+  saveAll();
+  renderStepDetail();
+}
+function deleteChecklistItem(stepId, itemId){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===stepId);
+  if(!step) return;
+  step.checklist = (step.checklist||[]).filter(c=>c.id!==itemId);
+  saveAll();
+  renderStepDetail();
 }
 
 // ── 참고자료 CRUD ─────────────────────────────────────────
