@@ -3,53 +3,486 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>보험 상담 프로세스 | 준비중</title>
+<title>보험 상담 프로세스</title>
 <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#0f1b35;--blue:#2563eb;--blue-light:#3b82f6;
-    --purple:#7c3aed;--purple-light:#8b5cf6;
-    --text2:#64748b;
+    --navy:#0f1b35;--navy2:#1a2d52;--blue:#2563eb;--blue-light:#3b82f6;--sky:#e8f0fe;
+    --purple:#7c3aed;--purple-light:#8b5cf6;--purple-bg:#f0e6ff;
+    --green:#10b981;--red:#ef4444;--orange:#f97316;
+    --bg:#f0f4f9;--card:#ffffff;--text:#0f1b35;--text2:#64748b;--border:#e2e8f0;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{height:100%;}
-  body{
-    font-family:'Pretendard',sans-serif;color:#fff;
-    background:
-      radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,.18), transparent 60%),
-      radial-gradient(1200px 600px at 100% 110%, rgba(37,99,235,.18), transparent 60%),
-      var(--navy);
-    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:32px 20px;text-align:center;
+  body{font-family:'Pretendard',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+
+  /* ── top bar (always visible) ───────────────────────────── */
+  #topbar{
+    position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 26px;background:var(--navy);color:#fff;
   }
-  .icon{
-    width:76px;height:76px;border-radius:22px;margin-bottom:26px;
-    background:linear-gradient(135deg,var(--purple),var(--purple-light));
-    display:flex;align-items:center;justify-content:center;font-size:36px;
-    box-shadow:0 20px 40px -12px rgba(124,58,237,.5);
+  #topbar .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14.5px;}
+  #topbar .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--purple),var(--blue-light));display:flex;align-items:center;justify-content:center;font-size:15px;}
+  #topbar .crumb{font-size:12.5px;color:rgba(255,255,255,.45);font-weight:600;display:flex;align-items:center;gap:6px;}
+  #topbar .crumb b{color:#fff;font-weight:700;}
+  #topbar .links{display:flex;gap:8px;}
+  #topbar .links a,#topbar .links button{
+    font-size:12.5px;font-weight:700;color:rgba(255,255,255,.8);text-decoration:none;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    padding:7px 12px;border-radius:9px;transition:background .15s ease;
   }
-  h1{font-size:26px;font-weight:800;letter-spacing:-.3px;}
-  p{font-size:14px;color:rgba(255,255,255,.55);margin-top:12px;line-height:1.7;max-width:380px;}
-  .badge{
-    margin-top:22px;font-size:11.5px;font-weight:700;letter-spacing:.5px;
-    padding:6px 14px;border-radius:20px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);
+  #topbar .links a:hover,#topbar .links button:hover{background:rgba(255,255,255,.18);}
+
+  #app{max-width:1180px;margin:0 auto;padding:40px 24px 60px;}
+
+  /* ── selection screens (type / insurance) ───────────────── */
+  .select-screen{display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:24px;}
+  .select-screen .step-tag{font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--purple);text-transform:uppercase;margin-bottom:10px;}
+  .select-screen h1{font-size:26px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;}
+  .select-screen .sub{font-size:14px;color:var(--text2);margin-bottom:38px;}
+
+  .opt-grid{display:grid;grid-template-columns:repeat(3,minmax(190px,240px));gap:20px;}
+  @media (max-width:720px){.opt-grid{grid-template-columns:1fr;width:100%;max-width:320px;}}
+  .opt-card{
+    background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:30px 20px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    box-shadow:0 8px 24px -12px rgba(15,27,53,.12);transition:all .18s ease;
   }
-  .back{
-    margin-top:34px;display:inline-flex;align-items:center;gap:6px;
-    font-size:13px;font-weight:700;color:#fff;text-decoration:none;
-    padding:11px 20px;border-radius:12px;background:rgba(255,255,255,.08);
-    border:1px solid rgba(255,255,255,.12);transition:background .2s ease;
+  .opt-card .em{font-size:34px;}
+  .opt-card h3{font-size:16px;font-weight:800;}
+  .opt-card p{font-size:12px;color:var(--text2);line-height:1.5;}
+  .opt-card:hover{transform:translateY(-4px);border-color:var(--purple-light);box-shadow:0 16px 32px -12px rgba(124,58,237,.25);}
+
+  .back-link{margin-top:30px;font-size:12.5px;font-weight:700;color:var(--text2);background:none;border:none;display:inline-flex;align-items:center;gap:5px;}
+  .back-link:hover{color:var(--text);}
+
+  /* ── process workspace ──────────────────────────────────── */
+  #process-view{display:none;grid-template-columns:270px 1fr 300px;gap:20px;align-items:start;}
+  #process-view.show{display:grid;}
+  @media (max-width:980px){#process-view{grid-template-columns:1fr;}}
+
+  .progress-wrap{grid-column:1/-1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:2px;}
+  .progress-wrap .label{font-size:12.5px;font-weight:700;color:var(--text2);white-space:nowrap;}
+  .progress-bar{flex:1;height:8px;border-radius:20px;background:var(--border);overflow:hidden;}
+  .progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:20px;transition:width .25s ease;}
+  .progress-wrap .pct{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;}
+  .panel h4{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+
+  /* left: step list */
+  #step-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;padding-right:2px;}
+  .step-item{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 10px;border-radius:10px;cursor:pointer;
+    border:1.5px solid transparent;position:relative;
   }
-  .back:hover{background:rgba(255,255,255,.15);}
+  .step-item:hover{background:var(--bg);}
+  .step-item.active{background:var(--purple-bg);border-color:#d8c4fb;}
+  .step-item .num{
+    width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--text2);
+    font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+  }
+  .step-item.done .num{background:var(--green);color:#fff;}
+  .step-item.active .num{background:var(--purple);color:#fff;}
+  .step-item .txt{flex:1;min-width:0;}
+  .step-item .ttl{font-size:13px;font-weight:700;line-height:1.4;word-break:break-word;}
+  .step-item.done .ttl{color:var(--text2);text-decoration:line-through;}
+  .step-item .mini-actions{display:none;gap:4px;margin-top:4px;}
+  .step-item:hover .mini-actions{display:flex;}
+  .step-item .mini-actions button{background:none;border:none;font-size:11px;color:var(--text2);padding:0;}
+  .step-item .mini-actions button:hover{color:var(--red);}
+
+  #add-step-row{display:flex;gap:6px;margin-top:12px;}
+  #add-step-input{flex:1;font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;}
+  #add-step-row button{background:var(--purple);color:#fff;border:none;border-radius:8px;padding:0 12px;font-size:13px;font-weight:800;}
+
+  .empty-steps{text-align:center;padding:20px 6px;color:var(--text2);font-size:12.5px;line-height:1.7;}
+
+  /* center: current step detail */
+  #step-detail .no-step{text-align:center;padding:60px 20px;color:var(--text2);}
+  #step-detail .no-step .em{font-size:40px;margin-bottom:12px;}
+  #step-detail .no-step p{font-size:13px;line-height:1.7;}
+
+  .detail-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .detail-head .badge-num{font-size:11px;font-weight:800;color:#fff;background:var(--purple);border-radius:8px;padding:3px 9px;}
+  #step-title-input{flex:1;font-size:19px;font-weight:800;border:none;outline:none;background:none;padding:4px 0;border-bottom:2px solid transparent;}
+  #step-title-input:focus{border-bottom-color:var(--purple-light);}
+  .detail-sub{font-size:12px;color:var(--text2);margin-bottom:18px;}
+
+  #step-memo{
+    width:100%;min-height:220px;border:1.5px solid var(--border);border-radius:12px;padding:14px;
+    font-size:13.5px;line-height:1.7;resize:vertical;outline:none;color:var(--text);
+  }
+  #step-memo:focus{border-color:var(--purple-light);}
+  .detail-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:10px;flex-wrap:wrap;}
+  .detail-footer .save-hint{font-size:11px;color:var(--text2);}
+  .btn{border:none;border-radius:10px;font-weight:800;font-size:13px;padding:10px 16px;display:inline-flex;align-items:center;gap:6px;}
+  .btn-complete{background:var(--green);color:#fff;}
+  .btn-complete.undone{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);}
+  .btn-next{background:var(--purple);color:#fff;}
+  .btn-ghost-sm{background:none;border:1.5px solid var(--border);color:var(--text2);font-size:12px;padding:8px 12px;border-radius:8px;font-weight:700;}
+  .btn-ghost-sm:hover{border-color:var(--red);color:var(--red);}
+
+  /* right: references */
+  #ref-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .ref-item{
+    display:flex;align-items:flex-start;gap:8px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--bg);
+  }
+  .ref-item a{font-size:12.5px;font-weight:700;color:var(--blue);text-decoration:none;word-break:break-all;}
+  .ref-item a:hover{text-decoration:underline;}
+  .ref-item .note{font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5;word-break:break-word;}
+  .ref-item .rm{background:none;border:none;color:var(--text2);font-size:12px;margin-left:auto;flex-shrink:0;}
+  .ref-item .rm:hover{color:var(--red);}
+  .ref-empty{font-size:12px;color:var(--text2);text-align:center;padding:14px 4px;}
+
+  #ref-form{display:flex;flex-direction:column;gap:6px;border-top:1px dashed var(--border);padding-top:12px;}
+  #ref-form input,#ref-form textarea{font-size:12.5px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;width:100%;}
+  #ref-form textarea{min-height:52px;resize:vertical;}
+  #ref-form button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:9px;font-size:12.5px;font-weight:800;}
 </style>
 </head>
 <body>
 
-  <div class="icon">🗂️</div>
-  <h1>보험 상담 프로세스</h1>
-  <p>상담 단계별 가이드와 체크리스트를 제공하는 서비스를 준비하고 있습니다.<br>조금만 기다려 주세요.</p>
-  <div class="badge">🚧 COMING SOON</div>
-  <a class="back" href="index.html">← 허브로 돌아가기</a>
+<div id="topbar">
+  <div class="brand"><span class="mark">🗂️</span> 보험 상담 프로세스</div>
+  <div class="crumb" id="crumb"></div>
+  <div class="links">
+    <button id="switch-btn" onclick="goToTypeSelect()" style="display:none;">🔄 상담 유형 변경</button>
+    <a href="index.html">← 허브로</a>
+  </div>
+</div>
 
+<div id="app">
+
+  <!-- STEP 1: 상담 유형 선택 -->
+  <div class="select-screen" id="screen-type">
+    <div class="step-tag">Step 1 · 상담 유형</div>
+    <h1>어떤 상담인가요?</h1>
+    <div class="sub">상담이 이루어진(될) 경로를 선택해 주세요.</div>
+    <div class="opt-grid" id="type-grid"></div>
+  </div>
+
+  <!-- STEP 2: 보험 종류 선택 -->
+  <div class="select-screen" id="screen-insurance" style="display:none;">
+    <div class="step-tag">Step 2 · 보험 종류</div>
+    <h1>어떤 보험 상담인가요?</h1>
+    <div class="sub">상담할 보험 종류를 선택해 주세요.</div>
+    <div class="opt-grid" id="insurance-grid"></div>
+    <button class="back-link" onclick="goToTypeSelect()">← 이전 단계로</button>
+  </div>
+
+  <!-- STEP 3: 프로세스 워크스페이스 -->
+  <div id="process-view">
+    <div class="progress-wrap">
+      <span class="label">진행률</span>
+      <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%;"></div></div>
+      <span class="pct" id="progress-pct">0%</span>
+    </div>
+
+    <!-- LEFT: 단계 목록 -->
+    <div class="panel">
+      <h4>프로세스 단계</h4>
+      <div id="step-list"></div>
+      <div class="empty-steps" id="empty-steps" style="display:none;">
+        아직 단계가 없어요.<br>아래에서 첫 단계를 추가해 프로세스를 직접 설계해 보세요.
+      </div>
+      <div id="add-step-row">
+        <input type="text" id="add-step-input" placeholder="새 단계 이름 (예: 첫 인사 및 니즈 파악)" onkeydown="if(event.key==='Enter')addStep()">
+        <button onclick="addStep()">+ 추가</button>
+      </div>
+    </div>
+
+    <!-- CENTER: 현재 단계 상세 -->
+    <div class="panel" id="step-detail"></div>
+
+    <!-- RIGHT: 참고자료 -->
+    <div class="panel">
+      <h4>📎 참고자료</h4>
+      <div id="ref-list"></div>
+      <div id="ref-form" style="display:none;">
+        <input type="text" id="ref-title" placeholder="제목 (예: 표준약관 PDF)">
+        <input type="text" id="ref-url" placeholder="링크 URL (https://...)">
+        <textarea id="ref-note" placeholder="메모 (선택)"></textarea>
+        <button onclick="addRef()">+ 참고자료 추가</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── 상수 ──────────────────────────────────────────────────
+const CONSULT_TYPES = [
+  { key:"박람회", em:"🎪", desc:"박람회·행사장에서 만난 고객 상담" },
+  { key:"DB",     em:"📇", desc:"DB(디비)로 확보한 고객 상담" },
+  { key:"방문",   em:"🏠", desc:"고객을 직접 방문해 진행하는 상담" },
+];
+const INSURANCE_TYPES = [
+  { key:"성인보험", em:"🧑", desc:"성인 대상 보장·건강 보험" },
+  { key:"태아보험", em:"👶", desc:"임산부·태아 대상 보험" },
+  { key:"펫보험",   em:"🐾", desc:"반려동물 대상 보험" },
+];
+const STORAGE_KEY = "ins_consult_process_v1";
+
+// ── 상태 ──────────────────────────────────────────────────
+let state = { consultType: null, insuranceType: null, currentStepId: null };
+let allData = loadAll();
+
+function loadAll(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(allData)); }
+function comboKey(){ return `${state.consultType}__${state.insuranceType}`; }
+function getCombo(){
+  const k = comboKey();
+  if(!allData[k]) allData[k] = { steps: [] };
+  return allData[k];
+}
+function uid(){ return "s" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ── 화면 전환 ─────────────────────────────────────────────
+function renderTypeGrid(){
+  const grid = document.getElementById("type-grid");
+  grid.innerHTML = CONSULT_TYPES.map(t => `
+    <div class="opt-card" onclick="selectConsultType('${t.key}')">
+      <div class="em">${t.em}</div>
+      <h3>${t.key}</h3>
+      <p>${t.desc}</p>
+    </div>`).join("");
+}
+function renderInsuranceGrid(){
+  const grid = document.getElementById("insurance-grid");
+  grid.innerHTML = INSURANCE_TYPES.map(t => `
+    <div class="opt-card" onclick="selectInsuranceType('${t.key}')">
+      <div class="em">${t.em}</div>
+      <h3>${t.key}</h3>
+      <p>${t.desc}</p>
+    </div>`).join("");
+}
+
+function selectConsultType(key){
+  state.consultType = key;
+  document.getElementById("screen-type").style.display = "none";
+  document.getElementById("screen-insurance").style.display = "flex";
+  updateCrumb();
+}
+function selectInsuranceType(key){
+  state.insuranceType = key;
+  document.getElementById("screen-insurance").style.display = "none";
+  document.getElementById("process-view").classList.add("show");
+  document.getElementById("switch-btn").style.display = "";
+  const combo = getCombo();
+  state.currentStepId = combo.steps[0]?.id || null;
+  updateCrumb();
+  renderProcess();
+}
+function goToTypeSelect(){
+  state.consultType = null; state.insuranceType = null; state.currentStepId = null;
+  document.getElementById("process-view").classList.remove("show");
+  document.getElementById("screen-insurance").style.display = "none";
+  document.getElementById("screen-type").style.display = "flex";
+  document.getElementById("switch-btn").style.display = "none";
+  updateCrumb();
+}
+function updateCrumb(){
+  const el = document.getElementById("crumb");
+  const ct = CONSULT_TYPES.find(t=>t.key===state.consultType);
+  const it = INSURANCE_TYPES.find(t=>t.key===state.insuranceType);
+  let html = "";
+  if(ct) html += `<b>${ct.em} ${ct.key}</b>`;
+  if(it) html += ` <span style="opacity:.4;">›</span> <b>${it.em} ${it.key}</b>`;
+  el.innerHTML = html;
+}
+
+// ── 프로세스 렌더 ─────────────────────────────────────────
+function renderProcess(){
+  const combo = getCombo();
+  const steps = combo.steps;
+
+  // progress
+  const done = steps.filter(s=>s.done).length;
+  const pct = steps.length ? Math.round(done/steps.length*100) : 0;
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-pct").textContent = `${pct}% (${done}/${steps.length})`;
+
+  // left: step list
+  const listEl = document.getElementById("step-list");
+  document.getElementById("empty-steps").style.display = steps.length ? "none" : "";
+  listEl.innerHTML = steps.map((s, i) => `
+    <div class="step-item ${s.done?'done':''} ${s.id===state.currentStepId?'active':''}" onclick="selectStep('${s.id}')">
+      <div class="num">${s.done ? '✓' : i+1}</div>
+      <div class="txt">
+        <div class="ttl">${escapeHtml(s.title)}</div>
+        <div class="mini-actions" onclick="event.stopPropagation()">
+          <button onclick="moveStep('${s.id}',-1)" title="위로">↑</button>
+          <button onclick="moveStep('${s.id}',1)" title="아래로">↓</button>
+          <button onclick="deleteStep('${s.id}')" title="삭제">🗑</button>
+        </div>
+      </div>
+    </div>`).join("");
+
+  renderStepDetail();
+  renderRefs();
+}
+
+function selectStep(id){
+  state.currentStepId = id;
+  renderProcess();
+}
+
+function renderStepDetail(){
+  const combo = getCombo();
+  const detailEl = document.getElementById("step-detail");
+  const step = combo.steps.find(s=>s.id===state.currentStepId);
+  if(!step){
+    detailEl.innerHTML = `
+      <div class="no-step">
+        <div class="em">🧭</div>
+        <p>왼쪽에서 단계를 추가하거나 선택하면<br>여기에서 내용을 채울 수 있어요.</p>
+      </div>`;
+    return;
+  }
+  const idx = combo.steps.findIndex(s=>s.id===step.id);
+  detailEl.innerHTML = `
+    <div class="detail-head">
+      <span class="badge-num">${idx+1}</span>
+      <input type="text" id="step-title-input" value="${escapeAttr(step.title)}" onchange="renameStep('${step.id}', this.value)">
+    </div>
+    <div class="detail-sub">${state.consultType} · ${state.insuranceType} 프로세스의 ${idx+1}번째 단계</div>
+    <textarea id="step-memo" placeholder="이 단계에서 할 일, 스크립트, 체크포인트 등을 자유롭게 적어보세요." onchange="saveMemo('${step.id}', this.value)">${escapeHtml(step.memo||"")}</textarea>
+    <div class="detail-footer">
+      <button class="btn ${step.done?'btn-complete':'btn-complete undone'}" onclick="toggleDone('${step.id}')">
+        ${step.done ? '✓ 완료됨' : '이 단계 완료하기'}
+      </button>
+      <div style="display:flex;gap:8px;">
+        ${idx < combo.steps.length-1 ? `<button class="btn btn-next" onclick="goNextStep('${step.id}')">다음 단계로 →</button>` : ``}
+        <button class="btn-ghost-sm" onclick="deleteStep('${step.id}')">단계 삭제</button>
+      </div>
+    </div>`;
+}
+
+function renderRefs(){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===state.currentStepId);
+  const listEl = document.getElementById("ref-list");
+  const formEl = document.getElementById("ref-form");
+  if(!step){
+    listEl.innerHTML = `<div class="ref-empty">단계를 선택하면<br>참고자료를 추가할 수 있어요.</div>`;
+    formEl.style.display = "none";
+    return;
+  }
+  formEl.style.display = "flex";
+  const refs = step.refs || [];
+  listEl.innerHTML = refs.length ? refs.map(r => `
+    <div class="ref-item">
+      <div style="flex:1;min-width:0;">
+        ${r.url ? `<a href="${escapeAttr(r.url)}" target="_blank" rel="noopener">🔗 ${escapeHtml(r.title||r.url)}</a>` : `<div style="font-size:12.5px;font-weight:700;">${escapeHtml(r.title)}</div>`}
+        ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ``}
+      </div>
+      <button class="rm" onclick="removeRef('${step.id}','${r.id}')">✕</button>
+    </div>`).join("") : `<div class="ref-empty">아직 참고자료가 없어요.</div>`;
+}
+
+// ── 단계 CRUD ─────────────────────────────────────────────
+function addStep(){
+  const input = document.getElementById("add-step-input");
+  const title = input.value.trim();
+  if(!title) return;
+  const combo = getCombo();
+  const step = { id: uid(), title, memo:"", done:false, refs:[] };
+  combo.steps.push(step);
+  if(!state.currentStepId) state.currentStepId = step.id;
+  input.value = "";
+  saveAll();
+  renderProcess();
+}
+function renameStep(id, title){
+  title = title.trim();
+  if(!title) return;
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===id);
+  if(step){ step.title = title; saveAll(); renderProcess(); }
+}
+function saveMemo(id, memo){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===id);
+  if(step){ step.memo = memo; saveAll(); }
+}
+function toggleDone(id){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===id);
+  if(!step) return;
+  step.done = !step.done;
+  saveAll();
+  if(step.done) goNextStep(id, true);
+  else renderProcess();
+}
+function goNextStep(id, onlyIfDone){
+  const combo = getCombo();
+  const idx = combo.steps.findIndex(s=>s.id===id);
+  const next = combo.steps[idx+1];
+  if(next) state.currentStepId = next.id;
+  renderProcess();
+}
+function moveStep(id, dir){
+  const combo = getCombo();
+  const idx = combo.steps.findIndex(s=>s.id===id);
+  const swapIdx = idx + dir;
+  if(swapIdx < 0 || swapIdx >= combo.steps.length) return;
+  [combo.steps[idx], combo.steps[swapIdx]] = [combo.steps[swapIdx], combo.steps[idx]];
+  saveAll();
+  renderProcess();
+}
+function deleteStep(id){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===id);
+  if(!step) return;
+  if(!confirm(`"${step.title}" 단계를 삭제할까요?`)) return;
+  combo.steps = combo.steps.filter(s=>s.id!==id);
+  if(state.currentStepId===id) state.currentStepId = combo.steps[0]?.id || null;
+  saveAll();
+  renderProcess();
+}
+
+// ── 참고자료 CRUD ─────────────────────────────────────────
+function addRef(){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===state.currentStepId);
+  if(!step) return;
+  const title = document.getElementById("ref-title").value.trim();
+  const url = document.getElementById("ref-url").value.trim();
+  const note = document.getElementById("ref-note").value.trim();
+  if(!title && !url){ alert("제목이나 링크 중 하나는 입력해 주세요."); return; }
+  if(!step.refs) step.refs = [];
+  step.refs.push({ id: uid(), title: title || url, url, note });
+  document.getElementById("ref-title").value = "";
+  document.getElementById("ref-url").value = "";
+  document.getElementById("ref-note").value = "";
+  saveAll();
+  renderRefs();
+}
+function removeRef(stepId, refId){
+  const combo = getCombo();
+  const step = combo.steps.find(s=>s.id===stepId);
+  if(!step) return;
+  step.refs = (step.refs||[]).filter(r=>r.id!==refId);
+  saveAll();
+  renderRefs();
+}
+
+// ── 유틸 ──────────────────────────────────────────────────
+function escapeHtml(str){
+  return String(str||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+// ── 초기화 ────────────────────────────────────────────────
+renderTypeGrid();
+renderInsuranceGrid();
+</script>
 </body>
 </html>
