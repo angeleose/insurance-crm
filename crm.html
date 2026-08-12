@@ -147,6 +147,15 @@
   .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;}
   .info-item .il{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;}
   .info-item .iv{font-size:14px;font-weight:600;}
+  /* 인라인 편집 인풋 — 평소엔 텍스트처럼 보이다가 hover/focus 시 편집 가능함을 드러냄 */
+  .iv input, .iv select{width:calc(100% + 12px);margin:-4px -6px;padding:4px 6px;font:inherit;font-weight:inherit;color:inherit;background:transparent;border:1.5px solid transparent;border-radius:6px;box-sizing:border-box;cursor:text;transition:border-color .15s,background-color .15s;}
+  .iv select{cursor:pointer;}
+  .iv input:hover, .iv select:hover{background:var(--bg);}
+  .iv input:focus, .iv select:focus{outline:none;border-color:var(--blue);background:var(--card);}
+  .iv input::placeholder{color:var(--text2);font-weight:500;}
+  #det-name[contenteditable]{outline:none;cursor:text;border-bottom:1.5px dashed transparent;border-radius:4px;transition:border-color .15s;}
+  #det-name[contenteditable]:hover{border-bottom-color:var(--border);}
+  #det-name[contenteditable]:focus{border-bottom-color:var(--blue);}
   .consult-item{padding:14px 0;border-bottom:1px solid #f1f5f9;}
   .consult-item:last-child{border-bottom:none;}
   .consult-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
@@ -1343,7 +1352,9 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="detail-header">
       <div class="avatar" id="det-avatar">?</div>
       <div class="detail-info">
-        <h3 id="det-name"></h3>
+        <h3 id="det-name" contenteditable="true" spellcheck="false" title="클릭하여 이름 수정"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+          onblur="saveDetName(this)"></h3>
         <p id="det-sub"></p>
         <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;" id="det-badges"></div>
       </div>
@@ -1352,8 +1363,8 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div id="det-convert-banner"></div>
     <div id="det-prospect-box"></div>
     <div class="card"><div class="card-title" style="justify-content:space-between;">
-      <span>📋 기본 정보</span>
-      <button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button>
+      <span>📋 기본 정보 <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:none;letter-spacing:0;">— 클릭해서 바로 입력/선택하세요</span></span>
+      <button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;" title="태그·주민번호·산모 정보 등 추가 항목 편집">✏️ 태그/주민번호 등</button>
     </div><div class="info-grid" id="det-info"></div></div>
     <div class="card" id="det-memo-card">
       <div class="card-title" style="justify-content:space-between;">
@@ -4982,7 +4993,7 @@ function renderDetail(id){
   document.getElementById("det-avatar").className=`avatar ${c.type}`;
   document.getElementById("det-name").textContent=c.name;
   document.getElementById("det-sub").innerHTML=`<span id="det-phone-text">${c.phone}</span><button onclick="copyPhone('${c.phone}')" id="det-phone-copy-btn" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>${c.email?" · "+c.email:""}`;
-  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${isPr&&c.isFailed?`<span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ 실패 · ${c.failCategory||""}</span>`:""}${renderTags(c.tags)}`;
+  document.getElementById("det-badges").innerHTML=`<span class="type-badge ${c.type}">${c.type==="가입"?"✅ 가입 고객":"🌱 가망 고객"}</span>${isPr?`<span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span>`:""}${isPr&&c.isFailed?`<span style="display:inline-block;padding:2px 10px;border-radius:5px;font-size:12px;font-weight:700;background:#fee2e2;color:#ef4444;">❌ 실패 · ${c.failCategory||""}</span>`:""}<span onclick="openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:var(--text2);font-size:12px;border:1px dashed var(--border);border-radius:5px;padding:2px 8px;">+ 태그</span>'}</span>`;
   const scanBtn = c.scanImageUrl ? `<button class="btn btn-ghost btn-sm" onclick="openScanImageViewer('${c.scanImageUrl}')" style="border-color:#a5f3fc;color:#0891b2;">📄 고객데이터원본</button>` : "";
   document.getElementById("det-actions").innerHTML=isPr?
     `<button class="btn btn-ghost btn-sm" onclick="openModal('update-stage')">단계 변경</button><button class="btn btn-success btn-sm" onclick="openConsultFromDetail()">+ 상담 기록</button><button class="btn btn-primary btn-sm" onclick="openModal('convert')">가입 전환 🎉</button><button class="btn btn-ghost btn-sm" onclick="openKakaoModal()" style="background:#FEE500;color:#3A1D1D;border-color:#FEE500;">💬 카카오</button>${scanBtn}`:
@@ -4992,12 +5003,12 @@ function renderDetail(id){
   renderMemoList();
 
   document.getElementById("det-prospect-box").innerHTML=isPr?`<div class="prospect-box" style="${c.isFailed?"border-color:#fca5a5;background:linear-gradient(135deg,#fff5f5,#fff1f1);":""}">
-  <div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;">✏️ 수정</button></div>
+  <div class="prospect-box-title" style="display:flex;justify-content:space-between;align-items:center;">🌱 가망 고객 정보<button class="btn btn-ghost btn-sm" onclick="openEditInfo()" style="font-size:12px;" title="태그·주민번호·산모 정보 등 추가 항목 편집">✏️ 태그/주민번호 등</button></div>
   <div class="info-grid">
-    <div class="info-item"><div class="il">관심 상품</div><div class="iv" style="color:var(--purple)">${c.interest||"-"}</div></div>
-    <div class="info-item"><div class="il">상담 단계</div><div class="iv"><span class="stage-badge" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}">${c.stage||"초기접촉"}</span></div></div>
+    <div class="info-item"><div class="il">관심 상품</div><div class="iv"><input type="text" value="${escAttr(c.interest||"")}" placeholder="실손보험, 암보험 등" style="color:var(--purple);" onblur="detField(this,'interest')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+    <div class="info-item"><div class="il">상담 단계</div><div class="iv"><select class="stage-badge" onchange="detStageChange(this)" style="${getStageStyle(c.stage||customStages[0]||'초기접촉')}border:none;font-weight:700;">${customStages.map(s=>`<option value="${escAttr(s)}" ${(c.stage||customStages[0])===s?"selected":""}>${s}</option>`).join("")}</select></div></div>
     <div class="info-item"><div class="il">출처</div><div class="iv">${c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:#f0e6ff;color:var(--purple);">${c.source}</span>`:"-"}</div></div>
-    <div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400">${c.memo||"-"}</div></div>
+    <div class="info-item" style="grid-column:1/-1"><div class="il">메모</div><div class="iv" style="font-size:13px;font-weight:400"><input type="text" value="${escAttr(c.memo||"")}" placeholder="특이사항 등..." style="font-size:13px;font-weight:400;" onblur="detField(this,'memo')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>
   </div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid ${c.isFailed?"#fca5a5":"var(--border)"};display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     ${c.isFailed
@@ -5012,7 +5023,7 @@ function renderDetail(id){
     }
   </div>
 </div>`:"";
-  document.getElementById("det-info").innerHTML=[["생년월일",formatBirth(c.birth)],["전화번호",`${c.phone} <button onclick="copyPhone('${c.phone}')" title="복사" style="margin-left:4px;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;vertical-align:middle;line-height:1;">📋</button>`],["이메일",c.email||"-"],["주소",c.address||"-"],["직업",c.job||"-"],["출처",c.source?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:700;background:${isPr?"#f0e6ff":"#dbeafe"};color:${isPr?"var(--purple)":"#1d4ed8"};">${c.source}</span>${c.sourceVenue?` <span style="font-size:12px;color:var(--text2);">· ${c.sourceVenue}</span>`:""}`:"-"],...(!isPr?[["가입일(첫 계약)",c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"]]:[])].map(([l,v])=>`<div class="info-item"><div class="il">${l}</div><div class="iv">${v}</div></div>`).join("")
+  document.getElementById("det-info").innerHTML = renderDetInfoGrid(c, isPr)
   + `<div class="info-item" style="grid-column:1/-1"><div class="il">주민번호</div><div class="iv" style="display:flex;align-items:center;gap:10px;">${renderSsn(c)}</div></div>`
   + (c.maternity==="Y" ? renderMaternityInfo(c) : "");
   const cc=document.getElementById("det-contracts-card");
@@ -7525,6 +7536,82 @@ function saveEditInfo() {
   renderDashboard();
 }
 
+// ─── 고객 상세 — 클릭 없이 바로 입력/선택하는 인라인 편집 ──────
+function escAttr(s){ return String(s??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+function renderDetInfoGrid(c, isPr){
+  const venueRow = isVenueSource(c.source) ? `<div class="info-item"><div class="il">장소</div><div class="iv"><input type="text" value="${escAttr(c.sourceVenue||"")}" placeholder="예: 킨텍스, 코엑스, 일산, 부산 벡스코..." onblur="detField(this,'sourceVenue')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>` : "";
+  const joinDateRow = !isPr ? `<div class="info-item"><div class="il">가입일(첫 계약)</div><div class="iv">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</div></div>` : "";
+  return `
+    <div class="info-item"><div class="il">생년월일</div><div class="iv"><input type="date" value="${c.birth||""}" onchange="detField(this,'birth')"></div></div>
+    <div class="info-item"><div class="il">전화번호</div><div class="iv" style="display:flex;align-items:center;">
+      <input type="text" value="${escAttr(c.phone||"")}" placeholder="010-0000-0000" style="flex:1;min-width:0;" onblur="detField(this,'phone',{required:true,label:'전화번호'})" onkeydown="if(event.key==='Enter')this.blur()">
+      <button onclick="copyPhone('${c.phone||""}')" title="복사" style="flex-shrink:0;background:none;border:none;cursor:pointer;font-size:17px;color:var(--text2);padding:0 4px;line-height:1;">📋</button>
+    </div></div>
+    <div class="info-item"><div class="il">이메일</div><div class="iv"><input type="email" value="${escAttr(c.email||"")}" placeholder="-" onblur="detField(this,'email')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+    <div class="info-item"><div class="il">주소</div><div class="iv"><input type="text" value="${escAttr(c.address||"")}" placeholder="-" onblur="detField(this,'address')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+    <div class="info-item"><div class="il">직업</div><div class="iv"><input type="text" value="${escAttr(c.job||"")}" placeholder="예: 교사, 자영업, 회사원" onblur="detField(this,'job')" onkeydown="if(event.key==='Enter')this.blur()"></div></div>
+    <div class="info-item"><div class="il">출처</div><div class="iv"><select onchange="detSourceChange(this)">
+      <option value="">-- 선택 --</option>
+      ${customSources.map(s=>`<option value="${escAttr(s.name)}" ${c.source===s.name?"selected":""}>${s.name}</option>`).join("")}
+    </select></div></div>
+    ${venueRow}
+    ${joinDateRow}`;
+}
+
+// 텍스트류 필드: blur(포커스 이탈) 시 커밋. field는 customer 객체 키.
+function detField(el, field, opts={}){
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  const value = el.value.trim();
+  if(opts.required && !value){
+    showToast(`${opts.label||"이 값"}은(는) 비워둘 수 없어요.`);
+    renderDetail(currentCustomerId);
+    return;
+  }
+  if((c[field]||"") === value) return;
+  c[field] = value;
+  autoSave();
+  renderDetail(currentCustomerId);
+  c.type === "가망" ? renderProspects() : renderEnrolled();
+}
+
+// 출처 select: 변경 즉시 반영 (장소 입력란 표시 여부도 함께 갱신)
+function detSourceChange(el){
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  c.source = el.value;
+  if(!isVenueSource(c.source)) c.sourceVenue = "";
+  autoSave();
+  renderDetail(currentCustomerId);
+  c.type === "가망" ? renderProspects() : renderEnrolled();
+}
+
+// 가망 고객 상담 단계 select: 변경 즉시 반영
+function detStageChange(el){
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  if(c.stage === el.value) return;
+  c.stage = el.value;
+  autoSave();
+  renderDetail(currentCustomerId);
+  renderProspects();
+  renderDashboard();
+}
+
+// 이름(h3, contenteditable): 포커스 이탈 시 커밋
+function saveDetName(el){
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  const value = el.textContent.trim();
+  if(!value){
+    showToast("이름은 비워둘 수 없어요.");
+    el.textContent = c.name;
+    return;
+  }
+  if(value === c.name) return;
+  c.name = value;
+  autoSave();
+  renderDetail(currentCustomerId);
+  c.type === "가망" ? renderProspects() : renderEnrolled();
+}
+
 function convertToEnrolled(){
   const c=customers.find(x=>x.id===currentCustomerId);if(!c)return;
   c.type="가입";delete c.interest;delete c.stage;delete c.memo;
@@ -7652,7 +7739,8 @@ function saveTagEditor() {
   const selected = [...document.querySelectorAll("#tag-editor-options span[data-selected='true']")].map(el=>el.textContent);
   c.tags = selected;
   closeTagEditor();
-  renderEnrolled();
+  c.type === "가망" ? renderProspects() : renderEnrolled();
+  if(currentCustomerId === c.id) renderDetail(c.id);
   autoSave();
 }
 // ──────────────────────────────────────────────────────────
