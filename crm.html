@@ -3370,6 +3370,8 @@ const isCtLive=ct=>ct.status!=="cancelled";
 const ctStatusText=ct=>ct.status==="cancelled"?"해지":ct.status==="active"?"유지":"만기예정";
 const ctBadgeCls=ct=>ct.status==="cancelled"?"badge-cancelled":ct.status==="active"?"badge-active":"badge-expiring";
 const ctBadgeHtml=ct=>`<span class="badge ${ctBadgeCls(ct)}">${ctStatusText(ct)}${ct.status==="cancelled"&&ct.cancelDate?` (${ct.cancelDate})`:""}</span>`;
+// 보유 계약이 있으면서 전부 해지된 고객 — 가입고객 목록에서 기본적으로 숨김 처리 대상
+const isCancelledCustomer=c=>!!(c.contracts&&c.contracts.length&&c.contracts.every(ct=>!isCtLive(ct)));
 const fmtW=n=>n>=10000?(n/10000).toFixed(0)+"만":n.toLocaleString();
 const tagCls=t=>({VIP:"tag-vip",신규:"tag-new",갱신예정:"tag-renew",전환상담:"tag-convert",만기예정:"tag-expire"}[t]||"");
 const renderTags=tags=>(tags||[]).map(t=>`<span class="tag ${tagCls(t)}">${t}</span>`).join(" ");
@@ -4792,10 +4794,12 @@ function updateEnrolledDateUI() {
 function renderEnrolled(resetPage){
   if(resetPage) enrolledPage = 1;
   const tags=["전체","VIP","신규","갱신예정","전환상담","만기예정"];
+  const cancelledCustCount = customers.filter(c=>c.type==="가입"&&isCancelledCustomer(c)).length;
   const sources=["전체",...getSourceNames()];
   const srcBadge=s=>s?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;">${s}</span>`:`<span style="color:var(--text2)">-</span>`;
   document.getElementById("tag-filters-enrolled").innerHTML=
     tags.map(t=>`<button class="filter-btn ${t===activeTagFilter?"active":""}" onclick="activeTagFilter='${t}';enrolledPage=1;renderEnrolled()">${t}</button>`).join("")+
+    `<button class="filter-btn ${activeTagFilter==="해지"?"active":""}" style="${activeTagFilter==="해지"?"background:var(--red);":"background:#fff1f2;color:var(--red);"}" onclick="activeTagFilter='해지';enrolledPage=1;renderEnrolled()">🚫 해지 고객 (${cancelledCustCount})</button>`+
     `<span style="width:1px;background:var(--border);margin:0 4px;display:inline-block;height:20px;vertical-align:middle;"></span>`+
     sources.map(s=>`<button class="filter-btn ${s===activeEnrolledSourceFilter?"active":""}" onclick="activeEnrolledSourceFilter='${s}';enrolledPage=1;renderEnrolled()">${s==="전체"?"전체출처":s}</button>`).join("");
   const q=document.getElementById("search-enrolled").value.trim();
@@ -4806,7 +4810,13 @@ function renderEnrolled(resetPage){
       if(q && !c.name.includes(q) && !c.phone.includes(q)) return false;
     }
     if(q && !c.name.includes(q) && !c.phone.includes(q)) return false;
-    if(activeTagFilter!=="전체" && !c.tags.includes(activeTagFilter)) return false;
+    // 해지 필터: 켜져 있으면 해지 고객만, 꺼져 있으면(기본) 해지 고객은 숨김
+    if(activeTagFilter==="해지") {
+      if(!isCancelledCustomer(c)) return false;
+    } else {
+      if(isCancelledCustomer(c)) return false;
+      if(activeTagFilter!=="전체" && !c.tags.includes(activeTagFilter)) return false;
+    }
     if(activeEnrolledSourceFilter!=="전체" && (c.source||"")!==activeEnrolledSourceFilter) return false;
     // 가입일 날짜 필터
     const joinDate = c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "";
