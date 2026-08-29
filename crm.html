@@ -108,6 +108,7 @@
   .badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;}
   .badge-active{background:#d1fae5;color:#065f46;}
   .badge-expiring{background:#fef3c7;color:#92400e;}
+  .badge-expired{background:#fee2e2;color:#991b1b;}
   .badge-cancelled{background:#f1f5f9;color:#64748b;}
   .badge-dday{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;}
   .badge-urgent{background:#fee2e2;color:#991b1b;}
@@ -282,6 +283,7 @@
   body.dark .tag-convert{background:#4c0519;color:#fda4af;}
   body.dark .badge-active{background:#052e16;color:#6ee7b7;}
   body.dark .badge-expiring{background:#451a03;color:#fde68a;}
+  body.dark .badge-expired{background:#4c0519;color:#fca5a5;}
   body.dark .badge-cancelled{background:#1e293b;color:#94a3b8;}
   body.dark .badge-urgent{background:#4c0519;color:#fca5a5;}
   body.dark .badge-warn{background:#451a03;color:#fde68a;}
@@ -1760,6 +1762,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <button class="btn btn-primary" onclick="openAddContractFromList()">+ 계약 추가</button>
     </div>
     <div class="filters" id="contract-type-filters"></div>
+    <div class="filters" id="contract-status-filters"></div>
     <div class="card" style="padding:0;overflow:hidden;">
       <table><thead><tr><th>고객명</th><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>시작일</th><th>만기일</th><th>D-Day</th><th>상태</th><th>계약서</th></tr></thead>
       <tbody id="contracts-tbody"></tbody></table>
@@ -3452,14 +3455,26 @@ let enrolledDateFrom = '';
 let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
-let activeContractTypeFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
+let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
 
 const getAge=b=>{if(!b)return"-";const d=new Date(b),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a+"세";};
 const getDday=e=>Math.ceil((new Date(e)-new Date())/86400000);
 // 계약 해지 여부 — 해지된 계약은 만기/보험료 집계에서 제외
 const isCtLive=ct=>ct.status!=="cancelled";
-const ctStatusText=ct=>ct.status==="cancelled"?"해지":ct.status==="active"?"유지":"만기예정";
-const ctBadgeCls=ct=>ct.status==="cancelled"?"badge-cancelled":ct.status==="active"?"badge-active":"badge-expiring";
+// 계약의 "현재" 상태를 만기일 기준으로 실시간 계산 (저장된 status는 마지막 저장 시점 값이라 오래된
+// 계약은 이미 만기가 지나도 "유지"로 멈춰 있을 수 있어, 화면 표시는 항상 만기일로 다시 판단한다)
+const ctLiveStatus=ct=>{
+  if(ct.status==="cancelled") return "cancelled";
+  if(!ct.end) return "active";
+  const d=getDday(ct.end);
+  if(d<0) return "expired";
+  if(d<=180) return "expiring";
+  return "active";
+};
+const CT_STATUS_TEXT={cancelled:"해지",expired:"만기",expiring:"만기예정",active:"유지"};
+const CT_STATUS_CLS={cancelled:"badge-cancelled",expired:"badge-expired",expiring:"badge-expiring",active:"badge-active"};
+const ctStatusText=ct=>CT_STATUS_TEXT[ctLiveStatus(ct)];
+const ctBadgeCls=ct=>CT_STATUS_CLS[ctLiveStatus(ct)];
 const ctBadgeHtml=ct=>`<span class="badge ${ctBadgeCls(ct)}">${ctStatusText(ct)}${ct.status==="cancelled"&&ct.cancelDate?` (${ct.cancelDate})`:""}</span>`;
 // 보유 계약이 있으면서 전부 해지된 고객 — 가입고객 목록에서 기본적으로 숨김 처리 대상
 const isCancelledCustomer=c=>!!(c.contracts&&c.contracts.length&&c.contracts.every(ct=>!isCtLive(ct)));
@@ -4281,6 +4296,7 @@ function clearAllFilters() {
   activeSourceFilter = "전체";
   activeEnrolledSourceFilter = "전체";
   activeContractTypeFilter = "전체";
+  activeContractStatusFilter = "전체";
   activeConsultTypeFilter = "전체";
   activeConsultCustFilter = "전체고객";
 }
@@ -5449,8 +5465,22 @@ function renderContracts(){
   ).join("");
   const totalBadge = document.getElementById("contracts-total-badge");
   if(totalBadge) totalBadge.textContent = `(전체 ${countByType["전체"]}건)`;
+
+  // 상태 필터 — 유지/만기예정/만기(지남)/해지를 구분해서 볼 수 있게
+  const statusFilters = ["전체","유지","만기예정","만기","해지"];
+  const typeScopedItems = allItems.filter(ct=>(activeContractTypeFilter==="전체"||ct.type===activeContractTypeFilter)&&(!q||ct.cname.includes(q)||ct.product.includes(q)));
+  const countByStatus = {};
+  statusFilters.forEach(s => {
+    countByStatus[s] = s==="전체" ? typeScopedItems.length : typeScopedItems.filter(ct=>ctStatusText(ct)===s).length;
+  });
+  document.getElementById("contract-status-filters").innerHTML = statusFilters.map(s=>{
+    const dangerActive = s==="만기"||s==="해지";
+    return `<button class="filter-btn ${s===activeContractStatusFilter?"active":""}" style="${s===activeContractStatusFilter&&dangerActive?"background:var(--red);":""}" onclick="activeContractStatusFilter='${s}';renderContracts()">${s} <span style="font-size:11px;opacity:.7;">${countByStatus[s]}</span></button>`;
+  }).join("");
+
   const filtered = allItems.filter(ct=>
     (activeContractTypeFilter==="전체" || ct.type===activeContractTypeFilter) &&
+    (activeContractStatusFilter==="전체" || ctStatusText(ct)===activeContractStatusFilter) &&
     (!q || ct.cname.includes(q) || ct.product.includes(q))
   ).sort((a,b)=>new Date(a.end)-new Date(b.end));
   const total = filtered.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
