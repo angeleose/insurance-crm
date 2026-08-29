@@ -586,13 +586,10 @@
     border:1px solid var(--border);display:flex;flex-direction:column;max-height:calc(100vh - 260px);
   }
   .kb-col.kb-dragover{border-color:var(--blue);background:var(--sky);}
-  .kb-col.kb-col-fail{border-color:#fca5a5;}
-  .kb-col.kb-col-fail.kb-dragover{border-color:#ef4444;background:#fff1f2;}
   .kb-col-head{
     padding:12px 14px;font-size:13px;font-weight:800;color:var(--text);
     display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;
   }
-  .kb-col-fail .kb-col-head{color:#ef4444;}
   .kb-col-head .kb-count{font-size:11px;font-weight:700;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 9px;}
   .kb-col-sub{padding:0 14px 10px;font-size:11px;color:var(--text2);margin-top:-4px;flex-shrink:0;}
   .kb-col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
@@ -607,6 +604,9 @@
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
+  .kb-card .kb-link-row{margin-top:6px;}
+  .kb-card .kb-linked-cust{display:inline-block;font-size:11px;font-weight:700;color:var(--purple);background:var(--purple-light);border-radius:6px;padding:2px 8px;}
+  .kb-card .kb-unlinked{display:inline-block;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg);border:1px dashed var(--border);border-radius:6px;padding:2px 8px;}
   .kb-card .kb-action-btn{font-size:11px;font-weight:700;border:none;border-radius:7px;padding:4px 9px;cursor:pointer;}
   .kb-manage-link{font-size:11.5px;color:var(--text2);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
 
@@ -2395,6 +2395,54 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   </div>
 </div>
 
+<!-- MODAL: 영업 퍼널 게시물 -->
+<div class="modal-overlay" id="modal-funnel-post" onclick="if(event.target===this)closeModal('funnel-post')">
+  <div class="modal-box" style="width:460px;">
+    <h3 id="fp-modal-title">🗂️ 영업 퍼널 게시물 추가</h3>
+    <div class="form-group">
+      <label>제목 *</label>
+      <input type="text" id="fp-title" placeholder="예: 최지영 - 태아보험 상담">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>관심 상품</label>
+        <input type="text" id="fp-product" placeholder="태아보험">
+      </div>
+      <div class="form-group">
+        <label>예상 보험료 (원)</label>
+        <input type="number" id="fp-premium" placeholder="50000">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>진행 단계</label>
+      <select id="fp-stage"></select>
+    </div>
+    <div class="form-group">
+      <label>고객 연동 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택 — 나중에 연결해도 돼요)</span></label>
+      <div style="position:relative;display:flex;gap:6px;">
+        <input type="text" id="fp-cust-search" placeholder="이름 검색..." style="flex:1;font-size:13px;"
+          oninput="filterFunnelPostCustomers(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('fp-cust-dd');if(d)d.style.display='none';},200)"
+          onfocus="filterFunnelPostCustomers(this.value)">
+        <input type="hidden" id="fp-cust-id">
+        <button type="button" class="btn btn-ghost btn-sm" title="연동 해제" onclick="document.getElementById('fp-cust-search').value='';document.getElementById('fp-cust-id').value='';">✕</button>
+        <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:44px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <textarea id="fp-memo" rows="2" placeholder="메모..."></textarea>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-ghost" id="fp-delete-btn" style="display:none;color:var(--red);" onclick="deleteFunnelPost()">🗑️ 삭제</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('funnel-post')">취소</button>
+        <button class="btn btn-primary" onclick="saveFunnelPost()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: 가족 관계 추가 -->
 <div class="modal-overlay" id="modal-family" onclick="if(event.target===this)closeModal('family')">
   <div class="modal-box" style="width:440px;">
@@ -3372,6 +3420,9 @@ function toggleSourceVenue(idx, val){
 
 let customers = [];
 let experienceItems = [];
+// 영업 퍼널 전용 게시물 — 가입제안서(c.proposals)와는 별개의 독립 엔티티.
+// 고객 정보는 필수가 아니라 customerId로 "연동"만 가능(나중에 연결해도 됨).
+let funnelPosts = [];
 
 // ─── 알림 규칙 설정 ───────────────────────────────────────
 // 알림 규칙 배열 — type: 'builtin'(기본) / 'custom_rule'(사용자 추가)
@@ -5011,11 +5062,13 @@ function renderProspects(){
   if(plw) plw.style.display = (!showKanban && isMobP) ? "" : "none";
   if(pkw) pkw.style.display = showKanban ? "" : "none";
   if(showKanban){
-    // 칸반은 단계별 컬럼 자체가 필터 역할을 하므로 상담단계/실패 필터는 무시하고 검색·출처만 적용
-    const kbList = customers.filter(c=>c.type==="가망").filter(c=>{
-      const nameOk=!q||c.name.includes(q)||c.phone.includes(q);
-      const srcOk=activeSourceFilter==="전체"||(c.source||"")===activeSourceFilter;
-      return nameOk&&srcOk;
+    // 칸반은 "영업 퍼널 게시물"(funnelPosts) 단위로 카드를 구성 — 가입제안서와는 별개의 독립 엔티티.
+    // 게시물은 고객과 연동될 수도, 아직 연동 안 될 수도 있음(연동은 나중에 해도 됨).
+    const kbList = funnelPosts.filter(p=>{
+      const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
+      const nameOk = !q || (p.title||"").includes(q) || (p.product||"").includes(q) || (linked && (linked.name.includes(q)||(linked.phone||"").includes(q)));
+      const srcOk = activeSourceFilter==="전체" || (linked && (linked.source||"")===activeSourceFilter);
+      return nameOk && srcOk;
     });
     renderProspectsKanban(kbList);
     return;
@@ -5078,77 +5131,166 @@ function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
   if(!customStages.length){
-    wrap.innerHTML = `<div class="empty"><span>🗂</span>상담 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
+    wrap.innerHTML = `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
     return;
   }
-  const lastStage = customStages[customStages.length-1];
   const stageCol = (stage) => {
-    const items = kbList.filter(c=>!c.isFailed && (c.stage||customStages[0])===stage);
+    const items = kbList.filter(p=>(p.stage||customStages[0])===stage);
+    const isDone = stage==="계약완료";
     return `<div class="kb-col" ondragover="event.preventDefault();this.classList.add('kb-dragover')" ondragleave="this.classList.remove('kb-dragover')" ondrop="prKbDrop(event,'${escAttr(stage)}')">
       <div class="kb-col-head"><span>${stage}</span><span class="kb-count">${items.length}</span></div>
       <div class="kb-col-body">
-        ${items.length ? items.map(c=>{
-          const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());
-          const isLast = stage===lastStage;
-          return `<div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${c.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${c.id})">
-            <div class="kb-name">${c.name}</div>
-            <div class="kb-sub">${c.interest?"💡 "+c.interest:(c.source||"-")}</div>
+        ${items.length ? items.map(p=>{
+          const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
+          const custRow = linked
+            ? `<span class="kb-linked-cust" onclick="event.stopPropagation();goToDetail(${linked.id})">👤 ${linked.name}${linked.phone?" · "+linked.phone:""}</span>`
+            : `<span class="kb-unlinked">🔗 고객 미연동</span>`;
+          return `<div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${p.id})" ondragend="this.classList.remove('kb-dragging')" onclick="openFunnelPostModal(${p.id})">
+            <div class="kb-name">${p.title}</div>
+            ${p.product?`<div class="kb-sub">${p.product}</div>`:``}
+            <div class="kb-link-row">${custRow}</div>
             <div class="kb-meta">
-              ${nf ? `<span class="kb-followup">📅 ${nf.followUp}</span>` : `<span></span>`}
-              ${isLast ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();currentCustomerId=${c.id};openModal('convert')">🎉 가입 전환</button>` : ``}
+              <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
+              ${isDone && linked ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``}
             </div>
           </div>`;
-        }).join("") : `<div class="kb-col-empty">고객 없음</div>`}
+        }).join("") : `<div class="kb-col-empty">게시물 없음</div>`}
       </div>
     </div>`;
   };
-  const failedItems = kbList.filter(c=>c.isFailed);
-  const failCol = `<div class="kb-col kb-col-fail" ondragover="event.preventDefault();this.classList.add('kb-dragover')" ondragleave="this.classList.remove('kb-dragover')" ondrop="prKbDrop(event,'__failed__')">
-    <div class="kb-col-head"><span>❌ 실패(이탈)</span><span class="kb-count">${failedItems.length}</span></div>
-    <div class="kb-col-body">
-      ${failedItems.length ? failedItems.map(c=>`
-        <div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${c.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${c.id})">
-          <div class="kb-name">${c.name}</div>
-          <div class="kb-sub">${c.failCategory||"실패"}${c.failNote?" · "+c.failNote:""}</div>
-          <div class="kb-meta">
-            <span></span>
-            <button class="kb-action-btn" style="background:#f1f5f9;color:#64748b;" onclick="event.stopPropagation();currentCustomerId=${c.id};clearFailReason()">↩ 복구</button>
-          </div>
-        </div>`).join("") : `<div class="kb-col-empty">없음</div>`}
-    </div>
-  </div>`;
 
-  wrap.innerHTML = `<div class="kb-board">${customStages.map(stageCol).join("")}${failCol}</div>
-    <div style="margin-top:10px;"><button class="kb-manage-link" onclick="showPage('settings')">🏷️ 상담 단계 관리하기 →</button></div>`;
+  wrap.innerHTML = `<div class="kb-board">${customStages.map(stageCol).join("")}</div>
+    <div style="margin-top:10px;display:flex;gap:14px;align-items:center;">
+      <button class="btn btn-purple btn-sm" onclick="openFunnelPostModal(null, customStages[0])">+ 새 게시물 추가</button>
+      <button class="kb-manage-link" onclick="showPage('settings')">🏷️ 진행 단계 관리하기 →</button>
+    </div>`;
 }
 
 let _prKbDrag = null;
-function prKbDragStart(e, cid){
-  _prKbDrag = cid;
+function prKbDragStart(e, postId){
+  _prKbDrag = postId;
   e.target.classList.add("kb-dragging");
   if(e.dataTransfer) e.dataTransfer.effectAllowed = "move";
 }
 function prKbDrop(e, target){
   e.preventDefault();
   e.currentTarget.classList.remove("kb-dragover");
-  const cid = _prKbDrag;
+  const postId = _prKbDrag;
   _prKbDrag = null;
-  if(cid==null) return;
-  const c = customers.find(x=>x.id===cid);
-  if(!c) return;
-  if(target==="__failed__"){
-    if(c.isFailed) return; // 이미 실패 처리됨
-    currentCustomerId = c.id;
-    openFailModal(); // 카테고리 선택 후 저장 시 renderProspects()가 호출됨
-    return;
-  }
-  let changed = false;
-  if(c.isFailed){ c.isFailed=false; c.failCategory=""; c.failNote=""; changed=true; }
-  if((c.stage||customStages[0])!==target){ c.stage=target; changed=true; }
-  if(!changed) return;
+  if(postId==null) return;
+  const p = funnelPosts.find(x=>String(x.id)===String(postId));
+  if(!p) return;
+  if((p.stage||customStages[0])===target) return;
+  p.stage = target;
   renderProspects();
-  renderDashboard();
   autoSave();
+}
+
+// ─── 영업 퍼널 게시물 CRUD ───────────────────────────────────
+let _fpEditId = null;
+function openFunnelPostModal(id = null, presetStage = null){
+  _fpEditId = id;
+  document.getElementById("fp-modal-title").textContent = id ? "🗂️ 게시물 수정" : "🗂️ 영업 퍼널 게시물 추가";
+  const stageSel = document.getElementById("fp-stage");
+  stageSel.innerHTML = customStages.map(s=>`<option value="${escAttr(s)}">${s}</option>`).join("");
+  document.getElementById("fp-delete-btn").style.display = id ? "" : "none";
+
+  if(id){
+    const p = funnelPosts.find(x=>String(x.id)===String(id));
+    if(!p){ return; }
+    document.getElementById("fp-title").value = p.title||"";
+    document.getElementById("fp-product").value = p.product||"";
+    document.getElementById("fp-premium").value = p.premium||"";
+    document.getElementById("fp-memo").value = p.memo||"";
+    if(p.stage && customStages.includes(p.stage)) stageSel.value = p.stage;
+    const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
+    document.getElementById("fp-cust-search").value = linked ? linked.name : "";
+    document.getElementById("fp-cust-id").value = linked ? String(linked.id) : "";
+  } else {
+    ["fp-title","fp-product","fp-premium","fp-memo","fp-cust-search"].forEach(fid=>document.getElementById(fid).value="");
+    document.getElementById("fp-cust-id").value = "";
+    stageSel.value = (presetStage && customStages.includes(presetStage)) ? presetStage : (customStages[0]||"");
+    // 현재 보고 있는 고객이 있으면 기본 연동
+    if(currentCustomerId){
+      const c = customers.find(x=>x.id===currentCustomerId);
+      if(c){ document.getElementById("fp-cust-search").value = c.name; document.getElementById("fp-cust-id").value = String(c.id); }
+    }
+  }
+  openModal("funnel-post");
+}
+
+function filterFunnelPostCustomers(q){
+  const dd = document.getElementById("fp-cust-dd");
+  const list = q.trim() ? customers.filter(c=>c.name.includes(q)||(c.phone||"").includes(q)) : customers;
+  dd.innerHTML = list.slice(0,20).map(c=>`
+    <div data-cid="${c.id}" data-cname="${c.name}"
+      style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600;">${c.name}</span>
+      <span style="color:var(--text2);font-size:12px;margin-left:6px;">${c.phone||""}</span>
+    </div>`).join("");
+  dd.style.display = "";
+  dd.onclick = e => {
+    const item = e.target.closest("[data-cid]"); if(!item) return;
+    document.getElementById("fp-cust-search").value = item.dataset.cname;
+    document.getElementById("fp-cust-id").value = item.dataset.cid;
+    dd.style.display = "none";
+  };
+}
+
+function saveFunnelPost(){
+  const title = document.getElementById("fp-title").value.trim();
+  if(!title){ alert("제목을 입력하세요."); return; }
+  const custIdRaw = document.getElementById("fp-cust-id").value;
+  const data = {
+    id: _fpEditId || (Date.now()+Math.random()),
+    title,
+    product: document.getElementById("fp-product").value.trim(),
+    premium: parseInt(document.getElementById("fp-premium").value)||0,
+    stage: document.getElementById("fp-stage").value || customStages[0] || "",
+    customerId: custIdRaw ? (customers.find(c=>String(c.id)===String(custIdRaw))?.id ?? null) : null,
+    memo: document.getElementById("fp-memo").value.trim(),
+    createdAt: _fpEditId ? (funnelPosts.find(x=>x.id===_fpEditId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+  };
+  if(_fpEditId){
+    const idx = funnelPosts.findIndex(x=>x.id===_fpEditId);
+    if(idx>=0) funnelPosts[idx] = data;
+  } else {
+    funnelPosts.push(data);
+  }
+  closeModal("funnel-post");
+  renderProspects();
+  autoSave();
+  showToast("✅ 저장되었습니다.");
+}
+
+function deleteFunnelPost(){
+  if(!_fpEditId) return;
+  if(!confirm("이 게시물을 삭제할까요?")) return;
+  funnelPosts = funnelPosts.filter(x=>x.id!==_fpEditId);
+  closeModal("funnel-post");
+  renderProspects();
+  autoSave();
+}
+
+// 칸반의 "계약완료" 카드에서 바로 계약 등록 — 연동된 고객이 있어야 하며,
+// 게시물의 관심상품/예상보험료를 계약 추가 폼에 미리 채워줌
+function registerContractFromFunnelPost(postId){
+  const p = funnelPosts.find(x=>String(x.id)===String(postId));
+  if(!p) return;
+  if(!p.customerId){ alert("먼저 이 게시물에 고객을 연동해 주세요."); return; }
+  const c = customers.find(x=>x.id===p.customerId);
+  if(!c){ alert("연동된 고객을 찾을 수 없습니다."); return; }
+  currentCustomerId = c.id;
+  if(c.type==="가망") convertToEnrolled(); // 아직 가망이면 먼저 가입 고객으로 전환 (계약 목록에 노출되도록)
+  openAddContractFromDetail();
+  if(p.product) document.getElementById("ct-product").value = p.product;
+  if(p.premium) document.getElementById("ct-premium").value = p.premium;
+  document.getElementById("ct-start").value = new Date().toISOString().slice(0,10);
+  const ctTypeOptions = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+  const guess = ctTypeOptions.find(t => (p.product||"").includes(t.replace("보험","")) || (p.title||"").includes(t));
+  if(guess) document.getElementById("ct-type").value = guess;
+  document.getElementById("ct-duedate-wrap").style.display = document.getElementById("ct-type").value==="태아보험" ? "" : "none";
 }
 
 function renderDetail(id){
@@ -6513,7 +6655,7 @@ function deduplicateContracts() {
 async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
-  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
+  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = [];
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
@@ -8769,6 +8911,7 @@ async function saveToFirestore() {
     myContacts,
     experienceItems,
     customStages,
+    funnelPosts,
     customSources,
     cardPayRecords,
     cardInfoRecords,
@@ -8821,6 +8964,7 @@ async function loadFromFirestore() {
         customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
         stagesMigrated = true;
       }
+      if (p.funnelPosts) funnelPosts = p.funnelPosts;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
