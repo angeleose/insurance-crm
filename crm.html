@@ -2343,17 +2343,21 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         oninput="autoFillProposalFromText(this.value)"></textarea>
     </div>
 
+    <div class="form-group">
+      <label>고객 선택 *</label>
+      <div style="position:relative;">
+        <input type="text" id="proposal-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
+          oninput="filterProposalCustomers(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('proposal-cust-dd');if(d)d.style.display='none';},200)"
+          onfocus="filterProposalCustomers(this.value)">
+        <input type="hidden" id="proposal-cust-id">
+        <div id="proposal-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label>고객 선택 *</label>
-        <div style="position:relative;">
-          <input type="text" id="proposal-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
-            oninput="filterProposalCustomers(this.value)"
-            onblur="setTimeout(()=>{const d=document.getElementById('proposal-cust-dd');if(d)d.style.display='none';},200)"
-            onfocus="filterProposalCustomers(this.value)">
-          <input type="hidden" id="proposal-cust-id">
-          <div id="proposal-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
-        </div>
+        <label>진행 단계 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(영업 퍼널)</span></label>
+        <select id="proposal-stage"></select>
       </div>
       <div class="form-group">
         <label>작성일</label>
@@ -5011,11 +5015,15 @@ function renderProspects(){
   if(plw) plw.style.display = (!showKanban && isMobP) ? "" : "none";
   if(pkw) pkw.style.display = showKanban ? "" : "none";
   if(showKanban){
-    // 칸반은 단계별 컬럼 자체가 필터 역할을 하므로 상담단계/실패 필터는 무시하고 검색·출처만 적용
-    const kbList = customers.filter(c=>c.type==="가망").filter(c=>{
-      const nameOk=!q||c.name.includes(q)||c.phone.includes(q);
-      const srcOk=activeSourceFilter==="전체"||(c.source||"")===activeSourceFilter;
-      return nameOk&&srcOk;
+    // 칸반은 "제안서(proposal)" 단위로 카드를 구성 — 한 고객에게 태아보험·종신보험 등
+    // 여러 제안을 동시에 진행할 수 있고, 제안마다 독립적으로 단계를 옮길 수 있음.
+    // (가입 고객에게 새로 올리는 제안도 함께 보이도록 가입/가망 모두 포함)
+    const kbList = customers.flatMap(c => (c.proposals||[]).map(p => ({
+      ...p, cid:c.id, cname:c.name, csource:c.source||""
+    }))).filter(p=>{
+      const nameOk = !q || p.cname.includes(q) || (p.title||"").includes(q) || (p.product||"").includes(q);
+      const srcOk = activeSourceFilter==="전체" || p.csource===activeSourceFilter;
+      return nameOk && srcOk;
     });
     renderProspectsKanban(kbList);
     return;
@@ -5078,77 +5086,74 @@ function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
   if(!customStages.length){
-    wrap.innerHTML = `<div class="empty"><span>🗂</span>상담 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
+    wrap.innerHTML = `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
     return;
   }
-  const lastStage = customStages[customStages.length-1];
   const stageCol = (stage) => {
-    const items = kbList.filter(c=>!c.isFailed && (c.stage||customStages[0])===stage);
+    const items = kbList.filter(p=>(p.stage||customStages[0])===stage);
+    const total = items.reduce((s,p)=>s+(p.premium||0),0);
+    const isDone = stage==="계약완료";
     return `<div class="kb-col" ondragover="event.preventDefault();this.classList.add('kb-dragover')" ondragleave="this.classList.remove('kb-dragover')" ondrop="prKbDrop(event,'${escAttr(stage)}')">
       <div class="kb-col-head"><span>${stage}</span><span class="kb-count">${items.length}</span></div>
+      <div class="kb-col-sub">${total?total.toLocaleString()+"원/월":""}</div>
       <div class="kb-col-body">
-        ${items.length ? items.map(c=>{
-          const nf=c.consultations.find(cs=>cs.followUp&&new Date(cs.followUp)>=new Date());
-          const isLast = stage===lastStage;
-          return `<div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${c.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${c.id})">
-            <div class="kb-name">${c.name}</div>
-            <div class="kb-sub">${c.interest?"💡 "+c.interest:(c.source||"-")}</div>
+        ${items.length ? items.map(p=>`
+          <div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${p.cid},${p.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${p.cid})">
+            <div class="kb-name">${p.cname} <span style="font-weight:400;color:var(--text2);">· ${p.title||p.product||"제안"}</span></div>
+            <div class="kb-sub">${[p.insurer,p.product].filter(Boolean).join(" · ")||"-"}</div>
             <div class="kb-meta">
-              ${nf ? `<span class="kb-followup">📅 ${nf.followUp}</span>` : `<span></span>`}
-              ${isLast ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();currentCustomerId=${c.id};openModal('convert')">🎉 가입 전환</button>` : ``}
+              <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
+              ${isDone ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromProposal(${p.cid},${p.id})">📄 계약 등록</button>` : ``}
             </div>
-          </div>`;
-        }).join("") : `<div class="kb-col-empty">고객 없음</div>`}
+          </div>`).join("") : `<div class="kb-col-empty">제안 없음</div>`}
       </div>
     </div>`;
   };
-  const failedItems = kbList.filter(c=>c.isFailed);
-  const failCol = `<div class="kb-col kb-col-fail" ondragover="event.preventDefault();this.classList.add('kb-dragover')" ondragleave="this.classList.remove('kb-dragover')" ondrop="prKbDrop(event,'__failed__')">
-    <div class="kb-col-head"><span>❌ 실패(이탈)</span><span class="kb-count">${failedItems.length}</span></div>
-    <div class="kb-col-body">
-      ${failedItems.length ? failedItems.map(c=>`
-        <div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${c.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${c.id})">
-          <div class="kb-name">${c.name}</div>
-          <div class="kb-sub">${c.failCategory||"실패"}${c.failNote?" · "+c.failNote:""}</div>
-          <div class="kb-meta">
-            <span></span>
-            <button class="kb-action-btn" style="background:#f1f5f9;color:#64748b;" onclick="event.stopPropagation();currentCustomerId=${c.id};clearFailReason()">↩ 복구</button>
-          </div>
-        </div>`).join("") : `<div class="kb-col-empty">없음</div>`}
-    </div>
-  </div>`;
 
-  wrap.innerHTML = `<div class="kb-board">${customStages.map(stageCol).join("")}${failCol}</div>
-    <div style="margin-top:10px;"><button class="kb-manage-link" onclick="showPage('settings')">🏷️ 상담 단계 관리하기 →</button></div>`;
+  wrap.innerHTML = `<div class="kb-board">${customStages.map(stageCol).join("")}</div>
+    <div style="margin-top:10px;display:flex;gap:14px;align-items:center;">
+      <button class="btn btn-purple btn-sm" onclick="openProposalModal(null, customStages[0])">+ 새 제안 추가</button>
+      <button class="kb-manage-link" onclick="showPage('settings')">🏷️ 진행 단계 관리하기 →</button>
+    </div>`;
 }
 
 let _prKbDrag = null;
-function prKbDragStart(e, cid){
-  _prKbDrag = cid;
+function prKbDragStart(e, cid, proposalId){
+  _prKbDrag = {cid, proposalId};
   e.target.classList.add("kb-dragging");
   if(e.dataTransfer) e.dataTransfer.effectAllowed = "move";
 }
 function prKbDrop(e, target){
   e.preventDefault();
   e.currentTarget.classList.remove("kb-dragover");
-  const cid = _prKbDrag;
+  const drag = _prKbDrag;
   _prKbDrag = null;
-  if(cid==null) return;
-  const c = customers.find(x=>x.id===cid);
-  if(!c) return;
-  if(target==="__failed__"){
-    if(c.isFailed) return; // 이미 실패 처리됨
-    currentCustomerId = c.id;
-    openFailModal(); // 카테고리 선택 후 저장 시 renderProspects()가 호출됨
-    return;
-  }
-  let changed = false;
-  if(c.isFailed){ c.isFailed=false; c.failCategory=""; c.failNote=""; changed=true; }
-  if((c.stage||customStages[0])!==target){ c.stage=target; changed=true; }
-  if(!changed) return;
+  if(!drag) return;
+  const c = customers.find(x=>x.id===drag.cid);
+  const p = c && (c.proposals||[]).find(x=>String(x.id)===String(drag.proposalId));
+  if(!p) return;
+  if((p.stage||customStages[0])===target) return;
+  p.stage = target;
   renderProspects();
   renderDashboard();
   autoSave();
+}
+
+// 칸반의 "계약완료" 카드에서 바로 계약 등록 — 제안 정보(상품·보험사·보험료)를 계약 추가 폼에 미리 채움
+function registerContractFromProposal(cid, proposalId){
+  const c = customers.find(x=>x.id===cid); if(!c) return;
+  const p = (c.proposals||[]).find(x=>String(x.id)===String(proposalId)); if(!p) return;
+  currentCustomerId = cid;
+  if(c.type==="가망") convertToEnrolled(); // 아직 가망이면 먼저 가입 고객으로 전환 (계약 목록에 노출되도록)
+  openAddContractFromDetail();
+  if(p.product) document.getElementById("ct-product").value = p.product;
+  if(p.insurer) document.getElementById("ct-insurer").value = p.insurer;
+  if(p.premium) document.getElementById("ct-premium").value = p.premium;
+  document.getElementById("ct-start").value = new Date().toISOString().slice(0,10);
+  const ctTypeOptions = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+  const guess = ctTypeOptions.find(t => (p.product||"").includes(t.replace("보험","")) || (p.title||"").includes(t));
+  if(guess) document.getElementById("ct-type").value = guess;
+  document.getElementById("ct-duedate-wrap").style.display = document.getElementById("ct-type").value==="태아보험" ? "" : "none";
 }
 
 function renderDetail(id){
@@ -7281,11 +7286,13 @@ function deleteAnalysisFile(id) {
 // ─── 가입제안서 ────────────────────────────────────────────
 let _proposalEditId = null;
 
-function openProposalModal(id = null) {
+function openProposalModal(id = null, presetStage = null) {
   _proposalEditId = id;
   document.getElementById("proposal-modal-title").textContent = id ? "📋 가입제안서 수정" : "📋 가입제안서 추가";
   document.getElementById("proposal-quick-text").value = "";
   document.getElementById("proposal-date").value = new Date().toISOString().slice(0,10);
+  const stageSel = document.getElementById("proposal-stage");
+  stageSel.innerHTML = customStages.map(s=>`<option value="${escAttr(s)}">${s}</option>`).join("");
 
   if (id) {
     // 수정: 기존 데이터 로드
@@ -7301,10 +7308,12 @@ function openProposalModal(id = null) {
       document.getElementById("proposal-date").value = found.date||"";
       document.getElementById("proposal-fileurl").value = found.fileUrl||"";
       document.getElementById("proposal-memo").value = found.memo||"";
+      if (found.stage && customStages.includes(found.stage)) stageSel.value = found.stage;
     }
   } else {
     ["proposal-cust-search","proposal-title","proposal-insurer","proposal-product","proposal-premium","proposal-fileurl","proposal-memo"].forEach(id=>{document.getElementById(id).value="";});
     document.getElementById("proposal-cust-id").value = "";
+    stageSel.value = (presetStage && customStages.includes(presetStage)) ? presetStage : (customStages[0]||"");
     // 현재 보고 있는 고객이 있으면 기본 선택
     if (currentCustomerId) {
       const c = customers.find(x=>x.id===currentCustomerId);
@@ -7386,6 +7395,7 @@ function saveProposal() {
     date: document.getElementById("proposal-date").value,
     fileUrl: document.getElementById("proposal-fileurl").value.trim(),
     memo: document.getElementById("proposal-memo").value.trim(),
+    stage: document.getElementById("proposal-stage").value || customStages[0] || "",
   };
 
   if (_proposalEditId) {
@@ -7397,6 +7407,7 @@ function saveProposal() {
   closeModal("proposal");
   renderProposals(c);
   renderProposalsPage();
+  renderProspects(); // 영업 퍼널(칸반) 열려 있으면 함께 갱신
   autoSave();
   showToast("✅ 가입제안서가 저장되었습니다.");
 }
@@ -7407,6 +7418,7 @@ function deleteProposal(cid, id) {
   c.proposals = (c.proposals||[]).filter(x=>x.id!==id);
   renderProposals(c);
   renderProposalsPage();
+  renderProspects();
   autoSave();
 }
 
