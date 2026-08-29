@@ -1763,6 +1763,17 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="filters" id="contract-type-filters"></div>
     <div class="filters" id="contract-status-filters"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <select id="contract-sort-select" onchange="contractSort=this.value;renderContracts()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="end_asc">만기일 빠른순</option>
+        <option value="end_desc">만기일 늦은순</option>
+        <option value="start_desc">시작일 최신순</option>
+        <option value="start_asc">시작일 오래된순</option>
+        <option value="premium_desc">보험료 높은순</option>
+        <option value="name_asc">고객명순</option>
+      </select>
+    </div>
     <div class="card" style="padding:0;overflow:hidden;">
       <table><thead><tr><th>고객명</th><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>시작일</th><th>만기일</th><th>D-Day</th><th>상태</th><th>계약서</th></tr></thead>
       <tbody id="contracts-tbody"></tbody></table>
@@ -3456,6 +3467,7 @@ let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
+let contractSort = "end_asc";
 
 const getAge=b=>{if(!b)return"-";const d=new Date(b),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a+"세";};
 const getDday=e=>Math.ceil((new Date(e)-new Date())/86400000);
@@ -5482,7 +5494,18 @@ function renderContracts(){
     (activeContractTypeFilter==="전체" || ct.type===activeContractTypeFilter) &&
     (activeContractStatusFilter==="전체" || ctStatusText(ct)===activeContractStatusFilter) &&
     (!q || ct.cname.includes(q) || ct.product.includes(q))
-  ).sort((a,b)=>new Date(a.end)-new Date(b.end));
+  ).sort((a,b)=>{
+    switch(contractSort){
+      case "end_desc":     return new Date(b.end)-new Date(a.end);
+      case "start_desc":   return (b.start||"").localeCompare(a.start||"");
+      case "start_asc":    return (a.start||"").localeCompare(b.start||"");
+      case "premium_desc": return (b.premium||0)-(a.premium||0);
+      case "name_asc":     return a.cname.localeCompare(b.cname,"ko");
+      default:              return new Date(a.end)-new Date(b.end); // end_asc
+    }
+  });
+  const sortSelC = document.getElementById("contract-sort-select");
+  if(sortSelC) sortSelC.value = contractSort;
   const total = filtered.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
   const tbody = document.getElementById("contracts-tbody");
   if(!filtered.length){
