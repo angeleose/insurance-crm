@@ -22,13 +22,13 @@
   /* ── top bar (always visible) ───────────────────────────── */
   #topbar{
     position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
-    padding:14px 26px;background:var(--navy);color:#fff;
+    padding:14px 26px;background:var(--navy);color:#fff;flex-wrap:wrap;gap:10px;
   }
   #topbar .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14.5px;}
   #topbar .brand .mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--purple),var(--blue-light));display:flex;align-items:center;justify-content:center;font-size:15px;}
   #topbar .crumb{font-size:12.5px;color:rgba(255,255,255,.45);font-weight:600;display:flex;align-items:center;gap:6px;}
   #topbar .crumb b{color:#fff;font-weight:700;}
-  #topbar .links{display:flex;gap:8px;}
+  #topbar .links{display:flex;gap:8px;flex-wrap:wrap;}
   #topbar .links a,#topbar .links button{
     font-size:12.5px;font-weight:700;color:rgba(255,255,255,.8);text-decoration:none;
     background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
@@ -69,6 +69,11 @@
   .progress-bar{flex:1;height:8px;border-radius:20px;background:var(--border);overflow:hidden;}
   .progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:20px;transition:width .25s ease;}
   .progress-wrap .pct{font-size:13px;font-weight:800;color:var(--purple);white-space:nowrap;}
+  .reset-progress-btn{
+    font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;
+    background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;
+  }
+  .reset-progress-btn:hover{border-color:var(--red);color:var(--red);}
 
   .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;}
   .panel h4{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
@@ -169,6 +174,8 @@
   <div class="brand"><span class="mark">🗂️</span> 보험 상담 프로세스</div>
   <div class="crumb" id="crumb"></div>
   <div class="links">
+    <a href="https://nsso.meritzfire.com/LoginServer/loginFormPageMulti.jsp?InitechEamNoCacheNonce=HjWHZ5nj5CllYJUV5jxPXA%3D%3D" target="_blank" rel="noopener noreferrer" title="메리츠 보장분석">📊 메리츠 보장분석</a>
+    <a href="https://www.easypaper.co.kr/ezp-2/login" target="_blank" rel="noopener noreferrer" title="이지페이퍼">📝 이지페이퍼</a>
     <button id="switch-btn" onclick="goToTypeSelect()" style="display:none;">🔄 상담 유형 변경</button>
     <a href="index.html">← 허브로</a>
   </div>
@@ -199,6 +206,7 @@
       <span class="label">진행률</span>
       <div class="progress-bar"><div class="fill" id="progress-fill" style="width:0%;"></div></div>
       <span class="pct" id="progress-pct">0%</span>
+      <button class="reset-progress-btn" onclick="resetProgress()" title="체크리스트 체크와 단계 완료 표시를 모두 초기화 (단계·메모·참고자료는 유지)">🔄 진행 초기화</button>
     </div>
 
     <!-- LEFT: 단계 목록 -->
@@ -483,6 +491,18 @@ function deleteStep(id){
   if(!confirm(`"${step.title}" 단계를 삭제할까요?`)) return;
   combo.steps = combo.steps.filter(s=>s.id!==id);
   if(state.currentStepId===id) state.currentStepId = combo.steps[0]?.id || null;
+  saveAll();
+  renderProcess();
+}
+function resetProgress(){
+  const combo = getCombo();
+  if(!combo.steps.length){ return; }
+  if(!confirm("체크리스트 체크와 단계 완료 표시를 모두 초기화할까요?\n(단계 구성·메모·참고자료는 그대로 유지돼요)")) return;
+  combo.steps.forEach(s => {
+    s.done = false;
+    (s.checklist||[]).forEach(c => { c.checked = false; });
+  });
+  state.currentStepId = combo.steps[0].id;
   saveAll();
   renderProcess();
 }

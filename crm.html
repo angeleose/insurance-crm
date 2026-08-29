@@ -108,6 +108,7 @@
   .badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;}
   .badge-active{background:#d1fae5;color:#065f46;}
   .badge-expiring{background:#fef3c7;color:#92400e;}
+  .badge-cancelled{background:#f1f5f9;color:#64748b;}
   .badge-dday{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;}
   .badge-urgent{background:#fee2e2;color:#991b1b;}
   .badge-warn{background:#fef3c7;color:#92400e;}
@@ -281,6 +282,7 @@
   body.dark .tag-convert{background:#4c0519;color:#fda4af;}
   body.dark .badge-active{background:#052e16;color:#6ee7b7;}
   body.dark .badge-expiring{background:#451a03;color:#fde68a;}
+  body.dark .badge-cancelled{background:#1e293b;color:#94a3b8;}
   body.dark .badge-urgent{background:#4c0519;color:#fca5a5;}
   body.dark .badge-warn{background:#451a03;color:#fde68a;}
   body.dark .badge-ok{background:#052e16;color:#6ee7b7;}
@@ -3363,6 +3365,11 @@ let activeContractTypeFilter="전체", activeConsultTypeFilter="전체", activeC
 
 const getAge=b=>{if(!b)return"-";const d=new Date(b),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a+"세";};
 const getDday=e=>Math.ceil((new Date(e)-new Date())/86400000);
+// 계약 해지 여부 — 해지된 계약은 만기/보험료 집계에서 제외
+const isCtLive=ct=>ct.status!=="cancelled";
+const ctStatusText=ct=>ct.status==="cancelled"?"해지":ct.status==="active"?"유지":"만기예정";
+const ctBadgeCls=ct=>ct.status==="cancelled"?"badge-cancelled":ct.status==="active"?"badge-active":"badge-expiring";
+const ctBadgeHtml=ct=>`<span class="badge ${ctBadgeCls(ct)}">${ctStatusText(ct)}${ct.status==="cancelled"&&ct.cancelDate?` (${ct.cancelDate})`:""}</span>`;
 const fmtW=n=>n>=10000?(n/10000).toFixed(0)+"만":n.toLocaleString();
 const tagCls=t=>({VIP:"tag-vip",신규:"tag-new",갱신예정:"tag-renew",전환상담:"tag-convert",만기예정:"tag-expire"}[t]||"");
 const renderTags=tags=>(tags||[]).map(t=>`<span class="tag ${tagCls(t)}">${t}</span>`).join(" ");
@@ -4050,7 +4057,7 @@ async function aiMessage() {
 
   const lastConsult = c.consultations?.slice(-1)[0];
   const followUp = c.consultations?.find(cs=>cs.followUp && !cs.followUpDone);
-  const nearExpire = c.contracts?.find(ct=>{const d=getDday(ct.end);return d>=0&&d<=90;});
+  const nearExpire = c.contracts?.find(ct=>{if(!isCtLive(ct))return false;const d=getDday(ct.end);return d>=0&&d<=90;});
 
   const context = [
     lastConsult ? `최근상담: ${lastConsult.date} ${lastConsult.note}` : "",
@@ -4124,7 +4131,7 @@ async function aiSalesReport() {
   const incIn  = incomeRecords.filter(r=>inP(r.date)&&r.type==="수익").reduce((s,r)=>s+r.amount,0);
   const incOut = incomeRecords.filter(r=>inP(r.date)&&r.type==="지출").reduce((s,r)=>s+r.amount,0);
   // 만기 임박
-  const expiring = en.reduce((s,c)=>s+c.contracts.filter(ct=>{const d=getDday(ct.end);return d>=0&&d<=90;}).length,0);
+  const expiring = en.reduce((s,c)=>s+c.contracts.filter(ct=>{if(!isCtLive(ct))return false;const d=getDday(ct.end);return d>=0&&d<=90;}).length,0);
   // 팔로업 완료율
   const allFu = customers.flatMap(c=>c.consultations.filter(cs=>cs.followUp&&inP(cs.followUp)));
   const doneFu = allFu.filter(cs=>cs.followUpDone);
@@ -4243,7 +4250,7 @@ function updateSidebar(){
   const pr=customers.filter(c=>c.type==="가망").length;
   document.getElementById("sb-enrolled").textContent=en;
   document.getElementById("sb-prospect").textContent=pr;
-  const exp=customers.filter(c=>c.type==="가입").reduce((s,c)=>s+c.contracts.filter(ct=>getDday(ct.end)<=180).length,0);
+  const exp=customers.filter(c=>c.type==="가입").reduce((s,c)=>s+c.contracts.filter(ct=>isCtLive(ct)&&getDday(ct.end)<=180).length,0);
   const today_=new Date();today_.setHours(0,0,0,0);
   const dueCnt=customers.reduce((s,c)=>s+c.contracts.filter(ct=>ct.type==="태아보험"&&ct.duedate&&(new Date(ct.duedate)-today_)/86400000<=14).length,0);
   const now=new Date(),m1=new Date(now.getFullYear(),now.getMonth()+1,now.getDate());
@@ -4496,7 +4503,7 @@ function renderDashboard(){
 
   // 월 총 보험료 KPI: 기간 내 신규 계약 보험료 합계
   const premInPeriod = enInPeriod.reduce((s,c)=>s+c.contracts.filter(ct=>inPeriod(ct.start)).reduce((ss,ct)=>ss+ct.premium,0),0);
-  const allPrem = en.reduce((s,c)=>s+c.contracts.reduce((ss,ct)=>ss+ct.premium,0),0);
+  const allPrem = en.reduce((s,c)=>s+c.contracts.filter(isCtLive).reduce((ss,ct)=>ss+ct.premium,0),0);
   document.getElementById("stat-premium").textContent = fmtW(premInPeriod)+"원";
   const kpiLabelPrem = document.getElementById("kpi-label-premium");
   if(kpiLabelPrem) kpiLabelPrem.textContent = `신규 보험료 (${periodLabel})`;
@@ -4504,7 +4511,7 @@ function renderDashboard(){
   if(premSubEl) premSubEl.textContent = `전체 월납 ${fmtW(allPrem)}원`;
 
   // 만기 예정 KPI: 항상 앞으로 180일 이내
-  const expFallback = en.reduce((s,c)=>s+c.contracts.filter(ct=>getDday(ct.end)<=180&&getDday(ct.end)>=0).length,0);
+  const expFallback = en.reduce((s,c)=>s+c.contracts.filter(ct=>isCtLive(ct)&&getDday(ct.end)<=180&&getDday(ct.end)>=0).length,0);
   document.getElementById("stat-expire").textContent = expFallback+"건";
   const kpiLabelExp = document.getElementById("kpi-label-expire");
   if(kpiLabelExp) kpiLabelExp.textContent = "만기 예정 (180일)";
@@ -4675,8 +4682,8 @@ function renderDashboard(){
 
   // ── 만기 임박 (기간 내 만기되는 계약) ──
   const exList = dashFilterMode==="yearly"&&nowY!==realY
-    ? en.flatMap(c=>c.contracts.filter(ct=>ct.end&&ct.end.startsWith(String(nowY))).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4)
-    : en.flatMap(c=>c.contracts.filter(ct=>getDday(ct.end)<=180&&getDday(ct.end)>=0).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4);
+    ? en.flatMap(c=>c.contracts.filter(ct=>isCtLive(ct)&&ct.end&&ct.end.startsWith(String(nowY))).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4)
+    : en.flatMap(c=>c.contracts.filter(ct=>isCtLive(ct)&&getDday(ct.end)<=180&&getDday(ct.end)>=0).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end)).slice(0,4);
   document.getElementById("dash-expiring").innerHTML = !exList.length
     ? '<div class="empty"><span>✅</span>만기 예정 없음</div>'
     : exList.map(ct=>{const d=getDday(ct.end);return`<div class="dash-item"><div class="dash-item-left"><h4 class="clickable" onclick="goToDetail(${ct.cid})">${ct.cname}</h4><p>${ct.product} · ${ct.end}</p></div><span class="badge-dday ${d<=90?"badge-urgent":"badge-warn"}">${d>=0?"D-"+d:"D+"+Math.abs(d)}</span></div>`;}).join("");
@@ -4820,7 +4827,7 @@ function renderEnrolled(resetPage){
   });
   // 정렬
   const getJoinDate = c => c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "0000-00-00";
-  const getPremium  = c => c.contracts.reduce((s,ct)=>s+ct.premium,0);
+  const getPremium  = c => c.contracts.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
   list.sort((a,b)=>{
     switch(enrolledSort){
       case "joinDate_asc":  return getJoinDate(a).localeCompare(getJoinDate(b));
@@ -4855,7 +4862,7 @@ function renderEnrolled(resetPage){
       wrap.innerHTML = !list.length
         ? `<div class="empty"><span>🔍</span>결과 없음</div>`
         : pagedList.map(c=>{
-            const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);
+            const p=c.contracts.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
             const tags=renderTags(c.tags);
             return `<div class="mob-card" onclick="goToDetail(${c.id})">
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
@@ -4881,7 +4888,7 @@ function renderEnrolled(resetPage){
     const enrolledContainer = document.getElementById("enrolled-tbody");
     enrolledContainer.innerHTML=!list.length
       ?`<tr><td colspan="8"><div class="empty"><span>🔍</span>결과 없음</div></td></tr>`
-      :pagedList.map(c=>{const p=c.contracts.reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="enroll-check" data-id="${c.id}" onchange="updateEnrolledSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
+      :pagedList.map(c=>{const p=c.contracts.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);return`<tr class="clickable" onclick="goToDetail(${c.id})"><td onclick="event.stopPropagation()" style="width:36px;"><input type="checkbox" class="enroll-check" data-id="${c.id}" onchange="updateEnrolledSelCount()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);"></td><td><strong>${c.name}</strong></td><td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td><td>${c.phone}</td><td>${srcBadge(c.source)}</td><td>${c.contracts.length}건</td><td>${p?p.toLocaleString()+"원":"-"}</td><td onclick="event.stopPropagation();openTagEditor(${c.id},this)" style="cursor:pointer;" title="클릭하여 태그 수정">${renderTags(c.tags)||'<span style="color:#cbd5e1;font-size:12px;">+ 태그</span>'}</td><td style="color:var(--text2);font-size:12px;">${c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0]||"-"}</td><td style="color:var(--text2)">${c.consultations[0]?.date||"-"}</td></tr>`;}).join("");
   }
 
   // 페이지네이션 렌더
@@ -5029,7 +5036,10 @@ function renderDetail(id){
   const cc=document.getElementById("det-contracts-card");
   cc.style.display=isPr&&!c.contracts.length?"none":"block";
   document.getElementById("det-contract-count").textContent=c.contracts.length+"건";
-  document.getElementById("det-contracts").innerHTML=!c.contracts.length?'<div class="empty"><span>📄</span>등록된 계약 없음</div>':`<table><thead><tr><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>계약일</th><th>만기일</th><th>D-Day</th><th>상태</th><th>계약서</th><th></th></tr></thead><tbody>${c.contracts.map(ct=>{const d=getDday(ct.end);const fileBtn=ct.fileUrl?`<a href="${ct.fileUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;font-size:11px;font-weight:600;text-decoration:none;" title="${ct.fileUrl}">📎 보기</a>`:`<span style="color:#cbd5e1;font-size:11px;">-</span>`;return`<tr><td>${ct.type}</td><td style="font-size:12px;color:var(--text2);">${ct.insured||"-"}</td><td><strong>${ct.product}</strong></td><td>${ct.insurer}</td><td>${ct.premium.toLocaleString()}원</td><td style="color:var(--text2);font-size:12px;">${ct.start||"-"}</td><td>${ct.end||"-"}</td><td><span class="badge-dday ${d<=90?"badge-urgent":d<=180?"badge-warn":"badge-ok"}">D-${d}</span></td><td><span class="badge ${ct.status==="active"?"badge-active":"badge-expiring"}">${ct.status==="active"?"유지":"만기예정"}</span></td><td>${fileBtn}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="openEditContract(${ct.id})">✏️</button> <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red);" onclick="deleteContract(${ct.id})">🗑️</button></td></tr>`;}).join("")}</tbody></table>`;
+  document.getElementById("det-contracts").innerHTML=!c.contracts.length?'<div class="empty"><span>📄</span>등록된 계약 없음</div>':`<table><thead><tr><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>계약일</th><th>만기일</th><th>D-Day</th><th>상태</th><th>계약서</th><th></th></tr></thead><tbody>${c.contracts.map(ct=>{const d=getDday(ct.end);const fileBtn=ct.fileUrl?`<a href="${ct.fileUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;font-size:11px;font-weight:600;text-decoration:none;" title="${ct.fileUrl}">📎 보기</a>`:`<span style="color:#cbd5e1;font-size:11px;">-</span>`;const cancelBtn = ct.status==="cancelled"
+      ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#2563eb;" onclick="restoreContract(${ct.id})" title="해지 취소">↩️</button>`
+      : `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#64748b;" onclick="cancelContract(${ct.id})" title="해지 처리">🚫</button>`;
+    return`<tr${ct.status==="cancelled"?' style="opacity:.6;"':''}><td>${ct.type}</td><td style="font-size:12px;color:var(--text2);">${ct.insured||"-"}</td><td><strong>${ct.product}</strong></td><td>${ct.insurer}</td><td>${ct.premium.toLocaleString()}원</td><td style="color:var(--text2);font-size:12px;">${ct.start||"-"}</td><td>${ct.end||"-"}</td><td><span class="badge-dday ${d<=90?"badge-urgent":d<=180?"badge-warn":"badge-ok"}">D-${d}</span></td><td>${ctBadgeHtml(ct)}</td><td>${fileBtn}</td><td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;" onclick="openEditContract(${ct.id})">✏️</button> ${cancelBtn} <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--red);" onclick="deleteContract(${ct.id})">🗑️</button></td></tr>`;}).join("")}</tbody></table>`;
   document.getElementById("det-consult-count").textContent=c.consultations.length+"건";
   const sortedConsults=[...c.consultations].sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById("det-consults").innerHTML=!sortedConsults.length?'<div class="empty"><span>💬</span>상담 기록 없음</div>':sortedConsults.map(cs=>{
@@ -5089,7 +5099,7 @@ function renderExpiring(){
     card.style.display="none";
   }
 
-  const items=customers.filter(c=>c.type==="가입").flatMap(c=>c.contracts.filter(ct=>getDday(ct.end)<=180).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end));
+  const items=customers.filter(c=>c.type==="가입").flatMap(c=>c.contracts.filter(ct=>isCtLive(ct)&&getDday(ct.end)<=180).map(ct=>({...ct,cname:c.name,cid:c.id}))).sort((a,b)=>new Date(a.end)-new Date(b.end));
   document.getElementById("expiring-tbody").innerHTML=!items.length?`<tr><td colspan="7"><div class="empty"><span>✅</span>만기 예정 없음</div></td></tr>`:items.map(ct=>{const d=getDday(ct.end);return`<tr class="clickable" onclick="goToDetail(${ct.cid})"><td><strong>${ct.cname}</strong></td><td>${ct.product}</td><td>${ct.insurer}</td><td>${ct.end}</td><td><span class="badge-dday ${d<=90?"badge-urgent":"badge-warn"}">D-${d}</span></td><td>${ct.premium.toLocaleString()}원</td><td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();goToDetail(${ct.cid})">상담</button></td></tr>`;}).join("");
 }
 
@@ -5142,7 +5152,7 @@ function renderContracts(){
     (activeContractTypeFilter==="전체" || ct.type===activeContractTypeFilter) &&
     (!q || ct.cname.includes(q) || ct.product.includes(q))
   ).sort((a,b)=>new Date(a.end)-new Date(b.end));
-  const total = filtered.reduce((s,ct)=>s+ct.premium,0);
+  const total = filtered.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
   const tbody = document.getElementById("contracts-tbody");
   if(!filtered.length){
     tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><span>📄</span>계약 없음</div></td></tr>`;
@@ -5172,7 +5182,7 @@ function renderContracts(){
               <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;padding-top:8px;border-top:1px solid var(--border);align-items:center;">
                 <strong style="font-size:13px;color:var(--blue);">${ct.premium.toLocaleString()}원/월</strong>
                 <span style="color:var(--text2);">고객: <strong style="color:var(--text);">${ct.cname}</strong></span>
-                <span class="badge ${ct.status==="active"?"badge-active":"badge-expiring"}" style="margin-left:auto;">${ct.status==="active"?"유지":"만기예정"}</span>
+                <span style="margin-left:auto;">${ctBadgeHtml(ct)}</span>
               </div>
             </div>`;
           }).join("")
@@ -5198,7 +5208,7 @@ function renderContracts(){
         <td style="color:var(--text2)">${ct.start||"-"}</td>
         <td style="color:var(--text2)">${ct.end||"-"}</td>
         <td>${dBadge}</td>
-        <td><span class="badge ${ct.status==="active"?"badge-active":"badge-expiring"}">${ct.status==="active"?"유지":"만기예정"}</span></td>
+        <td>${ctBadgeHtml(ct)}</td>
         <td>${fileBtn}</td>
       </tr>`;
     }).join("")
@@ -6198,7 +6208,7 @@ function downloadExcel(type) {
         "월보험료": ct.premium,
         "계약일": ct.start || "",
         "만기일": ct.end || "",
-        "상태": ct.status==="active"?"유지":"만기예정",
+        "상태": ctStatusText(ct),
         "출생예정일": ct.duedate || ""
       }))
     );
@@ -6258,7 +6268,7 @@ function downloadAllExcel() {
   const ctRows = customers.flatMap(c => c.contracts.map(ct => ({
     "고객명":c.name, "유형":c.type, "종류":ct.type, "상품명":ct.product,
     "보험사":ct.insurer, "월보험료":ct.premium, "계약일":ct.start||"",
-    "만기일":ct.end||"", "상태":ct.status==="active"?"유지":"만기예정"
+    "만기일":ct.end||"", "상태":ctStatusText(ct)
   })));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ctRows.length?ctRows:[{메시지:"데이터 없음"}]), "보험계약");
 
@@ -6892,6 +6902,20 @@ function renderTimeline(c) {
     }
   });
 
+  // 0-1b) 계약 해지일
+  (c.contracts||[]).forEach(ct => {
+    if(ct.status==="cancelled" && ct.cancelDate) {
+      items.push({
+        type:"contract", date:ct.cancelDate, sortKey:ct.cancelDate+"T00:01",
+        dot:"#94a3b8",
+        tag:"🚫 계약 해지",
+        tagBg:"#f1f5f9", tagColor:"#64748b",
+        text:`${ct.type} — ${ct.product||ct.insurer||""}`,
+        sub:`${ct.insurer||""} · 월 ${(ct.premium||0).toLocaleString()}원`
+      });
+    }
+  });
+
   // 0-2) 상담 기록
   (c.consultations||[]).forEach(cs => {
     if(!cs.calEventId) { // 캘린더 연동 기록은 캘린더 항목으로 표시
@@ -7409,8 +7433,11 @@ function saveEditContract() {
   ct.start = document.getElementById("ec-start").value;
   ct.end = document.getElementById("ec-end").value;
   ct.fileUrl = document.getElementById("ec-fileurl").value.trim();
-  const d = ct.end ? getDday(ct.end) : 999;
-  ct.status = d<=180 ? "expiring" : "active";
+  // 해지된 계약은 만기일이 바뀌어도 유지/만기예정으로 되돌리지 않음
+  if(ct.status !== "cancelled") {
+    const d = ct.end ? getDday(ct.end) : 999;
+    ct.status = d<=180 ? "expiring" : "active";
+  }
   closeModal("edit-contract");
   renderDetail(currentCustomerId);
   autoSave();
@@ -7424,6 +7451,34 @@ function deleteContract(ctId) {
   renderDetail(currentCustomerId);
   renderDashboard();
   autoSave();
+}
+function cancelContract(ctId) {
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  const ct = c.contracts.find(x=>String(x.id)===String(ctId)); if(!ct) return;
+  if(ct.status === "cancelled") return;
+  let dateInput = prompt(`"${ct.product}" 계약을 해지 처리합니다.\n해지일을 입력하세요 (YYYY-MM-DD)`, new Date().toISOString().slice(0,10));
+  if(dateInput === null) return; // 취소
+  dateInput = dateInput.trim();
+  if(dateInput && !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) { alert("날짜 형식이 올바르지 않아요. 예: 2026-08-29"); return; }
+  ct.status = "cancelled";
+  ct.cancelDate = dateInput || new Date().toISOString().slice(0,10);
+  renderDetail(currentCustomerId);
+  renderDashboard();
+  autoSave();
+  showToast(`✅ "${ct.product}" 계약이 해지 처리되었습니다.`);
+}
+function restoreContract(ctId) {
+  const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
+  const ct = c.contracts.find(x=>String(x.id)===String(ctId)); if(!ct) return;
+  if(ct.status !== "cancelled") return;
+  if(!confirm(`"${ct.product}" 계약의 해지 처리를 취소할까요?`)) return;
+  const d = ct.end ? getDday(ct.end) : 999;
+  ct.status = d<=180 ? "expiring" : "active";
+  delete ct.cancelDate;
+  renderDetail(currentCustomerId);
+  renderDashboard();
+  autoSave();
+  showToast(`↩️ "${ct.product}" 계약 해지가 취소되었습니다.`);
 }
 
 function openEditConsult(csId) {
@@ -8171,7 +8226,7 @@ function submitContractUpload() {
         ct.premium = r.premium || ct.premium;
         ct.start   = r.start || ct.start;
         ct.end     = end || ct.end;
-        ct.status  = d<=180?"expiring":"active";
+        if(ct.status !== "cancelled") ct.status = d<=180?"expiring":"active";
         updated++;
       }
       return;
@@ -11614,8 +11669,10 @@ function buildCrmContext() {
   const enrolled = customers.filter(c=>c.type==="가입");
   const prospects = customers.filter(c=>c.type==="가망");
   const allContracts = enrolled.flatMap(c=>c.contracts.map(ct=>({...ct,cname:c.name})));
-  const expiring = allContracts.filter(ct=>{const d=getDday(ct.end);return d>=0&&d<=90;});
-  const totalPremium = allContracts.reduce((s,ct)=>s+(ct.premium||0),0);
+  const liveContracts = allContracts.filter(isCtLive);
+  const cancelledCount = allContracts.length - liveContracts.length;
+  const expiring = liveContracts.filter(ct=>{const d=getDday(ct.end);return d>=0&&d<=90;});
+  const totalPremium = liveContracts.reduce((s,ct)=>s+(ct.premium||0),0);
   const pendingTasks = standaloneTasks.filter(t=>!t.done);
   const overdueTasks = pendingTasks.filter(t=>t.due&&t.due<todayStr);
   const thisMonth = today.getMonth()+1;
@@ -11630,7 +11687,7 @@ function buildCrmContext() {
   }).slice(0,5);
 
   return `[CRM 현황 데이터 — ${todayStr}]
-가입 고객: ${enrolled.length}명 / 가망 고객: ${prospects.length}명 / 총 계약: ${allContracts.length}건
+가입 고객: ${enrolled.length}명 / 가망 고객: ${prospects.length}명 / 총 계약: ${allContracts.length}건 (해지 ${cancelledCount}건 제외)
 월 총 보험료: ${totalPremium.toLocaleString()}원
 만기 임박(90일 이내): ${expiring.map(ct=>`${ct.cname} ${ct.product} (${ct.end})`).join(", ")||"없음"}
 미완료 Task: ${pendingTasks.length}건${overdueTasks.length?` (기한 초과 ${overdueTasks.length}건)`:""}
