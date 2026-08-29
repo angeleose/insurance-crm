@@ -3263,7 +3263,7 @@ const incomeCatColor = {
   "교육비":"#8b5cf6","선물":"#ec4899","사무용품":"#64748b","통신비":"#475569","기타 지출":"#94a3b8"
 };
 
-let customStages = ["초기접촉","니즈파악","설계중","계약검토"];
+let customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
 const stagePalette = [
   {bg:"#f0fdf4",color:"#15803d"},{bg:"#fef9c3",color:"#854d0e"},
   {bg:"#fff7ed",color:"#c2410c"},{bg:"#fdf4ff",color:"#7e22ce"},
@@ -6514,7 +6514,7 @@ async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
-  customStages = ["초기접촉","니즈파악","설계중","계약검토"];
+  customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
@@ -8809,6 +8809,18 @@ async function loadFromFirestore() {
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
       if (p.experienceItems) experienceItems = p.experienceItems;
       if (p.customStages && p.customStages.length) customStages = p.customStages;
+      // 2026-08-29: 영업 퍼널 단계 개편 — 예전 기본 단계(초기접촉/니즈파악/설계중/계약검토)를
+      // 그대로 쓰고 있던 계정만 새 6단계(DB수령/상담/설계중/계약검토/계약완료/종료)로 1회 이전
+      const OLD_DEFAULT_STAGES = ["초기접촉","니즈파악","설계중","계약검토"];
+      let stagesMigrated = false;
+      if (JSON.stringify(customStages) === JSON.stringify(OLD_DEFAULT_STAGES)) {
+        const stageMigrateMap = {"초기접촉":"상담","니즈파악":"상담","설계중":"설계중","계약검토":"계약검토"};
+        customers.forEach(c => {
+          if (c.type === "가망" && c.stage && stageMigrateMap[c.stage]) c.stage = stageMigrateMap[c.stage];
+        });
+        customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
+        stagesMigrated = true;
+      }
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
@@ -8823,9 +8835,9 @@ async function loadFromFirestore() {
         }
       }));
       _dataLoaded = true;
-      if (migrated > 0) {
+      if (migrated > 0 || stagesMigrated) {
         saveToFirestore();
-        showSyncToast(`✅ 로드 완료 (태아보험 ${migrated}건 자동 분류)`);
+        showSyncToast(`✅ 로드 완료${migrated>0?` (태아보험 ${migrated}건 자동 분류)`:""}${stagesMigrated?" · 영업 퍼널 단계 갱신됨":""}`);
       } else {
         showSyncToast("✅ 데이터 불러오기 완료");
       }
