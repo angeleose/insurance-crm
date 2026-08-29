@@ -577,6 +577,35 @@
   }
   .mob-card:active { box-shadow: 0 2px 12px rgba(37,99,235,.12); }
 
+  /* ── 계약 칸반보드 ── */
+  .ctv-btn{padding:5px 12px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:#64748b;}
+  .ctv-btn.active{background:#1d4ed8;color:#fff;}
+  .kb-board{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;align-items:flex-start;}
+  .kb-col{
+    flex:0 0 280px;width:280px;background:var(--bg2,var(--bg));border-radius:14px;
+    border:1px solid var(--border);display:flex;flex-direction:column;max-height:calc(100vh - 260px);
+  }
+  .kb-col.kb-dragover{border-color:var(--blue);background:var(--sky);}
+  .kb-col-head{
+    padding:12px 14px;font-size:13px;font-weight:800;color:var(--text);
+    display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;
+  }
+  .kb-col-head .kb-count{font-size:11px;font-weight:700;color:var(--text2);background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 9px;}
+  .kb-col-sub{padding:0 14px 10px;font-size:11px;color:var(--text2);margin-top:-4px;flex-shrink:0;}
+  .kb-col-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;}
+  .kb-col-empty{font-size:12px;color:var(--text2);text-align:center;padding:18px 6px;}
+  .kb-card{
+    background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;
+    cursor:grab;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .15s,opacity .15s;
+  }
+  .kb-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);}
+  .kb-card.kb-dragging{opacity:.4;}
+  .kb-card .kb-name{font-size:13px;font-weight:800;color:var(--text);}
+  .kb-card .kb-product{font-size:12px;color:var(--text2);margin-top:2px;}
+  .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;}
+  .kb-card .kb-premium{font-size:12px;font-weight:700;color:var(--blue);}
+  .kb-manage-link{font-size:11.5px;color:var(--text2);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;}
+
 /* ── 타임라인 ── */
 .tl-wrap { position:relative; padding-left:24px; margin-top:4px; }
 .tl-wrap::before { content:""; position:absolute; left:7px; top:6px; bottom:0; width:2px; background:var(--border); border-radius:2px; }
@@ -1716,15 +1745,20 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="page-header"><h2>보험 계약 목록 <span id="contracts-total-badge" style="font-size:14px;font-weight:500;color:var(--text2);"></span></h2><p>가입 고객의 전체 보험 계약 현황을 확인하세요.</p></div>
     <div class="toolbar">
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-contracts" placeholder="고객명 또는 상품명 검색..." oninput="renderContracts()"></div>
+      <div style="display:flex;background:#f1f5f9;border-radius:10px;padding:3px;gap:2px;">
+        <button id="ctv-btn-list" class="ctv-btn active" onclick="setContractsView('list')">📃 목록</button>
+        <button id="ctv-btn-kanban" class="ctv-btn" onclick="setContractsView('kanban')">🗂 칸반</button>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="openContractUploadModal()" style="display:flex;align-items:center;gap:6px;">📂 엑셀 업로드</button>
       <button class="btn btn-primary" onclick="openAddContractFromList()">+ 계약 추가</button>
     </div>
     <div class="filters" id="contract-type-filters"></div>
-    <div class="card" style="padding:0;overflow:hidden;">
+    <div class="card" id="contracts-table-wrap" style="padding:0;overflow:hidden;">
       <table><thead><tr><th>고객명</th><th>종류</th><th>피보험자</th><th>상품명</th><th>보험사</th><th>월 보험료</th><th>시작일</th><th>만기일</th><th>D-Day</th><th>상태</th><th>계약서</th></tr></thead>
       <tbody id="contracts-tbody"></tbody></table>
     </div>
     <div id="contracts-list-wrap" style="display:none;"></div>
+    <div id="contracts-kanban-wrap" style="display:none;"></div>
   </div>
 
   <!-- PROPOSALS -->
@@ -2143,6 +2177,16 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div style="display:flex;gap:8px;margin-top:14px;">
         <input type="text" id="new-stage-input" placeholder="새 단계명 입력..." onkeydown="if(event.key==='Enter')addCustomStage()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
         <button class="btn btn-primary btn-sm" onclick="addCustomStage()">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;">
+      <div class="card-title">🗂️ 계약 진행 단계 관리 (칸반)</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">계약 목록 페이지의 칸반보드에서 사용할 단계입니다. 단계명 수정, 추가·삭제·순서 변경이 가능합니다.</p>
+      <div id="contract-stage-setting-list"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <input type="text" id="new-contract-stage-input" placeholder="새 단계명 입력... (예: 서류접수)" onkeydown="if(event.key==='Enter')addContractStage()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        <button class="btn btn-primary btn-sm" onclick="addContractStage()">+ 추가</button>
       </div>
     </div>
 
@@ -3237,6 +3281,10 @@ function getStageStyle(name){
   return `background:${p.bg};color:${p.color};`;
 }
 
+// ─── 계약 진행 단계(칸반) 관리 ─────────────────────────────────
+let contractStages = ["서류접수","심사중","완료"];
+function ctStage(ct){ return (ct.kanbanStage && contractStages.includes(ct.kanbanStage)) ? ct.kanbanStage : (contractStages[0]||""); }
+
 // ─── 출처 관리 ───────────────────────────────────────────────
 let customSources = [
   {name:"펫박람회", needsVenue:true},
@@ -3443,7 +3491,70 @@ function moveCustomStage(idx, dir){
   renderStageSettings(); populateStageSelects(); autoSave();
 }
 
+// ─── 계약 진행 단계(칸반) 설정 관리 ─────────────────────────────
+function countContractsInStage(name){
+  let n=0;
+  customers.forEach(c=>(c.contracts||[]).forEach(ct=>{ if(isCtLive(ct) && ctStage(ct)===name) n++; }));
+  return n;
+}
 
+function renderContractStageSettings(){
+  const list=document.getElementById("contract-stage-setting-list"); if(!list) return;
+  if(!contractStages.length){ list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:8px 0;">단계가 없습니다.</div>`; return; }
+  list.innerHTML=contractStages.map((s,i)=>{
+    const p=stagePalette[i%stagePalette.length];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+      <span style="width:11px;height:11px;border-radius:50%;background:${p.color};flex-shrink:0;display:inline-block;"></span>
+      <input type="text" value="${s.replace(/"/g,'&quot;')}"
+        onblur="renameContractStage(${i},this.value.trim())"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--bg1);color:var(--text1);">
+      <button onclick="moveContractStage(${i},-1)" ${i===0?"disabled":""} title="위로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↑</button>
+      <button onclick="moveContractStage(${i},1)" ${i===contractStages.length-1?"disabled":""} title="아래로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↓</button>
+      <button onclick="deleteContractStage(${i})" title="삭제" style="background:none;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--red);">✕</button>
+    </div>`;
+  }).join("");
+}
+
+function addContractStage(){
+  const input=document.getElementById("new-contract-stage-input");
+  const name=input.value.trim();
+  if(!name){alert("단계명을 입력하세요.");return;}
+  if(contractStages.includes(name)){alert("이미 있는 단계입니다.");return;}
+  contractStages.push(name);
+  input.value="";
+  renderContractStageSettings(); renderContracts(); autoSave();
+}
+
+function renameContractStage(idx, newName){
+  if(!newName||!contractStages[idx]||newName===contractStages[idx]) return;
+  if(contractStages.includes(newName)){showToast("이미 있는 단계명이에요."); return;}
+  const oldName=contractStages[idx];
+  contractStages[idx]=newName;
+  customers.forEach(c=>(c.contracts||[]).forEach(ct=>{ if(ct.kanbanStage===oldName) ct.kanbanStage=newName; }));
+  renderContractStageSettings(); renderContracts(); autoSave();
+}
+
+function deleteContractStage(idx){
+  const name=contractStages[idx];
+  const count=countContractsInStage(name);
+  const remaining=contractStages.filter((s,i)=>i!==idx);
+  const fallback=remaining[0]||"";
+  const msg=count
+    ? `"${name}" 단계를 삭제할까요?\n이 단계의 계약 ${count}건은 "${fallback||"(단계 없음)"}" 단계로 변경됩니다.`
+    : `"${name}" 단계를 삭제할까요?`;
+  if(!confirm(msg)) return;
+  contractStages.splice(idx,1);
+  if(count) customers.forEach(c=>(c.contracts||[]).forEach(ct=>{ if(ct.kanbanStage===name) ct.kanbanStage=fallback; }));
+  renderContractStageSettings(); renderContracts(); autoSave();
+}
+
+function moveContractStage(idx, dir){
+  const ni=idx+dir;
+  if(ni<0||ni>=contractStages.length) return;
+  [contractStages[idx],contractStages[ni]]=[contractStages[ni],contractStages[idx]];
+  renderContractStageSettings(); renderContracts(); autoSave();
+}
 
 // ─── 고객데이터원본 이미지 뷰어 ──────────────────────────────────
 function openScanImageViewer(url) {
@@ -4199,6 +4310,7 @@ function showPage(name, pushHistory=true){
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     renderStageSettings();
+    renderContractStageSettings();
     renderSourceSettings();
     const emailEl = document.getElementById("setting-user-email");
     if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
@@ -5164,15 +5276,22 @@ function renderContracts(){
   ).sort((a,b)=>new Date(a.end)-new Date(b.end));
   const total = filtered.filter(isCtLive).reduce((s,ct)=>s+ct.premium,0);
   const tbody = document.getElementById("contracts-tbody");
+  const isMobC = window.innerWidth <= 768;
+  const ctw = document.getElementById("contracts-table-wrap") || tbody?.closest(".card");
+  const clw = document.getElementById("contracts-list-wrap");
+  const kbw = document.getElementById("contracts-kanban-wrap");
+  const showKanban = contractsViewMode === "kanban";
+  if(ctw) ctw.style.display = (!showKanban && !isMobC) ? "" : "none";
+  if(clw) clw.style.display = (!showKanban && isMobC) ? "" : "none";
+  if(kbw) kbw.style.display = showKanban ? "" : "none";
+  if(showKanban){
+    renderContractsKanban(filtered);
+    return;
+  }
   if(!filtered.length){
     tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><span>📄</span>계약 없음</div></td></tr>`;
     return;
   }
-  const isMobC = window.innerWidth <= 768;
-  const ctw = document.getElementById("contracts-table-wrap") || tbody?.closest(".card");
-  const clw = document.getElementById("contracts-list-wrap");
-  if(ctw) ctw.style.display = isMobC ? "none" : "";
-  if(clw) clw.style.display = isMobC ? "" : "none";
   if(isMobC){
     const wrap = document.getElementById("contracts-list-wrap");
     if(wrap){
@@ -5228,6 +5347,72 @@ function renderContracts(){
         <td colspan="5"></td>
       </tr>`;
   }
+}
+
+// ─── 계약 칸반보드 ──────────────────────────────────────────
+let contractsViewMode = "list";
+function setContractsView(mode){
+  contractsViewMode = mode;
+  const lb = document.getElementById("ctv-btn-list");
+  const kb = document.getElementById("ctv-btn-kanban");
+  if(lb) lb.classList.toggle("active", mode==="list");
+  if(kb) kb.classList.toggle("active", mode==="kanban");
+  renderContracts();
+}
+
+function renderContractsKanban(items){
+  const wrap = document.getElementById("contracts-kanban-wrap");
+  if(!wrap) return;
+  if(!contractStages.length){
+    wrap.innerHTML = `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
+    return;
+  }
+  // 해지된 계약은 칸반(진행 파이프라인)에서 제외 — 이미 끝난 계약이라 단계 이동 대상이 아님
+  const live = items.filter(isCtLive);
+  wrap.innerHTML = `
+    <div class="kb-board">
+      ${contractStages.map(stage=>{
+        const stageItems = live.filter(ct=>ctStage(ct)===stage);
+        const stageTotal = stageItems.reduce((s,ct)=>s+(ct.premium||0),0);
+        return `<div class="kb-col" ondragover="event.preventDefault();this.classList.add('kb-dragover')" ondragleave="this.classList.remove('kb-dragover')" ondrop="kbDrop(event,'${escAttr(stage)}')">
+          <div class="kb-col-head"><span>${stage}</span><span class="kb-count">${stageItems.length}</span></div>
+          <div class="kb-col-sub">${stageTotal?stageTotal.toLocaleString()+"원/월":""}</div>
+          <div class="kb-col-body">
+            ${stageItems.length ? stageItems.map(ct=>`
+              <div class="kb-card" draggable="true" ondragstart="kbDragStart(event,${ct.cid},${ct.id})" ondragend="this.classList.remove('kb-dragging')" onclick="goToDetail(${ct.cid})">
+                <div class="kb-name">${ct.cname}</div>
+                <div class="kb-product">${ct.product||"-"}</div>
+                <div class="kb-meta">
+                  <span class="kb-premium">${(ct.premium||0).toLocaleString()}원</span>
+                  ${ctBadgeHtml(ct)}
+                </div>
+              </div>`).join("") : `<div class="kb-col-empty">계약 없음</div>`}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="margin-top:10px;"><button class="kb-manage-link" onclick="showPage('settings')">🗂️ 단계 관리하기 →</button></div>`;
+}
+
+let _kbDrag = null;
+function kbDragStart(e, cid, ctId){
+  _kbDrag = {cid, ctId};
+  e.target.classList.add("kb-dragging");
+  if(e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+}
+function kbDrop(e, stage){
+  e.preventDefault();
+  e.currentTarget.classList.remove("kb-dragover");
+  if(!_kbDrag) return;
+  const { cid, ctId } = _kbDrag;
+  _kbDrag = null;
+  const c = customers.find(x=>x.id===cid);
+  const ct = c && c.contracts.find(x=>String(x.id)===String(ctId));
+  if(!ct || ctStage(ct)===stage) return;
+  ct.kanbanStage = stage;
+  renderContracts();
+  renderDashboard();
+  autoSave();
 }
 
 function renderConsultations() {
@@ -6366,6 +6551,7 @@ async function resetAllData() {
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = [];
   customStages = ["초기접촉","니즈파악","설계중","계약검토"];
+  contractStages = ["서류접수","심사중","완료"];
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
@@ -8620,6 +8806,7 @@ async function saveToFirestore() {
     myContacts,
     experienceItems,
     customStages,
+    contractStages,
     customSources,
     cardPayRecords,
     cardInfoRecords,
@@ -8660,6 +8847,7 @@ async function loadFromFirestore() {
       if (p.msgTemplates && p.msgTemplates.length) msgTemplates = p.msgTemplates;
       if (p.experienceItems) experienceItems = p.experienceItems;
       if (p.customStages && p.customStages.length) customStages = p.customStages;
+      if (p.contractStages && p.contractStages.length) contractStages = p.contractStages;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
