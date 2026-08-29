@@ -1790,6 +1790,15 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="toolbar">
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-proposals" placeholder="고객명 또는 상품명 검색..." oninput="renderProposalsPage()"></div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <select id="proposal-sort-select" onchange="proposalSort=this.value;renderProposalsPage()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="date_desc">작성일 최신순</option>
+        <option value="date_asc">작성일 오래된순</option>
+        <option value="premium_desc">보험료 높은순</option>
+        <option value="name_asc">고객명순</option>
+      </select>
+    </div>
     <div class="card" style="padding:0;overflow:hidden;">
       <table>
         <thead><tr><th>고객명</th><th>제목</th><th>보험사</th><th>상품명</th><th>월 보험료</th><th>작성일</th><th>메모</th><th>파일</th><th></th></tr></thead>
@@ -1808,6 +1817,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-consultations" placeholder="고객명 또는 상담 내용 검색..." oninput="renderConsultations()"></div>
     </div>
     <div class="filters" id="consult-filters"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <select id="consult-sort-select" onchange="consultSort=this.value;renderConsultations()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="date_desc">상담일 최신순</option>
+        <option value="date_asc">상담일 오래된순</option>
+        <option value="name_asc">고객명순</option>
+      </select>
+    </div>
     <div class="card" style="padding:0;overflow:hidden;" id="consultations-table-wrap">
       <table>
         <thead><tr><th>날짜</th><th>고객명</th><th>구분</th><th>방식</th><th>상담 내용</th><th>팔로업</th><th></th></tr></thead>
@@ -3468,6 +3485,8 @@ let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
 let contractSort = "end_asc";
+let consultSort = "date_desc";
+let proposalSort = "date_desc";
 
 const getAge=b=>{if(!b)return"-";const d=new Date(b),t=new Date();let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a+"세";};
 const getDday=e=>Math.ceil((new Date(e)-new Date())/86400000);
@@ -5585,13 +5604,21 @@ function renderConsultations() {
   const q = (document.getElementById("search-consultations").value||"").trim();
   const allItems = customers.flatMap(c =>
     c.consultations.map(cs => ({...cs, cname:c.name, ctype:c.type, cid:c.id}))
-  ).sort((a,b) => new Date(b.date) - new Date(a.date));
+  );
 
   const filtered = allItems.filter(cs =>
     (activeConsultTypeFilter==="전체" || cs.type===activeConsultTypeFilter) &&
     (activeConsultCustFilter==="전체고객" || cs.ctype===activeConsultCustFilter) &&
     (!q || cs.cname.includes(q) || cs.note.includes(q))
-  );
+  ).sort((a,b)=>{
+    switch(consultSort){
+      case "date_asc": return (a.date||"").localeCompare(b.date||"");
+      case "name_asc": return a.cname.localeCompare(b.cname,"ko");
+      default:          return (b.date||"").localeCompare(a.date||""); // date_desc
+    }
+  });
+  const sortSelCS = document.getElementById("consult-sort-select");
+  if(sortSelCS) sortSelCS.value = consultSort;
 
   const tbody = document.getElementById("consultations-tbody");
   if (!filtered.length) {
@@ -7632,7 +7659,16 @@ function renderProposalsPage() {
   let rows = [];
   customers.forEach(c => (c.proposals||[]).forEach(p => rows.push({...p, cname:c.name, cid:c.id})));
   if (q) rows = rows.filter(r => r.cname.includes(q)||r.title.includes(q)||(r.product||"").includes(q));
-  rows.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  rows.sort((a,b)=>{
+    switch(proposalSort){
+      case "date_asc":     return (a.date||"").localeCompare(b.date||"");
+      case "premium_desc": return (b.premium||0)-(a.premium||0);
+      case "name_asc":     return a.cname.localeCompare(b.cname,"ko");
+      default:               return (b.date||"").localeCompare(a.date||""); // date_desc
+    }
+  });
+  const sortSelP = document.getElementById("proposal-sort-select");
+  if(sortSelP) sortSelP.value = proposalSort;
   if (!rows.length) { tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><span>📋</span>제안서 없음</div></td></tr>`; return; }
   tbody.innerHTML = rows.map(p=>`
     <tr class="clickable" onclick="goToDetail(${p.cid})">
