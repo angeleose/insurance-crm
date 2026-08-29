@@ -1038,6 +1038,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <nav class="sb-nav">
     <div class="sb-section">메인</div>
     <div class="nav-item" data-page="dashboard" onclick="closeMobileDrawer()"><span class="icon">📊</span> 대시보드</div>
+    <div class="nav-item" data-page="funnel" onclick="closeMobileDrawer();openFunnelBoard()"><span class="icon">🎯</span> 영업 퍼널</div>
     <div class="sb-section" style="margin-top:6px">고객</div>
     <div class="nav-item" data-page="enrolled" onclick="closeMobileDrawer()"><span class="icon">✅</span> 가입 고객</div>
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
@@ -1130,6 +1131,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <nav class="sb-nav">
     <div class="sb-section">메인</div>
     <div class="nav-item active" data-page="dashboard"><span class="icon">📊</span> 대시보드</div>
+    <div class="nav-item" data-page="funnel" onclick="openFunnelBoard()"><span class="icon">🎯</span> 영업 퍼널</div>
 
     <div class="sb-section collapsible" style="margin-top:6px" onclick="toggleSbSection(this)">
       <span>고객</span><span class="sb-arrow">▾</span>
@@ -4247,7 +4249,7 @@ function showPage(name, pushHistory=true){
   const ni=document.querySelector(`[data-page="${name}"]`);if(ni)ni.classList.add("active");
   if(name==="dashboard")renderDashboard();
   if(name==="enrolled")renderEnrolled();
-  if(name==="prospects")renderProspects();
+  if(name==="prospects"){ prospectsViewMode="list"; renderProspects(); }
   if(name==="expiring")renderExpiring();
   if(name==="followup")renderFollowup();
   if(name==="contracts")renderContracts();
@@ -5062,6 +5064,14 @@ function setProspectsView(mode){
   if(lb) lb.classList.toggle("active", mode==="list");
   if(kb) kb.classList.toggle("active", mode==="kanban");
   renderProspects();
+}
+
+// 사이드바 "영업 퍼널" 진입점 — 가망고객 페이지를 칸반 뷰로 바로 연다
+function openFunnelBoard(){
+  showPage("prospects");
+  setProspectsView("kanban");
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  document.querySelectorAll('.nav-item[data-page="funnel"]').forEach(n=>n.classList.add("active"));
 }
 
 function renderProspectsKanban(kbList){
