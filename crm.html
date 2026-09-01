@@ -5293,7 +5293,7 @@ function renderProspectsKanban(kbList){
               <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
               ${p.contractRegistered && linked
                 ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" title="계약 내용 보기·수정" onclick="event.stopPropagation();viewRegisteredContract(${p.id})">✅ 계약등록 완료 보기</button>`
-                : (isDone && linked ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``)}
+                : (isDone && linked ? `<button class="kb-action-btn" style="background:#dbeafe;color:#1d4ed8;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``)}
             </div>
           </div>`;
         }).join("") : `<div class="kb-col-empty">게시물 없음</div>`}
