@@ -5143,6 +5143,7 @@ function renderProspects(){
   if(plw) plw.style.display = (!showKanban && isMobP) ? "" : "none";
   if(pkw) pkw.style.display = showKanban ? "" : "none";
   if(showKanban){
+    syncFunnelPostCompletions(); // 기능 도입 전 이미 등록된 계약도 자동으로 찾아 "완료" 처리
     // 칸반은 "영업 퍼널 게시물"(funnelPosts) 단위로 카드를 구성 — 가입제안서와는 별개의 독립 엔티티.
     // 게시물은 고객과 연동될 수도, 아직 연동 안 될 수도 있음(연동은 나중에 해도 됨).
     const kbList = funnelPosts.filter(p=>{
@@ -5208,6 +5209,20 @@ function openFunnelBoard(){
   document.querySelectorAll('.nav-item[data-page="funnel"]').forEach(n=>n.classList.add("active"));
 }
 
+// 이 기능(계약등록 완료 표시)이 생기기 전에 이미 계약이 등록된 게시물을 자동으로 찾아 연결.
+// 연동된 고객이 게시물의 관심상품과 같은 종류의 살아있는 계약을 이미 갖고 있으면 완료로 간주.
+function syncFunnelPostCompletions(){
+  let changed = false;
+  funnelPosts.forEach(p=>{
+    if(p.contractRegistered || !p.customerId || !p.product) return;
+    const c = customers.find(x=>x.id===p.customerId);
+    if(!c) return;
+    const match = (c.contracts||[]).find(ct=>isCtLive(ct)&&ct.type===p.product);
+    if(match){ p.contractRegistered = true; p.registeredContractId = match.id; changed = true; }
+  });
+  if(changed) autoSave();
+}
+
 function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
@@ -5234,8 +5249,8 @@ function renderProspectsKanban(kbList){
             <div class="kb-link-row">${custRow}</div>
             <div class="kb-meta">
               <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
-              ${p.contractRegistered
-                ? `<span class="kb-action-btn" style="background:#dcfce7;color:#15803d;cursor:default;">✅ 계약등록 완료</span>`
+              ${p.contractRegistered && linked
+                ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" title="계약 내용 보기" onclick="event.stopPropagation();goToDetail(${linked.id})">✅ 계약등록 완료 보기</button>`
                 : (isDone && linked ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``)}
             </div>
           </div>`;
@@ -5491,6 +5506,14 @@ function registerContractFromFunnelPost(postId){
   if(!p.customerId){ alert("먼저 이 게시물에 고객을 연동해 주세요."); return; }
   const c = customers.find(x=>x.id===p.customerId);
   if(!c){ alert("연동된 고객을 찾을 수 없습니다."); return; }
+  // 방어적 재확인 — 렌더링 시점의 자동 동기화를 놓쳤더라도 중복 등록을 막는다
+  const existing = p.product ? (c.contracts||[]).find(ct=>isCtLive(ct)&&ct.type===p.product) : null;
+  if(existing){
+    p.contractRegistered = true; p.registeredContractId = existing.id;
+    renderProspects(); autoSave();
+    showToast("이미 등록된 계약을 찾아 연결했어요.");
+    return;
+  }
   currentCustomerId = c.id;
   if(c.type==="가망") convertToEnrolled(); // 아직 가망이면 먼저 가입 고객으로 전환 (계약 목록에 노출되도록)
   openAddContractFromDetail();
