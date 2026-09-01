@@ -625,15 +625,6 @@
   .kb-month-chip-total{background:var(--purple-light);border-color:#d8c4fb;}
   .kb-month-chip-total .kb-month-label,.kb-month-chip-total .kb-month-count{color:var(--purple);}
   .kb-month-chip-total .kb-month-total{color:var(--purple);}
-  .kb-pipeline-summary{display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px 16px;margin-bottom:12px;flex-wrap:wrap;}
-  .kb-pipeline-icon{font-size:17px;}
-  .kb-pipeline-label{font-size:12.5px;font-weight:800;color:#92400e;}
-  .kb-pipeline-label .kb-pipeline-sub{font-weight:600;color:#b45309;}
-  .kb-pipeline-count{font-size:12px;color:#92400e;}
-  .kb-pipeline-total{font-size:15px;font-weight:800;color:#92400e;margin-left:auto;}
-  body.dark .kb-pipeline-summary{background:#451a03;border-color:#78350f;}
-  body.dark .kb-pipeline-label,body.dark .kb-pipeline-count,body.dark .kb-pipeline-total{color:#fde68a;}
-  body.dark .kb-pipeline-label .kb-pipeline-sub{color:#fcd34d;}
 
 /* ── 타임라인 ── */
 .tl-wrap { position:relative; padding-left:24px; margin-top:4px; }
@@ -5320,31 +5311,6 @@ function renderFunnelMonthlySummaryHtml(kbList){
   </div>`;
 }
 
-// "계약검토" 단계(고객이 검토 중인, 아직 계약은 안 된 게시물)의 예상 보험료 합계 —
-// 아직 실현되지 않은 파이프라인 매출이라 계약월별 합계(확정분)와 분리해서 보여줌.
-// 단계명은 설정에서 자유롭게 바뀔 수 있으므로("계약검토" → "고객검토중" 등) 이름으로
-// 고정하지 않고, "계약완료" 바로 앞 단계를 검토 단계로 간주해 이름이 바뀌어도 계속 찾는다.
-function getFunnelReviewStageName(){
-  const doneIdx = customStages.indexOf("계약완료");
-  if(doneIdx > 0) return customStages[doneIdx-1];
-  return customStages.length >= 2 ? customStages[customStages.length-2] : null;
-}
-function renderPipelineForecastHtml(kbList){
-  const reviewStage = getFunnelReviewStageName();
-  if(!reviewStage) return "";
-  const items = kbList.filter(p=>(p.stage||customStages[0])===reviewStage);
-  // 게시물이 없어도(0건) 배너 자체는 항상 보여줘서, "이 기능이 어디 있는지 안 보인다"는
-  // 혼동이 없게 한다 — 0건일 땐 그냥 0건 · 0원으로 표시됨
-  const total = items.reduce((s,p)=>s+(p.premium||0),0);
-  const reviewLabel = reviewStage.endsWith("중") ? reviewStage : reviewStage+"중"; // "계약검토"→"계약검토중", "고객검토중"은 그대로
-  return `<div class="kb-pipeline-summary">
-    <span class="kb-pipeline-icon">💰</span>
-    <span class="kb-pipeline-label">예상 추가매출 <span class="kb-pipeline-sub">(${reviewLabel})</span></span>
-    <span class="kb-pipeline-count">${items.length}건</span>
-    <span class="kb-pipeline-total">${total.toLocaleString()}원</span>
-  </div>`;
-}
-
 function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
@@ -5381,8 +5347,7 @@ function renderProspectsKanban(kbList){
     </div>`;
   };
 
-  wrap.innerHTML = renderPipelineForecastHtml(kbList)
-    + renderFunnelMonthlySummaryHtml(kbList)
+  wrap.innerHTML = renderFunnelMonthlySummaryHtml(kbList)
     + `<div class="kb-board">${customStages.map(stageCol).join("")}</div>
     <div style="margin-top:10px;display:flex;gap:14px;align-items:center;">
       <button class="btn btn-purple btn-sm" onclick="openFunnelPostModal(null, customStages[0])">+ 새 게시물 추가</button>
