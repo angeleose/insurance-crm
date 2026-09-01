@@ -6346,7 +6346,7 @@ function addContract(){
 function openAddContractFromDetail(){
   _fpPendingContractPostId = null; // registerContractFromFunnelPost가 아닌 다른 경로로 열렸다면 초기화
   document.getElementById("ct-customer-wrap").style.display = "none";
-  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate"].forEach(id=>document.getElementById(id).value="");
+  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate","ct-insured"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const r=document.getElementById("ct-calc-result");if(r)r.style.display="none";
   document.getElementById("ct-type").value="실손보험";
@@ -6361,7 +6361,7 @@ function openAddContractFromList(){
   document.getElementById("ct-customer-id").value = "";
   document.getElementById("ct-customer-wrap").style.display = "";
   // 입력 초기화
-  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate"].forEach(id=>document.getElementById(id).value="");
+  ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate","ct-insured"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const r=document.getElementById("ct-calc-result");if(r)r.style.display="none";
   document.getElementById("ct-type").value = "실손보험";
