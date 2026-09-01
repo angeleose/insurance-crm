@@ -610,6 +610,8 @@
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
+  .kb-card .kb-meta-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .kb-card .kb-post-date{font-size:10.5px;color:var(--text2);}
   .kb-card .kb-link-row{margin-top:6px;}
   .kb-card .kb-linked-cust{display:inline-block;font-size:11px;font-weight:700;color:var(--purple);background:var(--purple-light);border-radius:6px;padding:2px 8px;}
   .kb-card .kb-unlinked{display:inline-block;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg);border:1px dashed var(--border);border-radius:6px;padding:2px 8px;}
@@ -2482,9 +2484,15 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <input type="number" id="fp-premium" placeholder="50000">
       </div>
     </div>
-    <div class="form-group">
-      <label>진행 단계</label>
-      <select id="fp-stage"></select>
+    <div class="form-row">
+      <div class="form-group">
+        <label>진행 단계</label>
+        <select id="fp-stage"></select>
+      </div>
+      <div class="form-group">
+        <label>시작일</label>
+        <input type="date" id="fp-date">
+      </div>
     </div>
     <div class="form-group">
       <label>고객 연동 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택 — 나중에 연결해도 돼요)</span></label>
@@ -5336,7 +5344,10 @@ function renderProspectsKanban(kbList){
             ${p.product?`<div class="kb-sub">${p.product}</div>`:``}
             <div class="kb-link-row">${custRow}</div>
             <div class="kb-meta">
-              <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
+              <span class="kb-meta-left">
+                <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
+                ${p.date?`<span class="kb-post-date">📅 ${p.date}</span>`:``}
+              </span>
               ${p.contractRegistered && linked
                 ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" title="계약 내용 보기·수정" onclick="event.stopPropagation();viewRegisteredContract(${p.id})">✅ 계약등록 완료 보기</button>`
                 : (isDone && linked ? `<button class="kb-action-btn" style="background:#dbeafe;color:#1d4ed8;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``)}
@@ -5412,6 +5423,7 @@ function openFunnelPostModal(id = null, presetStage = null){
     if(p.product && productCategories.includes(p.product)) productSel.value = p.product; else productSel.value = "";
     document.getElementById("fp-premium").value = p.premium||"";
     document.getElementById("fp-memo").value = p.memo||"";
+    document.getElementById("fp-date").value = p.date || (p.createdAt ? p.createdAt.slice(0,10) : "");
     if(p.stage && customStages.includes(p.stage)) stageSel.value = p.stage;
     _fpSelectedTags = (p.tags||[]).filter(t=>funnelPostTags.includes(t));
     const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
@@ -5421,6 +5433,7 @@ function openFunnelPostModal(id = null, presetStage = null){
     ["fp-title","fp-premium","fp-memo","fp-cust-search"].forEach(fid=>document.getElementById(fid).value="");
     productSel.value = "";
     document.getElementById("fp-cust-id").value = "";
+    document.getElementById("fp-date").value = new Date().toISOString().slice(0,10); // 새 게시물은 오늘 날짜를 기본값으로 (변경 가능)
     _fpSelectedTags = [];
     stageSel.value = (presetStage && customStages.includes(presetStage)) ? presetStage : (customStages[0]||"");
     // 현재 보고 있는 고객이 있으면 기본 연동
@@ -5470,6 +5483,7 @@ function quickAddCustomerForFunnelPost(name){
     product: document.getElementById("fp-product").value,
     premium: document.getElementById("fp-premium").value,
     stage: document.getElementById("fp-stage").value,
+    date: document.getElementById("fp-date").value,
     memo: document.getElementById("fp-memo").value,
     tags: [..._fpSelectedTags],
   };
@@ -5490,6 +5504,7 @@ function reopenFunnelPostModalWithLinkedCustomer(newCustomerId){
   if(snap.product) document.getElementById("fp-product").value = snap.product;
   document.getElementById("fp-premium").value = snap.premium;
   if(snap.stage) document.getElementById("fp-stage").value = snap.stage;
+  if(snap.date) document.getElementById("fp-date").value = snap.date;
   document.getElementById("fp-memo").value = snap.memo;
   _fpSelectedTags = [...snap.tags];
   renderFpTagChips();
@@ -5511,6 +5526,7 @@ function saveFunnelPost(){
     tags: [..._fpSelectedTags],
     premium: parseInt(document.getElementById("fp-premium").value)||0,
     stage: document.getElementById("fp-stage").value || customStages[0] || "",
+    date: document.getElementById("fp-date").value,
     customerId: custIdRaw ? (customers.find(c=>String(c.id)===String(custIdRaw))?.id ?? null) : null,
     memo: document.getElementById("fp-memo").value.trim(),
     createdAt: _fpEditId ? (funnelPosts.find(x=>x.id===_fpEditId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
