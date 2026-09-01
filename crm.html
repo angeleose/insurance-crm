@@ -5234,7 +5234,9 @@ function renderProspectsKanban(kbList){
             <div class="kb-link-row">${custRow}</div>
             <div class="kb-meta">
               <span class="kb-followup">${p.premium?p.premium.toLocaleString()+"원":""}</span>
-              ${isDone && linked ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``}
+              ${p.contractRegistered
+                ? `<span class="kb-action-btn" style="background:#dcfce7;color:#15803d;cursor:default;">✅ 계약등록 완료</span>`
+                : (isDone && linked ? `<button class="kb-action-btn" style="background:#dcfce7;color:#15803d;" onclick="event.stopPropagation();registerContractFromFunnelPost(${p.id})">📄 계약 등록</button>` : ``)}
             </div>
           </div>`;
         }).join("") : `<div class="kb-col-empty">게시물 없음</div>`}
@@ -5271,6 +5273,9 @@ function prKbDrop(e, target){
 
 // ─── 영업 퍼널 게시물 CRUD ───────────────────────────────────
 let _fpEditId = null;
+// 계약 등록 버튼으로 계약 추가 모달을 연 게시물 id — 실제로 계약이 저장될 때만
+// 해당 게시물을 "계약등록 완료"로 표시하기 위한 임시 상태(모달 취소 시엔 그냥 버려짐)
+let _fpPendingContractPostId = null;
 let _fpSelectedTags = [];
 function renderFpTagChips(){
   const wrap = document.getElementById("fp-tags-chips"); if(!wrap) return;
@@ -5482,12 +5487,14 @@ function moveFunnelTag(idx, dir){
 function registerContractFromFunnelPost(postId){
   const p = funnelPosts.find(x=>String(x.id)===String(postId));
   if(!p) return;
+  if(p.contractRegistered) return; // 이미 계약등록 완료된 게시물
   if(!p.customerId){ alert("먼저 이 게시물에 고객을 연동해 주세요."); return; }
   const c = customers.find(x=>x.id===p.customerId);
   if(!c){ alert("연동된 고객을 찾을 수 없습니다."); return; }
   currentCustomerId = c.id;
   if(c.type==="가망") convertToEnrolled(); // 아직 가망이면 먼저 가입 고객으로 전환 (계약 목록에 노출되도록)
   openAddContractFromDetail();
+  _fpPendingContractPostId = postId; // openAddContractFromDetail 호출 이후에 설정 — 함수 시작부에서 초기화되므로
   if(p.product) document.getElementById("ct-product").value = p.product; // 상품명 초안 — 실제 상품명으로 고쳐 쓰면 됨
   if(p.premium) document.getElementById("ct-premium").value = p.premium;
   document.getElementById("ct-start").value = new Date().toISOString().slice(0,10);
@@ -6177,12 +6184,20 @@ function addContract(){
   const end=document.getElementById("ct-end").value,d=end?getDday(end):999;
   const ctType = document.getElementById("ct-type").value;
   const ctInsured = document.getElementById("ct-insured").value.trim();
-  c.contracts.push({id:Date.now(),type:ctType,product,insurer:document.getElementById("ct-insurer").value,premium:parseInt(document.getElementById("ct-premium").value)||0,start:document.getElementById("ct-start").value,end,status:d<=180?"expiring":"active",duedate:ctType==="태아보험"?document.getElementById("ct-duedate").value:"",insured:ctInsured});
+  const newCtId = Date.now();
+  c.contracts.push({id:newCtId,type:ctType,product,insurer:document.getElementById("ct-insurer").value,premium:parseInt(document.getElementById("ct-premium").value)||0,start:document.getElementById("ct-start").value,end,status:d<=180?"expiring":"active",duedate:ctType==="태아보험"?document.getElementById("ct-duedate").value:"",insured:ctInsured});
   ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate","ct-insured"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const r=document.getElementById("ct-calc-result");if(r)r.style.display="none";
   document.getElementById("ct-duedate-wrap").style.display="none";
   closeModal("add-contract");
+  // 영업 퍼널 "계약 등록" 버튼을 통해 열린 모달이었다면, 실제 저장이 끝난 지금 그 게시물을 완료 처리
+  if(_fpPendingContractPostId != null){
+    const fp = funnelPosts.find(x=>String(x.id)===String(_fpPendingContractPostId));
+    if(fp){ fp.contractRegistered = true; fp.registeredContractId = newCtId; }
+    _fpPendingContractPostId = null;
+    renderProspects();
+  }
   if(customerWrap && customerWrap.style.display !== "none") {
     renderContracts();
   } else {
@@ -6192,6 +6207,7 @@ function addContract(){
 }
 
 function openAddContractFromDetail(){
+  _fpPendingContractPostId = null; // registerContractFromFunnelPost가 아닌 다른 경로로 열렸다면 초기화
   document.getElementById("ct-customer-wrap").style.display = "none";
   ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
@@ -6202,6 +6218,7 @@ function openAddContractFromDetail(){
 }
 
 function openAddContractFromList(){
+  _fpPendingContractPostId = null; // 영업 퍼널 흐름이 아닌 일반 계약 추가이므로 초기화
   if(!customers.length){ alert("고객이 없습니다."); return; }
   document.getElementById("ct-cust-search").value = "";
   document.getElementById("ct-customer-id").value = "";
