@@ -5321,17 +5321,25 @@ function renderFunnelMonthlySummaryHtml(kbList){
 }
 
 // "계약검토" 단계(고객이 검토 중인, 아직 계약은 안 된 게시물)의 예상 보험료 합계 —
-// 아직 실현되지 않은 파이프라인 매출이라 계약월별 합계(확정분)와 분리해서 보여줌
-const FUNNEL_REVIEW_STAGE = "계약검토";
+// 아직 실현되지 않은 파이프라인 매출이라 계약월별 합계(확정분)와 분리해서 보여줌.
+// 단계명은 설정에서 자유롭게 바뀔 수 있으므로("계약검토" → "고객검토중" 등) 이름으로
+// 고정하지 않고, "계약완료" 바로 앞 단계를 검토 단계로 간주해 이름이 바뀌어도 계속 찾는다.
+function getFunnelReviewStageName(){
+  const doneIdx = customStages.indexOf("계약완료");
+  if(doneIdx > 0) return customStages[doneIdx-1];
+  return customStages.length >= 2 ? customStages[customStages.length-2] : null;
+}
 function renderPipelineForecastHtml(kbList){
-  if(!customStages.includes(FUNNEL_REVIEW_STAGE)) return "";
-  const items = kbList.filter(p=>(p.stage||customStages[0])===FUNNEL_REVIEW_STAGE);
+  const reviewStage = getFunnelReviewStageName();
+  if(!reviewStage) return "";
+  const items = kbList.filter(p=>(p.stage||customStages[0])===reviewStage);
   // 게시물이 없어도(0건) 배너 자체는 항상 보여줘서, "이 기능이 어디 있는지 안 보인다"는
   // 혼동이 없게 한다 — 0건일 땐 그냥 0건 · 0원으로 표시됨
   const total = items.reduce((s,p)=>s+(p.premium||0),0);
+  const reviewLabel = reviewStage.endsWith("중") ? reviewStage : reviewStage+"중"; // "계약검토"→"계약검토중", "고객검토중"은 그대로
   return `<div class="kb-pipeline-summary">
     <span class="kb-pipeline-icon">💰</span>
-    <span class="kb-pipeline-label">예상 추가매출 <span class="kb-pipeline-sub">(${FUNNEL_REVIEW_STAGE}중)</span></span>
+    <span class="kb-pipeline-label">예상 추가매출 <span class="kb-pipeline-sub">(${reviewLabel})</span></span>
     <span class="kb-pipeline-count">${items.length}건</span>
     <span class="kb-pipeline-total">${total.toLocaleString()}원</span>
   </div>`;
