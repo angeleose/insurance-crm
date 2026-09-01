@@ -1348,7 +1348,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
   <!-- PROSPECTS -->
   <div class="page" id="page-prospects">
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
-      <div><h2>가망 고객</h2><p>잠재 고객을 관리하고 가입 전환을 준비하세요.</p></div>
+      <div><h2 id="prospects-page-title">가망 고객</h2><p id="prospects-page-sub">잠재 고객을 관리하고 가입 전환을 준비하세요.</p></div>
       <div id="prospect-month-badge" style="font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;background:#f0e6ff;color:#7c3aed;white-space:nowrap;margin-top:4px;"></div>
     </div>
     <div class="toolbar">
@@ -5177,6 +5177,10 @@ function renderProspects(){
   const plw = document.getElementById("prospect-list-wrap");
   const pkw = document.getElementById("prospect-kanban-wrap");
   const showKanban = prospectsViewMode === "kanban";
+  const titleEl = document.getElementById("prospects-page-title");
+  const subEl = document.getElementById("prospects-page-sub");
+  if(titleEl) titleEl.textContent = showKanban ? "영업 관리" : "가망 고객";
+  if(subEl) subEl.textContent = showKanban ? "영업 퍼널로 상담부터 계약까지 진행 상황을 관리하세요." : "잠재 고객을 관리하고 가입 전환을 준비하세요.";
   if(ptw) ptw.style.display = (!showKanban && !isMobP) ? "" : "none";
   if(plw) plw.style.display = (!showKanban && isMobP) ? "" : "none";
   if(pkw) pkw.style.display = showKanban ? "" : "none";
@@ -5384,21 +5388,69 @@ function openFunnelPostModal(id = null, presetStage = null){
 
 function filterFunnelPostCustomers(q){
   const dd = document.getElementById("fp-cust-dd");
-  const list = q.trim() ? customers.filter(c=>c.name.includes(q)||(c.phone||"").includes(q)) : customers;
-  dd.innerHTML = list.slice(0,20).map(c=>`
+  const trimmed = q.trim();
+  const list = trimmed ? customers.filter(c=>c.name.includes(trimmed)||(c.phone||"").includes(trimmed)) : customers;
+  const rows = list.slice(0,20).map(c=>`
     <div data-cid="${c.id}" data-cname="${c.name}"
       style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
       onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
       <span style="font-weight:600;">${c.name}</span>
       <span style="color:var(--text2);font-size:12px;margin-left:6px;">${c.phone||""}</span>
     </div>`).join("");
-  dd.style.display = "";
+  // 검색해도 원하는 고객이 안 나올 때 바로 신규 고객을 추가할 수 있는 항목
+  const addRow = trimmed
+    ? `<div data-add="1" style="padding:9px 14px;font-size:13px;font-weight:700;color:var(--purple);cursor:pointer;${list.length?"border-top:1px solid var(--border);":""}"
+        onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">+ "${escAttr(trimmed)}" 신규 고객으로 추가</div>`
+    : "";
+  dd.innerHTML = rows + addRow;
+  dd.style.display = (list.length || addRow) ? "" : "none";
   dd.onclick = e => {
+    if(e.target.closest("[data-add]")){ quickAddCustomerForFunnelPost(trimmed); return; }
     const item = e.target.closest("[data-cid]"); if(!item) return;
     document.getElementById("fp-cust-search").value = item.dataset.cname;
     document.getElementById("fp-cust-id").value = item.dataset.cid;
     dd.style.display = "none";
   };
+}
+
+// 게시물 작성 중 "고객 연동" 검색에 원하는 사람이 없을 때 — 지금 쓰던 내용을 잠깐 보관해두고
+// 신규 고객 추가 창을 띄운다. 저장되면 reopenFunnelPostModalWithLinkedCustomer가 이어서 처리.
+let _fpDraftSnapshot = null;
+function quickAddCustomerForFunnelPost(name){
+  const draft = {
+    editId: _fpEditId,
+    title: document.getElementById("fp-title").value || name,
+    product: document.getElementById("fp-product").value,
+    premium: document.getElementById("fp-premium").value,
+    stage: document.getElementById("fp-stage").value,
+    memo: document.getElementById("fp-memo").value,
+    tags: [..._fpSelectedTags],
+  };
+  closeModal("funnel-post");
+  openAddModal("가망"); // openAddModal이 시작부에서 _fpDraftSnapshot을 초기화하므로 반드시 그 다음에 값을 채운다
+  _fpDraftSnapshot = draft;
+  document.getElementById("nc-name").value = name;
+}
+
+function reopenFunnelPostModalWithLinkedCustomer(newCustomerId){
+  const snap = _fpDraftSnapshot;
+  _fpDraftSnapshot = null;
+  if(!snap) return;
+  const c = customers.find(x=>x.id===newCustomerId);
+  openFunnelPostModal(snap.editId, snap.stage);
+  // openFunnelPostModal이 채운 값 위에, 방금 전까지 작성 중이던 초안을 그대로 복원
+  document.getElementById("fp-title").value = snap.title;
+  if(snap.product) document.getElementById("fp-product").value = snap.product;
+  document.getElementById("fp-premium").value = snap.premium;
+  if(snap.stage) document.getElementById("fp-stage").value = snap.stage;
+  document.getElementById("fp-memo").value = snap.memo;
+  _fpSelectedTags = [...snap.tags];
+  renderFpTagChips();
+  if(c){
+    document.getElementById("fp-cust-search").value = c.name;
+    document.getElementById("fp-cust-id").value = String(c.id);
+  }
+  showToast(`✅ ${c?c.name:"새"} 고객을 추가하고 게시물에 연동했어요.`);
 }
 
 function saveFunnelPost(){
@@ -6177,6 +6229,7 @@ function closeModal(n){document.getElementById("modal-"+n).classList.remove("ope
 document.querySelectorAll(".modal-overlay").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
 
 function openAddModal(type){
+  _fpDraftSnapshot = null; // 영업 퍼널 게시물의 "고객 연동"에서 빠른 추가로 연게 아니라면 초기화
   const r=document.querySelector(`input[name="nc-type"][value="${type}"]`);
   if(r){r.checked=true;toggleProspectFields();}
   populateSourceSelects("");
@@ -6229,6 +6282,11 @@ function addCustomer(){
   type==="가망"?renderProspects():renderEnrolled();
   renderDashboard();
   autoSave();
+  // 영업 퍼널 게시물의 "고객 연동"에서 검색해도 안 나와 빠른 추가로 만든 고객이면,
+  // 작성 중이던 게시물 초안을 복원하면서 방금 만든 고객을 자동으로 연동해 이어서 쓰게 함
+  if(_fpDraftSnapshot){
+    reopenFunnelPostModalWithLinkedCustomer(obj.id);
+  }
 }
 
 function onCtInsuredInput() {
