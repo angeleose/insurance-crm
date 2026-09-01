@@ -5302,7 +5302,7 @@ function computeFunnelMonthlyPremium(kbList){
 function renderFunnelMonthlySummaryHtml(kbList){
   const byMonth = computeFunnelMonthlyPremium(kbList);
   const months = Object.keys(byMonth).sort().reverse();
-  if(!months.length) return "";
+  // 등록된 계약이 아직 없어도(0건) 패널 자체는 항상 보여서 기능이 어디 있는지 알 수 있게 함
   const totalCount = months.reduce((s,m)=>s+byMonth[m].count,0);
   const totalPremium = months.reduce((s,m)=>s+byMonth[m].total,0);
   const chip = (label, count, total, extraCls) => `
@@ -5326,7 +5326,8 @@ const FUNNEL_REVIEW_STAGE = "계약검토";
 function renderPipelineForecastHtml(kbList){
   if(!customStages.includes(FUNNEL_REVIEW_STAGE)) return "";
   const items = kbList.filter(p=>(p.stage||customStages[0])===FUNNEL_REVIEW_STAGE);
-  if(!items.length) return "";
+  // 게시물이 없어도(0건) 배너 자체는 항상 보여줘서, "이 기능이 어디 있는지 안 보인다"는
+  // 혼동이 없게 한다 — 0건일 땐 그냥 0건 · 0원으로 표시됨
   const total = items.reduce((s,p)=>s+(p.premium||0),0);
   return `<div class="kb-pipeline-summary">
     <span class="kb-pipeline-icon">💰</span>
