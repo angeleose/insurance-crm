@@ -603,6 +603,10 @@
   .kb-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);}
   .kb-card.kb-dragging{opacity:.4;}
   .kb-card .kb-name{font-size:13px;font-weight:800;color:var(--text);}
+  .kb-post-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
+  .kb-post-tag{display:inline-block;font-size:10px;font-weight:800;color:var(--purple);background:var(--purple-light);border-radius:5px;padding:1px 6px;}
+  .fp-tag-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg1);color:var(--text2);}
+  .fp-tag-chip.selected{border-color:var(--purple);background:var(--purple-light);color:var(--purple);}
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
@@ -2218,6 +2222,26 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
 
     <div class="card" style="max-width:520px;margin-bottom:16px;">
+      <div class="card-title">🧩 관심상품 카테고리 관리</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">영업 퍼널 게시물의 "관심 상품" 선택 목록입니다. 수정·추가·삭제·순서 변경이 가능합니다.</p>
+      <div id="product-cat-setting-list"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <input type="text" id="new-product-cat-input" placeholder="새 상품 카테고리 입력..." onkeydown="if(event.key==='Enter')addProductCat()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        <button class="btn btn-primary btn-sm" onclick="addProductCat()">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;">
+      <div class="card-title">🏷️ 영업 퍼널 태그 관리</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">영업 퍼널 게시물에 붙일 수 있는 태그 목록입니다. 수정·추가·삭제·순서 변경이 가능합니다.</p>
+      <div id="funnel-tag-setting-list"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <input type="text" id="new-funnel-tag-input" placeholder="새 태그 입력... (예: 재가입)" onkeydown="if(event.key==='Enter')addFunnelTag()" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg1);color:var(--text1);">
+        <button class="btn btn-primary btn-sm" onclick="addFunnelTag()">+ 추가</button>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px;margin-bottom:16px;">
       <div class="card-title">📍 출처 카테고리 관리</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">출처명 수정·추가·삭제·순서 변경이 가능합니다. <b>장소기록</b> 체크 시 박람회/교실 등 장소 입력란이 표시됩니다.</p>
       <div id="source-setting-list"></div>
@@ -2434,10 +2458,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <label>제목 *</label>
       <input type="text" id="fp-title" placeholder="예: 최지영 - 태아보험 상담">
     </div>
+    <div class="form-group">
+      <label>태그 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(여러 개 선택 가능)</span></label>
+      <div id="fp-tags-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>관심 상품</label>
-        <input type="text" id="fp-product" placeholder="태아보험">
+        <select id="fp-product"><option value="">(선택 안 함)</option></select>
       </div>
       <div class="form-group">
         <label>예상 보험료 (원)</label>
@@ -3454,6 +3482,10 @@ let experienceItems = [];
 // 영업 퍼널 전용 게시물 — 가입제안서(c.proposals)와는 별개의 독립 엔티티.
 // 고객 정보는 필수가 아니라 customerId로 "연동"만 가능(나중에 연결해도 됨).
 let funnelPosts = [];
+// 관심상품 카테고리 — 게시물의 "관심 상품"을 자유 입력이 아닌 고정 목록에서 선택하게 함
+let productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+// 영업 퍼널 게시물 태그 — 제목에 "[재가입]"처럼 끼워넣는 대신 별도 태그로 관리
+let funnelPostTags = ["재가입"];
 
 // ─── 알림 규칙 설정 ───────────────────────────────────────
 // 알림 규칙 배열 — type: 'builtin'(기본) / 'custom_rule'(사용자 추가)
@@ -4337,6 +4369,8 @@ function showPage(name, pushHistory=true){
   if(name==="settings") {
     setTimeout(updateGeminiKeyStatus, 50);
     renderStageSettings();
+    renderProductCatSettings();
+    renderFunnelTagSettings();
     renderSourceSettings();
     const emailEl = document.getElementById("setting-user-email");
     if(emailEl) emailEl.textContent = sessionStorage.getItem("crm_auth") || "-";
@@ -5192,7 +5226,9 @@ function renderProspectsKanban(kbList){
           const custRow = linked
             ? `<span class="kb-linked-cust" onclick="event.stopPropagation();goToDetail(${linked.id})">👤 ${linked.name}${linked.phone?" · "+linked.phone:""}</span>`
             : `<span class="kb-unlinked">🔗 고객 미연동</span>`;
+          const tagsRow = (p.tags&&p.tags.length) ? `<div class="kb-post-tags">${p.tags.map(t=>`<span class="kb-post-tag">${t}</span>`).join("")}</div>` : ``;
           return `<div class="kb-card" draggable="true" ondragstart="prKbDragStart(event,${p.id})" ondragend="this.classList.remove('kb-dragging')" onclick="openFunnelPostModal(${p.id})">
+            ${tagsRow}
             <div class="kb-name">${p.title}</div>
             ${p.product?`<div class="kb-sub">${p.product}</div>`:``}
             <div class="kb-link-row">${custRow}</div>
@@ -5235,27 +5271,48 @@ function prKbDrop(e, target){
 
 // ─── 영업 퍼널 게시물 CRUD ───────────────────────────────────
 let _fpEditId = null;
+let _fpSelectedTags = [];
+function renderFpTagChips(){
+  const wrap = document.getElementById("fp-tags-chips"); if(!wrap) return;
+  if(!funnelPostTags.length){
+    wrap.innerHTML = `<span style="font-size:12px;color:var(--text2);">태그가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 추가해 보세요 →</button></span>`;
+    return;
+  }
+  wrap.innerHTML = funnelPostTags.map(t=>
+    `<button type="button" class="fp-tag-chip ${_fpSelectedTags.includes(t)?"selected":""}" onclick="toggleFpTag('${escAttr(t)}')">${t}</button>`
+  ).join("");
+}
+function toggleFpTag(tag){
+  const i = _fpSelectedTags.indexOf(tag);
+  if(i>=0) _fpSelectedTags.splice(i,1); else _fpSelectedTags.push(tag);
+  renderFpTagChips();
+}
 function openFunnelPostModal(id = null, presetStage = null){
   _fpEditId = id;
   document.getElementById("fp-modal-title").textContent = id ? "🗂️ 게시물 수정" : "🗂️ 영업 퍼널 게시물 추가";
   const stageSel = document.getElementById("fp-stage");
   stageSel.innerHTML = customStages.map(s=>`<option value="${escAttr(s)}">${s}</option>`).join("");
+  const productSel = document.getElementById("fp-product");
+  productSel.innerHTML = `<option value="">(선택 안 함)</option>` + productCategories.map(s=>`<option value="${escAttr(s)}">${s}</option>`).join("");
   document.getElementById("fp-delete-btn").style.display = id ? "" : "none";
 
   if(id){
     const p = funnelPosts.find(x=>String(x.id)===String(id));
     if(!p){ return; }
     document.getElementById("fp-title").value = p.title||"";
-    document.getElementById("fp-product").value = p.product||"";
+    if(p.product && productCategories.includes(p.product)) productSel.value = p.product; else productSel.value = "";
     document.getElementById("fp-premium").value = p.premium||"";
     document.getElementById("fp-memo").value = p.memo||"";
     if(p.stage && customStages.includes(p.stage)) stageSel.value = p.stage;
+    _fpSelectedTags = (p.tags||[]).filter(t=>funnelPostTags.includes(t));
     const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
     document.getElementById("fp-cust-search").value = linked ? linked.name : "";
     document.getElementById("fp-cust-id").value = linked ? String(linked.id) : "";
   } else {
-    ["fp-title","fp-product","fp-premium","fp-memo","fp-cust-search"].forEach(fid=>document.getElementById(fid).value="");
+    ["fp-title","fp-premium","fp-memo","fp-cust-search"].forEach(fid=>document.getElementById(fid).value="");
+    productSel.value = "";
     document.getElementById("fp-cust-id").value = "";
+    _fpSelectedTags = [];
     stageSel.value = (presetStage && customStages.includes(presetStage)) ? presetStage : (customStages[0]||"");
     // 현재 보고 있는 고객이 있으면 기본 연동
     if(currentCustomerId){
@@ -5263,6 +5320,7 @@ function openFunnelPostModal(id = null, presetStage = null){
       if(c){ document.getElementById("fp-cust-search").value = c.name; document.getElementById("fp-cust-id").value = String(c.id); }
     }
   }
+  renderFpTagChips();
   openModal("funnel-post");
 }
 
@@ -5293,6 +5351,7 @@ function saveFunnelPost(){
     id: _fpEditId || (Date.now()+Math.random()),
     title,
     product: document.getElementById("fp-product").value.trim(),
+    tags: [..._fpSelectedTags],
     premium: parseInt(document.getElementById("fp-premium").value)||0,
     stage: document.getElementById("fp-stage").value || customStages[0] || "",
     customerId: custIdRaw ? (customers.find(c=>String(c.id)===String(custIdRaw))?.id ?? null) : null,
@@ -5320,6 +5379,104 @@ function deleteFunnelPost(){
   autoSave();
 }
 
+// ─── 관심상품 카테고리 관리 ─────────────────────────────────
+function renderProductCatSettings(){
+  const list = document.getElementById("product-cat-setting-list"); if(!list) return;
+  if(!productCategories.length){ list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:8px 0;">카테고리가 없습니다.</div>`; return; }
+  list.innerHTML = productCategories.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+    <input type="text" value="${s.replace(/"/g,'&quot;')}"
+      onblur="renameProductCat(${i},this.value.trim())"
+      onkeydown="if(event.key==='Enter')this.blur()"
+      style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--bg1);color:var(--text1);">
+    <button onclick="moveProductCat(${i},-1)" ${i===0?"disabled":""} title="위로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↑</button>
+    <button onclick="moveProductCat(${i},1)" ${i===productCategories.length-1?"disabled":""} title="아래로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↓</button>
+    <button onclick="deleteProductCat(${i})" title="삭제" style="background:none;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--red);">✕</button>
+  </div>`).join("");
+}
+function addProductCat(){
+  const input = document.getElementById("new-product-cat-input");
+  const name = input.value.trim();
+  if(!name){ alert("카테고리명을 입력하세요."); return; }
+  if(productCategories.includes(name)){ alert("이미 있는 카테고리입니다."); return; }
+  productCategories.push(name);
+  input.value = "";
+  renderProductCatSettings(); autoSave();
+}
+function renameProductCat(idx, newName){
+  if(!newName||!productCategories[idx]||newName===productCategories[idx]) return;
+  if(productCategories.includes(newName)){ showToast("이미 있는 카테고리명이에요."); return; }
+  const oldName = productCategories[idx];
+  productCategories[idx] = newName;
+  funnelPosts.forEach(p=>{ if(p.product===oldName) p.product=newName; });
+  renderProductCatSettings(); renderProspects(); autoSave();
+}
+function deleteProductCat(idx){
+  const name = productCategories[idx];
+  const count = funnelPosts.filter(p=>p.product===name).length;
+  const msg = count
+    ? `"${name}" 카테고리를 삭제할까요?\n이 카테고리를 쓰는 게시물 ${count}건은 관심상품이 비워집니다.`
+    : `"${name}" 카테고리를 삭제할까요?`;
+  if(!confirm(msg)) return;
+  if(count) funnelPosts.forEach(p=>{ if(p.product===name) p.product=""; });
+  productCategories.splice(idx,1);
+  renderProductCatSettings(); renderProspects(); autoSave();
+}
+function moveProductCat(idx, dir){
+  const ni = idx+dir;
+  if(ni<0||ni>=productCategories.length) return;
+  [productCategories[idx],productCategories[ni]] = [productCategories[ni],productCategories[idx]];
+  renderProductCatSettings(); autoSave();
+}
+
+// ─── 영업 퍼널 태그 관리 ─────────────────────────────────────
+function renderFunnelTagSettings(){
+  const list = document.getElementById("funnel-tag-setting-list"); if(!list) return;
+  if(!funnelPostTags.length){ list.innerHTML=`<div style="color:var(--text2);font-size:13px;padding:8px 0;">태그가 없습니다.</div>`; return; }
+  list.innerHTML = funnelPostTags.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border);">
+    <input type="text" value="${s.replace(/"/g,'&quot;')}"
+      onblur="renameFunnelTag(${i},this.value.trim())"
+      onkeydown="if(event.key==='Enter')this.blur()"
+      style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:13px;background:var(--bg1);color:var(--text1);">
+    <button onclick="moveFunnelTag(${i},-1)" ${i===0?"disabled":""} title="위로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↑</button>
+    <button onclick="moveFunnelTag(${i},1)" ${i===funnelPostTags.length-1?"disabled":""} title="아래로" style="background:none;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--text2);">↓</button>
+    <button onclick="deleteFunnelTag(${i})" title="삭제" style="background:none;border:1px solid #fca5a5;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--red);">✕</button>
+  </div>`).join("");
+}
+function addFunnelTag(){
+  const input = document.getElementById("new-funnel-tag-input");
+  const name = input.value.trim();
+  if(!name){ alert("태그명을 입력하세요."); return; }
+  if(funnelPostTags.includes(name)){ alert("이미 있는 태그입니다."); return; }
+  funnelPostTags.push(name);
+  input.value = "";
+  renderFunnelTagSettings(); autoSave();
+}
+function renameFunnelTag(idx, newName){
+  if(!newName||!funnelPostTags[idx]||newName===funnelPostTags[idx]) return;
+  if(funnelPostTags.includes(newName)){ showToast("이미 있는 태그명이에요."); return; }
+  const oldName = funnelPostTags[idx];
+  funnelPostTags[idx] = newName;
+  funnelPosts.forEach(p=>{ if(p.tags&&p.tags.includes(oldName)) p.tags = p.tags.map(t=>t===oldName?newName:t); });
+  renderFunnelTagSettings(); renderProspects(); autoSave();
+}
+function deleteFunnelTag(idx){
+  const name = funnelPostTags[idx];
+  const count = funnelPosts.filter(p=>p.tags&&p.tags.includes(name)).length;
+  const msg = count
+    ? `"${name}" 태그를 삭제할까요?\n이 태그가 붙은 게시물 ${count}건에서 태그가 제거됩니다.`
+    : `"${name}" 태그를 삭제할까요?`;
+  if(!confirm(msg)) return;
+  if(count) funnelPosts.forEach(p=>{ if(p.tags) p.tags = p.tags.filter(t=>t!==name); });
+  funnelPostTags.splice(idx,1);
+  renderFunnelTagSettings(); renderProspects(); autoSave();
+}
+function moveFunnelTag(idx, dir){
+  const ni = idx+dir;
+  if(ni<0||ni>=funnelPostTags.length) return;
+  [funnelPostTags[idx],funnelPostTags[ni]] = [funnelPostTags[ni],funnelPostTags[idx]];
+  renderFunnelTagSettings(); autoSave();
+}
+
 // 칸반의 "계약완료" 카드에서 바로 계약 등록 — 연동된 고객이 있어야 하며,
 // 게시물의 관심상품/예상보험료를 계약 추가 폼에 미리 채워줌
 function registerContractFromFunnelPost(postId){
@@ -5331,13 +5488,15 @@ function registerContractFromFunnelPost(postId){
   currentCustomerId = c.id;
   if(c.type==="가망") convertToEnrolled(); // 아직 가망이면 먼저 가입 고객으로 전환 (계약 목록에 노출되도록)
   openAddContractFromDetail();
-  if(p.product) document.getElementById("ct-product").value = p.product;
+  if(p.product) document.getElementById("ct-product").value = p.product; // 상품명 초안 — 실제 상품명으로 고쳐 쓰면 됨
   if(p.premium) document.getElementById("ct-premium").value = p.premium;
   document.getElementById("ct-start").value = new Date().toISOString().slice(0,10);
-  const ctTypeOptions = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
-  const guess = ctTypeOptions.find(t => (p.product||"").includes(t.replace("보험","")) || (p.title||"").includes(t));
-  if(guess) document.getElementById("ct-type").value = guess;
-  document.getElementById("ct-duedate-wrap").style.display = document.getElementById("ct-type").value==="태아보험" ? "" : "none";
+  // 관심상품 카테고리명이 계약 종류(ct-type) 선택지와 정확히 같을 때만 매핑.
+  // <select>.value에 없는 값을 넣으면 선택이 풀려 빈 값이 되므로(예: 카테고리를 자유롭게
+  // 이름 바꾼 경우) 반드시 옵션 목록에 있는지 먼저 확인한다.
+  const ctTypeSel = document.getElementById("ct-type");
+  if(p.product && [...ctTypeSel.options].some(o=>o.value===p.product)) ctTypeSel.value = p.product;
+  document.getElementById("ct-duedate-wrap").style.display = ctTypeSel.value==="태아보험" ? "" : "none";
 }
 
 function renderDetail(id){
@@ -6737,6 +6896,8 @@ async function resetAllData() {
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = [];
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
+  productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+  funnelPostTags = ["재가입"];
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
@@ -9001,6 +9162,8 @@ async function saveToFirestore() {
     experienceItems,
     customStages,
     funnelPosts,
+    productCategories,
+    funnelPostTags,
     customSources,
     cardPayRecords,
     cardInfoRecords,
@@ -9054,6 +9217,8 @@ async function loadFromFirestore() {
         stagesMigrated = true;
       }
       if (p.funnelPosts) funnelPosts = p.funnelPosts;
+      if (p.productCategories && p.productCategories.length) productCategories = p.productCategories;
+      if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
