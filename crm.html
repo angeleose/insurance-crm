@@ -8365,14 +8365,14 @@ function renderConsultingNotesPage(){
   if(!rows.length){ tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><span>📝</span>컨설팅 노트 없음</div></td></tr>`; return; }
   tbody.innerHTML = rows.map(n=>{
     const change = n.proposedTotal ? `${n.currentTotal.toLocaleString()}원 → ${(n.currentTotal+n.proposedTotal).toLocaleString()}원` : "-";
-    return `<tr class="clickable" onclick="${n.cid?`goToDetail(${n.cid})`:""}">
-      <td><strong>${n.cname}</strong></td>
-      <td>${n.title}</td>
+    return `<tr>
+      <td ${n.cid?`onclick="goToDetail(${n.cid})" style="cursor:pointer;" title="고객 상세로 이동"`:""}><strong>${n.cname}</strong></td>
+      <td onclick="exportConsultingNoteReport(${n.id})" style="cursor:pointer;" title="리포트로 보기">${n.title}</td>
       <td style="color:var(--text2);font-size:12px;">${n.date||"-"}</td>
       <td>${(n.issues||[]).length}건</td>
       <td>${(n.proposedProducts||[]).length}건</td>
       <td style="font-size:12px;color:var(--text2);">${change}</td>
-      <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+      <td style="white-space:nowrap;">
         ${n.coverageFileUrl?`<a href="${n.coverageFileUrl}" target="_blank" rel="noopener" style="text-decoration:none;"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;color:#2563eb;" title="첨부된 보장분석 자료">📎</button></a>`:""}
         <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;color:#7c3aed;" onclick="exportConsultingNoteReport(${n.id})" title="리포트로 내보내기">📄</button>
         <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="openConsultingNoteModal(${n.id})">✏️</button>
