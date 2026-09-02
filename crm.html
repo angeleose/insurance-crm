@@ -2537,8 +2537,9 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
           onblur="setTimeout(()=>{const d=document.getElementById('fp-cust-dd');if(d)d.style.display='none';},200)"
           onfocus="filterFunnelPostCustomers(this.value)">
         <input type="hidden" id="fp-cust-id">
+        <button type="button" class="btn btn-ghost btn-sm" title="연동된 고객 상세보기" onclick="goToLinkedFpCustomer()">👤 보기</button>
         <button type="button" class="btn btn-ghost btn-sm" title="연동 해제" onclick="document.getElementById('fp-cust-search').value='';document.getElementById('fp-cust-id').value='';">✕</button>
-        <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:44px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+        <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:88px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
       </div>
     </div>
     <div class="form-group">
@@ -5567,6 +5568,16 @@ function filterFunnelPostCustomers(q){
     document.getElementById("fp-cust-id").value = item.dataset.cid;
     dd.style.display = "none";
   };
+}
+
+// 연동된 고객의 상세 페이지로 바로 이동
+function goToLinkedFpCustomer(){
+  const cid = document.getElementById("fp-cust-id").value;
+  if(!cid){ alert("연동된 고객이 없어요. 먼저 고객을 연동해 주세요."); return; }
+  const c = customers.find(x=>String(x.id)===String(cid));
+  if(!c){ alert("연동된 고객을 찾을 수 없어요."); return; }
+  closeModal("funnel-post");
+  goToDetail(c.id);
 }
 
 // 게시물 작성 중 "고객 연동" 검색에 원하는 사람이 없을 때 — 지금 쓰던 내용을 잠깐 보관해두고
