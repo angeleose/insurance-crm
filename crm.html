@@ -607,6 +607,15 @@
   .kb-post-tag{display:inline-block;font-size:10px;font-weight:800;color:var(--purple);background:var(--purple-light);border-radius:5px;padding:1px 6px;}
   .fp-tag-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--bg1);color:var(--text2);}
   .fp-tag-chip.selected{border-color:var(--purple);background:var(--purple-light);color:var(--purple);}
+  .cn-repeat-row{border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--bg1,var(--bg));}
+  .cn-repeat-row-head{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .cn-repeat-row-head input{flex:1;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;}
+  .cn-repeat-row textarea{width:100%;font-size:12.5px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;resize:vertical;}
+  .cn-repeat-row-grid{display:grid;grid-template-columns:1fr 1fr 110px 28px;gap:6px;margin-bottom:6px;align-items:center;}
+  .cn-repeat-row-grid select,.cn-repeat-row-grid input{font-size:12.5px;padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;}
+  .cn-repeat-row-grid input[type="text"]:last-of-type{width:100%;}
+  .cn-row-del{background:none;border:1px solid #fca5a5;border-radius:6px;color:var(--red);width:28px;height:28px;cursor:pointer;font-size:12px;flex-shrink:0;}
+  .cn-empty-hint{font-size:12px;color:var(--text2);padding:6px 2px;}
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
@@ -1062,6 +1071,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
     <div class="nav-item" data-page="contracts" onclick="closeMobileDrawer()"><span class="icon">📄</span> 보험 계약</div>
     <div class="nav-item" data-page="proposals" onclick="closeMobileDrawer()"><span class="icon">📋</span> 가입제안서</div>
+    <div class="nav-item" data-page="consulting-notes" onclick="closeMobileDrawer()"><span class="icon">📝</span> 컨설팅 노트</div>
     <div class="nav-item" data-page="consultations" onclick="closeMobileDrawer()"><span class="icon">💬</span> 상담 기록</div>
     <div class="nav-item" data-page="tasks" onclick="closeMobileDrawer()"><span class="icon">☑️</span> Task</div>
     <div class="nav-item" data-page="calendar" onclick="closeMobileDrawer();showPage('calendar')"><span class="icon">📅</span> 캘린더</div>
@@ -1159,6 +1169,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="nav-item" data-page="prospects"><span class="icon">🌱</span> 가망 고객</div>
       <div class="nav-item" data-page="contracts"><span class="icon">📄</span> 보험 계약</div>
       <div class="nav-item" data-page="proposals"><span class="icon">📋</span> 가입제안서</div>
+      <div class="nav-item" data-page="consulting-notes"><span class="icon">📝</span> 컨설팅 노트</div>
       <div class="nav-item" data-page="consultations"><span class="icon">💬</span> 상담 기록</div>
       <div class="nav-item" data-page="tasks"><span class="icon">☑️</span> Task <span class="notif" id="nb-tasks" style="display:none;">0</span></div>
       <div class="nav-item" data-page="calendar" onclick="showPage('calendar')"><span class="icon">📅</span> 캘린더</div>
@@ -1478,6 +1489,13 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <button class="btn btn-ghost btn-sm" onclick="openProposalModal()" style="font-size:12px;">+ 추가</button>
       </div>
       <div id="det-proposals-list"></div>
+    </div>
+    <div class="card" id="det-consulting-notes-card">
+      <div class="card-title" style="justify-content:space-between;">
+        <span>📝 컨설팅 노트</span>
+        <button class="btn btn-ghost btn-sm" onclick="openConsultingNoteModal()" style="font-size:12px;">+ 작성</button>
+      </div>
+      <div id="det-consulting-notes-list"></div>
     </div>
     <div class="card" id="det-analysis-card">
       <div class="card-title" style="justify-content:space-between;">
@@ -1819,6 +1837,23 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <table>
         <thead><tr><th>고객명</th><th>제목</th><th>보험사</th><th>상품명</th><th>월 보험료</th><th>작성일</th><th>메모</th><th>파일</th><th></th></tr></thead>
         <tbody id="proposals-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONSULTING NOTES -->
+  <div class="page" id="page-consulting-notes">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><h2>📝 컨설팅 노트</h2><p>고객의 보장을 분석하고 제안 내용을 기록하세요. 완성되면 예쁜 리포트로 내보낼 수 있어요.</p></div>
+      <button class="btn btn-primary" onclick="openConsultingNoteModal()" style="margin-top:4px;">+ 컨설팅 노트 작성</button>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-consulting-notes" placeholder="고객명 또는 제목 검색..." oninput="renderConsultingNotesPage()"></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>고객명</th><th>제목</th><th>작성일</th><th>문제점</th><th>제안 상품</th><th>월 보험료 변화</th><th></th></tr></thead>
+        <tbody id="consulting-notes-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -2515,6 +2550,63 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div style="display:flex;gap:8px;margin-left:auto;">
         <button class="btn btn-ghost" onclick="closeModal('funnel-post')">취소</button>
         <button class="btn btn-primary" onclick="saveFunnelPost()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 컨설팅 노트 -->
+<div class="modal-overlay" id="modal-consulting-note" onclick="if(event.target===this)closeModal('consulting-note')">
+  <div class="modal-box" style="width:600px;max-height:88vh;overflow-y:auto;">
+    <h3 id="cn-modal-title">📝 컨설팅 노트 작성</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>고객 선택 *</label>
+        <div style="position:relative;">
+          <input type="text" id="cn-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
+            oninput="filterCnCustomers(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('cn-cust-dd');if(d)d.style.display='none';},200)"
+            onfocus="filterCnCustomers(this.value)">
+          <input type="hidden" id="cn-cust-id">
+          <div id="cn-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>작성일</label>
+        <input type="date" id="cn-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>제목 *</label>
+      <input type="text" id="cn-title" placeholder="예: 정수지님 보장분석 & 컨설팅">
+    </div>
+    <div class="form-group">
+      <label>현재 보장 현황 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택된 고객의 계약에서 자동으로 불러옵니다)</span></label>
+      <div id="cn-current-coverage" style="font-size:12.5px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;line-height:1.7;">고객을 먼저 선택해 주세요.</div>
+    </div>
+    <div class="form-group">
+      <label>문제점 · 보장 공백</label>
+      <div id="cn-issues-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addCnIssue()">+ 문제점 추가</button>
+    </div>
+    <div class="form-group">
+      <label>제안 방향</label>
+      <textarea id="cn-direction" rows="3" placeholder="보완이 필요한 방향을 정리해서 적어보세요..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>제안 상품</label>
+      <div id="cn-products-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addCnProduct()">+ 제안 상품 추가</button>
+    </div>
+    <div class="form-group">
+      <label>최종 권장안</label>
+      <textarea id="cn-final-plan" rows="3" placeholder="고객에게 최종적으로 권할 내용을 정리해서 적어보세요..."></textarea>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-ghost" id="cn-delete-btn" style="display:none;color:var(--red);" onclick="deleteConsultingNote()">🗑️ 삭제</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('consulting-note')">취소</button>
+        <button class="btn btn-primary" onclick="saveConsultingNote()">저장</button>
       </div>
     </div>
   </div>
@@ -3522,6 +3614,9 @@ let funnelPosts = [];
 let productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
 // 영업 퍼널 게시물 태그 — 제목에 "[재가입]"처럼 끼워넣는 대신 별도 태그로 관리
 let funnelPostTags = ["재가입"];
+// 컨설팅 노트 — 고객별 보장분석·제안 기록. 반드시 고객과 연동되며(customerId 필수),
+// "현재 보장 현황"은 저장하지 않고 내보내기 시점에 그 고객의 실제 계약에서 항상 새로 계산한다.
+let consultingNotes = [];
 // 보험사 검색/자동입력용 참고 목록 — 계약 추가·수정의 보험사 입력창은 이 목록으로
 // 자동완성 드롭다운을 보여주지만, 목록에 없는 이름도 자유롭게 직접 입력할 수 있다.
 const INSURER_LIST = ["삼성생명","삼성화재","한화생명","한화손해보험","교보생명","현대해상","DB손해보험","DB생명","KB손해보험","KB생명","메리츠화재","흥국화재","흥국생명","롯데손해보험","NH농협생명","NH농협손해보험","신한라이프","AIA생명","라이나생명","처브라이프","오렌지라이프","미래에셋생명","동양생명","ABL생명","KDB생명","DGB생명","푸본현대생명","하나생명","MG손해보험","카디프생명","BNP파리바카디프"];
@@ -4450,6 +4545,7 @@ function showPage(name, pushHistory=true){
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
   if(name==="proposals")renderProposalsPage();
+  if(name==="consulting-notes")renderConsultingNotesPage();
   if(pushHistory && history.state?.page !== name) {
     history.pushState({page:name}, "", "#"+name);
   }
@@ -5765,6 +5861,7 @@ function renderDetail(id){
   renderMedicals(c);
   renderAnalysisFiles(c);
   renderProposals(c);
+  renderConsultingNotesList(c);
   renderOneDriveLink(c);
   renderFamilyList(c);
   renderTimeline(c);
@@ -7111,7 +7208,7 @@ function deduplicateContracts() {
 async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
-  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = [];
+  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = []; consultingNotes = [];
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
   productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
   funnelPostTags = ["재가입"];
@@ -8063,6 +8160,376 @@ function renderProposalsPage() {
     </tr>`).join("");
 }
 // ──────────────────────────────────────────────────────────
+
+// ─── 컨설팅 노트 ────────────────────────────────────────────
+let _cnEditId = null;
+let _cnIssues = [];
+let _cnProducts = [];
+
+// 고객의 살아있는(해지되지 않은) 계약 목록 + 월 보험료 합계 — 노트 화면 표시와
+// 리포트 내보내기(현재 보장 현황 섹션)에서 항상 같은 계산을 재사용한다
+function getCustomerLiveContractsSummary(c){
+  const list = (c.contracts||[]).filter(isCtLive);
+  const total = list.reduce((s,ct)=>s+(ct.premium||0),0);
+  return { list, total };
+}
+
+function filterCnCustomers(q){
+  const dd = document.getElementById("cn-cust-dd");
+  const trimmed = q.trim();
+  const list = trimmed ? customers.filter(c=>c.name.includes(trimmed)||(c.phone||"").includes(trimmed)) : customers;
+  dd.innerHTML = list.slice(0,20).map(c=>`
+    <div data-cid="${c.id}" data-cname="${c.name}"
+      style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600;">${c.name}</span>
+      <span style="color:var(--text2);font-size:12px;margin-left:6px;">${c.phone||""}</span>
+    </div>`).join("");
+  dd.style.display = "";
+  dd.onclick = e => {
+    const item = e.target.closest("[data-cid]"); if(!item) return;
+    document.getElementById("cn-cust-search").value = item.dataset.cname;
+    document.getElementById("cn-cust-id").value = item.dataset.cid;
+    dd.style.display = "none";
+    updateCnCurrentCoverage();
+  };
+}
+
+function updateCnCurrentCoverage(){
+  const el = document.getElementById("cn-current-coverage"); if(!el) return;
+  const cid = document.getElementById("cn-cust-id").value;
+  const c = customers.find(x=>String(x.id)===String(cid));
+  if(!c){ el.textContent = "고객을 먼저 선택해 주세요."; return; }
+  const { list, total } = getCustomerLiveContractsSummary(c);
+  if(!list.length){ el.textContent = `${c.name}님은 현재 유지 중인 계약이 없어요.`; return; }
+  el.innerHTML = list.map(ct=>`· ${ct.insurer||"보험사 미상"} ${ct.product||ct.type} — ${(ct.premium||0).toLocaleString()}원/월`).join("<br>")
+    + `<br><strong style="color:var(--text);">합계: ${total.toLocaleString()}원/월</strong>`;
+}
+
+function renderCnIssues(){
+  const wrap = document.getElementById("cn-issues-list"); if(!wrap) return;
+  if(!_cnIssues.length){ wrap.innerHTML = `<div class="cn-empty-hint">아직 문제점이 없어요. 아래 버튼으로 추가해 보세요.</div>`; return; }
+  wrap.innerHTML = _cnIssues.map((it,i)=>`
+    <div class="cn-repeat-row">
+      <div class="cn-repeat-row-head">
+        <input type="text" placeholder="문제점 제목 (예: 암 진단비 부족)" value="${escAttr(it.title)}" oninput="_cnIssues[${i}].title=this.value">
+        <button type="button" class="cn-row-del" onclick="removeCnIssue(${i})" title="삭제">✕</button>
+      </div>
+      <textarea rows="2" placeholder="설명(선택)...">${escAttr(it.desc)}</textarea>
+    </div>`).join("");
+  // textarea는 value 속성이 아니라 innerHTML로 채워지므로, 재렌더링 후 oninput 바인딩을 별도로 건다
+  [...wrap.querySelectorAll(".cn-repeat-row textarea")].forEach((ta,i)=>{
+    ta.oninput = () => { _cnIssues[i].desc = ta.value; };
+  });
+}
+function addCnIssue(){ _cnIssues.push({ id: Date.now()+Math.random(), title:"", desc:"" }); renderCnIssues(); }
+function removeCnIssue(i){ _cnIssues.splice(i,1); renderCnIssues(); }
+
+function renderCnProducts(){
+  const wrap = document.getElementById("cn-products-list"); if(!wrap) return;
+  if(!_cnProducts.length){ wrap.innerHTML = `<div class="cn-empty-hint">아직 제안 상품이 없어요. 아래 버튼으로 추가해 보세요.</div>`; return; }
+  wrap.innerHTML = _cnProducts.map((p,i)=>`
+    <div class="cn-repeat-row">
+      <div class="cn-repeat-row-grid">
+        <select onchange="_cnProducts[${i}].product=this.value">
+          <option value="">(상품 선택)</option>
+          ${productCategories.map(cat=>`<option value="${escAttr(cat)}" ${p.product===cat?"selected":""}>${cat}</option>`).join("")}
+        </select>
+        <input type="text" placeholder="보험사" value="${escAttr(p.insurer)}" oninput="_cnProducts[${i}].insurer=this.value">
+        <input type="number" placeholder="월보험료" value="${p.premium||""}" oninput="_cnProducts[${i}].premium=parseInt(this.value)||0">
+        <button type="button" class="cn-row-del" onclick="removeCnProduct(${i})" title="삭제">✕</button>
+      </div>
+      <input type="text" placeholder="메모(선택)" value="${escAttr(p.note||"")}" oninput="_cnProducts[${i}].note=this.value">
+    </div>`).join("");
+}
+function addCnProduct(){ _cnProducts.push({ id: Date.now()+Math.random(), product:"", insurer:"", premium:0, note:"" }); renderCnProducts(); }
+function removeCnProduct(i){ _cnProducts.splice(i,1); renderCnProducts(); }
+
+function openConsultingNoteModal(id = null){
+  _cnEditId = id;
+  document.getElementById("cn-modal-title").textContent = id ? "📝 컨설팅 노트 수정" : "📝 컨설팅 노트 작성";
+  document.getElementById("cn-delete-btn").style.display = id ? "" : "none";
+
+  if(id){
+    const note = consultingNotes.find(x=>String(x.id)===String(id));
+    if(!note){ return; }
+    document.getElementById("cn-title").value = note.title||"";
+    document.getElementById("cn-date").value = note.date||"";
+    document.getElementById("cn-direction").value = note.direction||"";
+    document.getElementById("cn-final-plan").value = note.finalPlan||"";
+    _cnIssues = (note.issues||[]).map(it=>({...it}));
+    _cnProducts = (note.proposedProducts||[]).map(p=>({...p}));
+    const linked = note.customerId ? customers.find(c=>c.id===note.customerId) : null;
+    document.getElementById("cn-cust-search").value = linked ? linked.name : "";
+    document.getElementById("cn-cust-id").value = linked ? String(linked.id) : "";
+  } else {
+    ["cn-title","cn-direction","cn-final-plan","cn-cust-search"].forEach(fid=>document.getElementById(fid).value="");
+    document.getElementById("cn-cust-id").value = "";
+    document.getElementById("cn-date").value = new Date().toISOString().slice(0,10);
+    _cnIssues = [];
+    _cnProducts = [];
+    // 현재 보고 있는 고객이 있으면 기본 연동
+    if(currentCustomerId){
+      const c = customers.find(x=>x.id===currentCustomerId);
+      if(c){ document.getElementById("cn-cust-search").value = c.name; document.getElementById("cn-cust-id").value = String(c.id); }
+    }
+  }
+  renderCnIssues();
+  renderCnProducts();
+  updateCnCurrentCoverage();
+  openModal("consulting-note");
+}
+
+function saveConsultingNote(){
+  const title = document.getElementById("cn-title").value.trim();
+  if(!title){ alert("제목을 입력하세요."); return; }
+  const custIdRaw = document.getElementById("cn-cust-id").value;
+  if(!custIdRaw){ alert("고객을 선택하세요."); return; }
+  const c = customers.find(x=>String(x.id)===String(custIdRaw));
+  if(!c){ alert("고객을 찾을 수 없습니다."); return; }
+  const data = {
+    id: _cnEditId || (Date.now()+Math.random()),
+    customerId: c.id,
+    title,
+    date: document.getElementById("cn-date").value,
+    issues: _cnIssues.filter(it=>it.title.trim()||it.desc.trim()),
+    direction: document.getElementById("cn-direction").value.trim(),
+    proposedProducts: _cnProducts.filter(p=>p.product||p.insurer||p.premium),
+    finalPlan: document.getElementById("cn-final-plan").value.trim(),
+    createdAt: _cnEditId ? (consultingNotes.find(x=>x.id===_cnEditId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+  };
+  if(_cnEditId){
+    const idx = consultingNotes.findIndex(x=>x.id===_cnEditId);
+    if(idx>=0) consultingNotes[idx] = data;
+  } else {
+    consultingNotes.push(data);
+  }
+  closeModal("consulting-note");
+  renderConsultingNotesList(c);
+  renderConsultingNotesPage();
+  autoSave();
+  showToast("✅ 컨설팅 노트가 저장되었습니다.");
+}
+
+function deleteConsultingNote(){
+  if(!_cnEditId) return;
+  if(!confirm("이 컨설팅 노트를 삭제할까요?")) return;
+  const note = consultingNotes.find(x=>x.id===_cnEditId);
+  consultingNotes = consultingNotes.filter(x=>x.id!==_cnEditId);
+  closeModal("consulting-note");
+  const c = note ? customers.find(x=>x.id===note.customerId) : null;
+  if(c) renderConsultingNotesList(c);
+  renderConsultingNotesPage();
+  autoSave();
+}
+
+function renderConsultingNotesList(c){
+  const el = document.getElementById("det-consulting-notes-list"); if(!el) return;
+  const list = (consultingNotes||[]).filter(n=>n.customerId===c.id);
+  if(!list.length){ el.innerHTML = `<div style="font-size:13px;color:var(--text2);padding:8px 0;">작성된 컨설팅 노트가 없습니다.</div>`; return; }
+  el.innerHTML = list.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(n=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fafbfc;margin-bottom:5px;">
+      <span style="font-size:18px;flex-shrink:0;">📝</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.title}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:1px;">문제점 ${(n.issues||[]).length}건 · 제안상품 ${(n.proposedProducts||[]).length}건</div>
+      </div>
+      <span style="font-size:10px;color:#94a3b8;flex-shrink:0;">${n.date||""}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:#7c3aed;" onclick="exportConsultingNoteReport(${n.id})" title="리포트로 내보내기">📄</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 6px;" onclick="openConsultingNoteModal(${n.id})">✏️</button>
+      </div>
+    </div>`).join("");
+}
+
+function renderConsultingNotesPage(){
+  const tbody = document.getElementById("consulting-notes-tbody"); if(!tbody) return;
+  const q = (document.getElementById("search-consulting-notes")?.value||"").trim();
+  let rows = consultingNotes.map(n=>{
+    const c = customers.find(x=>x.id===n.customerId);
+    const proposedTotal = (n.proposedProducts||[]).reduce((s,p)=>s+(p.premium||0),0);
+    const currentTotal = c ? getCustomerLiveContractsSummary(c).total : 0;
+    return { ...n, cname: c?c.name:"(삭제된 고객)", cid: c?c.id:null, currentTotal, proposedTotal };
+  });
+  if(q) rows = rows.filter(r=>r.cname.includes(q)||r.title.includes(q));
+  rows.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><span>📝</span>컨설팅 노트 없음</div></td></tr>`; return; }
+  tbody.innerHTML = rows.map(n=>{
+    const change = n.proposedTotal ? `${n.currentTotal.toLocaleString()}원 → ${(n.currentTotal+n.proposedTotal).toLocaleString()}원` : "-";
+    return `<tr class="clickable" onclick="${n.cid?`goToDetail(${n.cid})`:""}">
+      <td><strong>${n.cname}</strong></td>
+      <td>${n.title}</td>
+      <td style="color:var(--text2);font-size:12px;">${n.date||"-"}</td>
+      <td>${(n.issues||[]).length}건</td>
+      <td>${(n.proposedProducts||[]).length}건</td>
+      <td style="font-size:12px;color:var(--text2);">${change}</td>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;color:#7c3aed;" onclick="exportConsultingNoteReport(${n.id})" title="리포트로 내보내기">📄</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;" onclick="openConsultingNoteModal(${n.id})">✏️</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// ─── 컨설팅 노트 → 리포트 내보내기 ───────────────────────────
+// 정수지님 리포트(cream/caramel 팔레트, Gowun Batang·Cormorant Garamond)와
+// 같은 시각 언어를 재사용하는 범용 템플릿. 노트 데이터 + 고객의 실제 계약으로
+// 매번 새로 생성하며, 원본 파일처럼 저장/보관하지 않고 그때그때 만들어 연다.
+function buildConsultingReportHtml(note, c){
+  const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const nl2br = s => esc(s).replace(/\n/g,"<br>");
+  const { list: currentList, total: currentTotal } = getCustomerLiveContractsSummary(c);
+  const proposed = note.proposedProducts||[];
+  const proposedTotal = proposed.reduce((s,p)=>s+(p.premium||0),0);
+  const afterTotal = currentTotal + proposedTotal;
+  const diff = afterTotal - currentTotal;
+
+  const statusCardsHtml = currentList.length
+    ? currentList.map(ct=>`
+      <div class="status-card">
+        <div class="status-card-label">${esc(ct.insurer||"보험사 미상")}</div>
+        <div class="status-card-value">${(ct.premium||0).toLocaleString()}<span class="status-card-unit">원/월</span></div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">${esc(ct.product||ct.type)}</div>
+      </div>`).join("")
+    : `<p class="section-description">현재 유지 중인 계약이 없습니다.</p>`;
+
+  const issuesHtml = (note.issues||[]).map((it,i)=>`
+      <div class="problem">
+        <div class="problem-number">ISSUE ${String(i+1).padStart(2,"0")}</div>
+        <div class="problem-title">${esc(it.title)}</div>
+        ${it.desc?`<div class="problem-body">${nl2br(it.desc)}</div>`:""}
+      </div>`).join("");
+
+  const productsHtml = proposed.map((p,i)=>`
+      <div class="action-card">
+        <div class="action-step">PROPOSAL ${String(i+1).padStart(2,"0")}</div>
+        <div class="action-title">${esc(p.product||"제안 상품")}${p.insurer?" · "+esc(p.insurer):""}</div>
+        ${p.premium?`<div class="action-amount">${p.premium.toLocaleString()}원/월</div>`:""}
+        ${p.note?`<div class="action-desc">${nl2br(p.note)}</div>`:""}
+      </div>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(c.name)}님 ${esc(note.title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#F7F3EC;--paper:#FAF7F1;--ink:#2C2416;--ink-soft:#5C5142;--caramel:#B8723C;--caramel-light:#D9A06B;--caramel-deep:#8B4F1F;--mint:#6B9080;--mint-light:#A4C3B2;--rose:#C8756B;--border:#E8DFD0;--shadow:0 2px 20px rgba(139,79,31,.08);--shadow-soft:0 1px 8px rgba(44,36,22,.06);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Gowun Dodum',sans-serif;background:var(--cream);color:var(--ink);line-height:1.75;font-size:15px;}
+  .container{max-width:880px;margin:0 auto;padding:0 24px;}
+  .cover{min-height:70vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 24px;background:linear-gradient(180deg,var(--paper) 0%,var(--cream) 100%);}
+  .cover-logo{font-family:'Cormorant Garamond',serif;font-size:14px;letter-spacing:.3em;color:var(--caramel-deep);margin-bottom:40px;text-transform:uppercase;font-weight:500;}
+  .cover-logo::after{content:'';display:block;width:40px;height:1px;background:var(--caramel);margin:12px auto 0;}
+  .cover-title-kr{font-family:'Gowun Batang',serif;font-size:38px;font-weight:700;margin-bottom:16px;line-height:1.4;}
+  .cover-title-kr .highlight{color:var(--caramel-deep);}
+  .cover-subtitle{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:var(--ink-soft);margin-bottom:40px;}
+  .cover-meta{display:flex;gap:40px;margin-top:20px;padding:24px 40px;background:var(--paper);border:1px solid var(--border);border-radius:2px;box-shadow:var(--shadow);}
+  .cover-meta-item{text-align:left;}
+  .cover-meta-label{font-size:11px;letter-spacing:.2em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:6px;}
+  .cover-meta-value{font-family:'Gowun Batang',serif;font-size:16px;font-weight:700;}
+  section{padding:60px 0;}
+  section+section{border-top:1px solid var(--border);}
+  .section-number{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.3em;color:var(--caramel);text-transform:uppercase;margin-bottom:12px;font-weight:600;}
+  .section-title{font-family:'Gowun Batang',serif;font-size:27px;font-weight:700;margin-bottom:12px;line-height:1.4;}
+  .section-title-accent{display:inline-block;position:relative;padding-bottom:4px;}
+  .section-title-accent::after{content:'';position:absolute;bottom:0;left:0;width:60%;height:6px;background:var(--caramel-light);opacity:.4;z-index:-1;}
+  .section-description{font-size:15px;color:var(--ink-soft);margin-bottom:32px;line-height:1.8;}
+  .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;}
+  .status-card{background:var(--paper);border:1px solid var(--border);padding:22px 20px;border-radius:2px;text-align:center;}
+  .status-card-label{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.15em;color:var(--caramel);text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+  .status-card-value{font-family:'Gowun Batang',serif;font-size:22px;font-weight:700;}
+  .status-card-unit{font-size:13px;color:var(--ink-soft);margin-left:3px;}
+  .problem{background:var(--paper);border-left:4px solid var(--rose);padding:26px 30px;margin-bottom:24px;border-radius:2px;box-shadow:var(--shadow-soft);position:relative;}
+  .problem-number{position:absolute;top:-12px;left:20px;background:var(--rose);color:#fff;font-family:'Cormorant Garamond',serif;font-weight:700;font-size:13px;padding:4px 14px;letter-spacing:.15em;border-radius:2px;}
+  .problem-title{font-family:'Gowun Batang',serif;font-size:19px;margin-top:8px;margin-bottom:10px;font-weight:700;}
+  .problem-body{color:var(--ink-soft);line-height:1.85;}
+  .action-card{background:var(--paper);border:1px solid var(--border);padding:26px 30px;margin-bottom:18px;border-radius:2px;box-shadow:var(--shadow-soft);position:relative;overflow:hidden;}
+  .action-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--caramel);}
+  .action-step{font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.25em;color:var(--caramel);text-transform:uppercase;font-weight:600;margin-bottom:8px;}
+  .action-title{font-family:'Gowun Batang',serif;font-size:18px;margin-bottom:12px;font-weight:700;}
+  .action-amount{display:inline-block;background:var(--ink);color:var(--caramel-light);padding:5px 14px;font-family:'Gowun Batang',serif;font-weight:700;font-size:14px;border-radius:2px;margin-bottom:12px;}
+  .action-desc{color:var(--ink-soft);line-height:1.8;}
+  .final-plan{background:var(--paper);border:1px solid var(--caramel);padding:36px;border-radius:3px;margin:30px 0;}
+  .final-plan-title{font-family:'Gowun Batang',serif;font-size:20px;margin-bottom:22px;text-align:center;font-weight:700;}
+  .final-plan-title::before,.final-plan-title::after{content:'◆';color:var(--caramel);margin:0 10px;font-size:13px;}
+  .final-plan-body{color:var(--ink);line-height:1.9;font-size:15px;white-space:pre-wrap;}
+  .plan-result{margin-top:24px;padding:20px;background:var(--ink);color:var(--cream);border-radius:2px;text-align:center;}
+  .plan-result-label{font-size:12px;letter-spacing:.2em;color:var(--caramel-light);margin-bottom:8px;text-transform:uppercase;}
+  .plan-result-value{font-family:'Gowun Batang',serif;font-size:22px;font-weight:700;}
+  .plan-result-change{margin-top:8px;font-size:13px;color:var(--mint-light);font-weight:700;}
+  footer{padding:40px 24px;text-align:center;font-size:12px;color:var(--ink-soft);}
+  @media print{ section{padding:36px 0;} .cover{min-height:auto;padding:40px 24px;} }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-logo">Insurance Consulting</div>
+    <h1 class="cover-title-kr">${esc(c.name)}님 <span class="highlight">${esc(note.title)}</span></h1>
+    <p class="cover-subtitle">보장분석 & 컨설팅 리포트</p>
+    <div class="cover-meta">
+      <div class="cover-meta-item"><div class="cover-meta-label">Client</div><div class="cover-meta-value">${esc(c.name)}</div></div>
+      <div class="cover-meta-item"><div class="cover-meta-label">Date</div><div class="cover-meta-value">${esc(note.date||"")}</div></div>
+    </div>
+  </div>
+  <div class="container">
+    <section>
+      <div class="section-number">01 · Current Status</div>
+      <h2 class="section-title">${esc(c.name)}님의 <span class="section-title-accent">현재 보장 현황</span></h2>
+      <p class="section-description">현재 유지 중인 계약을 정리했습니다.</p>
+      <div class="status-grid">${statusCardsHtml}</div>
+      ${currentList.length?`<p style="text-align:right;font-weight:700;">현재 합계: ${currentTotal.toLocaleString()}원/월</p>`:""}
+    </section>
+    ${issuesHtml ? `<section>
+      <div class="section-number">02 · Issues</div>
+      <h2 class="section-title">현재 보장의 <span class="section-title-accent">핵심 문제점</span></h2>
+      ${issuesHtml}
+    </section>` : ""}
+    ${note.direction ? `<section>
+      <div class="section-number">03 · Direction</div>
+      <h2 class="section-title">보완 <span class="section-title-accent">방향</span></h2>
+      <p class="section-description" style="white-space:pre-wrap;">${nl2br(note.direction)}</p>
+    </section>` : ""}
+    ${productsHtml ? `<section>
+      <div class="section-number">04 · Proposal</div>
+      <h2 class="section-title">제안 <span class="section-title-accent">상품</span></h2>
+      ${productsHtml}
+    </section>` : ""}
+    ${proposed.length ? `<section>
+      <div class="section-number">05 · Premium</div>
+      <h2 class="section-title">보험료 <span class="section-title-accent">변화</span></h2>
+      <div class="plan-result">
+        <div class="plan-result-label">예상 월 보험료</div>
+        <div class="plan-result-value">${currentTotal.toLocaleString()}원 → ${afterTotal.toLocaleString()}원</div>
+        <div class="plan-result-change">${diff>=0?"+":""}${diff.toLocaleString()}원 변화</div>
+      </div>
+    </section>` : ""}
+    ${note.finalPlan ? `<section>
+      <div class="section-number">06 · Final Plan</div>
+      <h2 class="section-title">최종 <span class="section-title-accent">권장안</span></h2>
+      <div class="final-plan">
+        <div class="final-plan-title">${esc(c.name)}님을 위한 제안</div>
+        <div class="final-plan-body">${nl2br(note.finalPlan)}</div>
+      </div>
+    </section>` : ""}
+    <footer>본 리포트는 ${esc(note.date||"")} 기준으로 작성되었습니다.</footer>
+  </div>
+</body>
+</html>`;
+}
+
+function exportConsultingNoteReport(id){
+  const note = consultingNotes.find(x=>String(x.id)===String(id));
+  if(!note){ alert("노트를 찾을 수 없습니다."); return; }
+  const c = customers.find(x=>x.id===note.customerId);
+  if(!c){ alert("연동된 고객을 찾을 수 없습니다."); return; }
+  const html = buildConsultingReportHtml(note, c);
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
 
 function renderAnalysisFiles(c) {
   const el = document.getElementById("det-analysis-list");
@@ -9377,6 +9844,7 @@ async function saveToFirestore() {
     experienceItems,
     customStages,
     funnelPosts,
+    consultingNotes,
     productCategories,
     funnelPostTags,
     customSources,
@@ -9432,6 +9900,7 @@ async function loadFromFirestore() {
         stagesMigrated = true;
       }
       if (p.funnelPosts) funnelPosts = p.funnelPosts;
+      if (p.consultingNotes) consultingNotes = p.consultingNotes;
       if (p.productCategories && p.productCategories.length) productCategories = p.productCategories;
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
