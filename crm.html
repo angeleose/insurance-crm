@@ -3611,6 +3611,10 @@ let experienceItems = [];
 // 영업 퍼널 전용 게시물 — 가입제안서(c.proposals)와는 별개의 독립 엔티티.
 // 고객 정보는 필수가 아니라 customerId로 "연동"만 가능(나중에 연결해도 됨).
 let funnelPosts = [];
+// 계약등록 완료 자동감지(syncFunnelPostCompletions)를 1회만 실행하기 위한 플래그.
+// 이게 없으면 렌더될 때마다 다시 돌면서, 고객이 예전에 가입한(이번 게시물과 무관한) 같은 종류의
+// 계약을 보고 새로 만든 게시물까지 "완료"로 잘못 표시해버림.
+let funnelCompletionSyncDone = false;
 // 관심상품 카테고리 — 게시물의 "관심 상품"을 자유 입력이 아닌 고정 목록에서 선택하게 함
 let productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
 // 영업 퍼널 게시물 태그 — 제목에 "[재가입]"처럼 끼워넣는 대신 별도 태그로 관리
@@ -5368,16 +5372,19 @@ function openFunnelBoard(){
 
 // 이 기능(계약등록 완료 표시)이 생기기 전에 이미 계약이 등록된 게시물을 자동으로 찾아 연결.
 // 연동된 고객이 게시물의 관심상품과 같은 종류의 살아있는 계약을 이미 갖고 있으면 완료로 간주.
+// ⚠️ 딱 1회만 실행(funnelCompletionSyncDone) — 계속 돌리면, 이미 다른 상품으로 가입된 적 있는
+// 고객에게 "새로" 다른 건을 제안하려고 만든 게시물까지 예전 계약을 보고 완료로 잘못 표시해버림.
 function syncFunnelPostCompletions(){
-  let changed = false;
+  if(funnelCompletionSyncDone) return;
   funnelPosts.forEach(p=>{
     if(p.contractRegistered || !p.customerId || !p.product) return;
     const c = customers.find(x=>x.id===p.customerId);
     if(!c) return;
     const match = (c.contracts||[]).find(ct=>isCtLive(ct)&&ct.type===p.product);
-    if(match){ p.contractRegistered = true; p.registeredContractId = match.id; changed = true; }
+    if(match){ p.contractRegistered = true; p.registeredContractId = match.id; }
   });
-  if(changed) autoSave();
+  funnelCompletionSyncDone = true;
+  autoSave();
 }
 
 // 계약 등록이 완료된 게시물들을, 실제 계약의 계약일(start) 기준 월별로 묶어 보험료 합계를 구함
@@ -7220,6 +7227,7 @@ async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = []; consultingNotes = [];
+  funnelCompletionSyncDone = false;
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
   productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
   funnelPostTags = ["재가입"];
@@ -9839,6 +9847,7 @@ async function saveToFirestore() {
     experienceItems,
     customStages,
     funnelPosts,
+    funnelCompletionSyncDone,
     consultingNotes,
     productCategories,
     funnelPostTags,
@@ -9895,6 +9904,7 @@ async function loadFromFirestore() {
         stagesMigrated = true;
       }
       if (p.funnelPosts) funnelPosts = p.funnelPosts;
+      if (typeof p.funnelCompletionSyncDone === "boolean") funnelCompletionSyncDone = p.funnelCompletionSyncDone;
       if (p.consultingNotes) consultingNotes = p.consultingNotes;
       if (p.productCategories && p.productCategories.length) productCategories = p.productCategories;
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
