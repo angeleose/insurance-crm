@@ -616,6 +616,8 @@
   .cn-repeat-row-grid input[type="text"]:last-of-type{width:100%;}
   .cn-row-del{background:none;border:1px solid #fca5a5;border-radius:6px;color:var(--red);width:28px;height:28px;cursor:pointer;font-size:12px;flex-shrink:0;}
   .cn-empty-hint{font-size:12px;color:var(--text2);padding:6px 2px;}
+  .cn-cov-cat-head{font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px;}
+  .cn-cov-cat-head:first-child{margin-top:0;}
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
@@ -2584,6 +2586,14 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="form-group">
       <label>보장분석 자료 첨부 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(메리츠 보장분석 등 외부에서 뽑은 파일을 OneDrive·구글드라이브 등에 올리고 링크를 붙여넣으세요)</span></label>
       <input type="url" id="cn-coverage-file-url" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label>보장 갭 분석 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(권장금액은 표준 기준으로 불러오고, 실제 보유금액만 직접 입력하세요)</span></label>
+      <div id="cn-coverage-items-list"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="loadCnCoverageTemplate()">🔄 표준 항목 불러오기</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addCnCoverageItem()">+ 항목 직접 추가</button>
+      </div>
     </div>
     <div class="form-group">
       <label>문제점 · 보장 공백</label>
@@ -8184,6 +8194,46 @@ function renderProposalsPage() {
 let _cnEditId = null;
 let _cnIssues = [];
 let _cnProducts = [];
+let _cnCoverageItems = [];
+
+// 메리츠 "간편보장분석" 등 보장분석 리포트에서 흔히 쓰는 표준 권장금액 기준표.
+// 여기 있는 권장금액은 고정 참고값으로 불러와 쓰고, 고객의 실제(보유) 보장금액만
+// 컨설턴트가 직접 입력한다 — CRM 계약에서 자동 계산하지 않는다.
+const COVERAGE_GAP_TEMPLATE = [
+  {category:"가족보장·사망", item:"질병사망", recommended:100000000},
+  {category:"가족보장·사망", item:"상해사망", recommended:200000000},
+  {category:"큰병보장·진단비", item:"일반암진단비", recommended:150000000},
+  {category:"큰병보장·진단비", item:"유사암진단비", recommended:30000000},
+  {category:"큰병보장·진단비", item:"통합암진단비", recommended:20000000},
+  {category:"큰병보장·진단비", item:"뇌혈관진단비", recommended:50000000},
+  {category:"큰병보장·진단비", item:"뇌졸중진단비", recommended:50000000},
+  {category:"큰병보장·진단비", item:"허혈성심장질환진단비", recommended:30000000},
+  {category:"큰병보장·진단비", item:"급성심근경색증진단비", recommended:50000000},
+  {category:"큰병보장·진단비", item:"암주요치료비", recommended:20000000},
+  {category:"큰병보장·진단비", item:"2대질환주요치료비", recommended:10000000},
+  {category:"의료/수술보장", item:"질병입원", recommended:50000000},
+  {category:"의료/수술보장", item:"상해입원", recommended:50000000},
+  {category:"의료/수술보장", item:"질병통원", recommended:300000},
+  {category:"의료/수술보장", item:"상해통원", recommended:300000},
+  {category:"의료/수술보장", item:"질병수술비", recommended:500000},
+  {category:"의료/수술보장", item:"상해수술비", recommended:2000000},
+  {category:"운전자/비용보장", item:"교통사고처리지원금", recommended:200000000},
+  {category:"운전자/비용보장", item:"자동차사고부상치료비", recommended:300000},
+  {category:"운전자/비용보장", item:"변호사선임비용", recommended:50000000},
+  {category:"운전자/비용보장", item:"일상생활배상책임", recommended:100000000},
+  {category:"운전자/비용보장", item:"벌금", recommended:30000000},
+  {category:"운전자/비용보장", item:"치아보철치료비", recommended:2000000},
+];
+
+// 보장 갭 상태(미가입/부족/충분) 계산 — 실제 보유금액 vs 권장금액
+function cnCovStatus(actual, recommended){
+  actual = actual||0; recommended = recommended||0;
+  if(!recommended) return { text:"-", color:"#94a3b8", pct:0 };
+  const pct = Math.round(actual/recommended*100);
+  if(!actual) return { text:"미가입 0%", color:"#94a3b8", pct:0 };
+  if(actual < recommended) return { text:`부족 ${pct}%`, color:"#c2410c", pct };
+  return { text:`충분 ${pct}%`, color:"#15803d", pct };
+}
 
 // 고객의 살아있는(해지되지 않은) 계약 목록 + 월 보험료 합계 — 노트 화면 표시와
 // 리포트 내보내기(현재 보장 현황 섹션)에서 항상 같은 계산을 재사용한다
@@ -8252,6 +8302,44 @@ function renderCnProducts(){
 function addCnProduct(){ _cnProducts.push({ id: Date.now()+Math.random(), product:"", insurer:"", premium:0, note:"" }); renderCnProducts(); }
 function removeCnProduct(i){ _cnProducts.splice(i,1); renderCnProducts(); }
 
+function renderCnCoverageItems(){
+  const wrap = document.getElementById("cn-coverage-items-list"); if(!wrap) return;
+  if(!_cnCoverageItems.length){ wrap.innerHTML = `<div class="cn-empty-hint">아직 보장 갭 항목이 없어요. 표준 항목을 불러오거나 직접 추가해 보세요.</div>`; return; }
+  let lastCat = undefined;
+  wrap.innerHTML = _cnCoverageItems.map((it,i)=>{
+    const st = cnCovStatus(it.actual, it.recommended);
+    const catHeader = it.category !== lastCat ? `<div class="cn-cov-cat-head">${escAttr(it.category)||"(구분 없음)"}</div>` : "";
+    lastCat = it.category;
+    return `${catHeader}<div class="cn-repeat-row">
+      <div class="cn-repeat-row-head">
+        <input type="text" placeholder="구분" value="${escAttr(it.category)}" oninput="_cnCoverageItems[${i}].category=this.value" style="flex:0 0 110px;">
+        <input type="text" placeholder="항목명 (예: 일반암진단비)" value="${escAttr(it.item)}" oninput="_cnCoverageItems[${i}].item=this.value">
+        <button type="button" class="cn-row-del" onclick="removeCnCoverageItem(${i})" title="삭제">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center;">
+        <input type="number" placeholder="권장금액(원)" value="${it.recommended||""}" oninput="_cnCoverageItems[${i}].recommended=parseInt(this.value)||0;updateCnCovBadge(${i})">
+        <input type="number" placeholder="실제(보유) 금액(원)" value="${it.actual||""}" oninput="_cnCoverageItems[${i}].actual=parseInt(this.value)||0;updateCnCovBadge(${i})">
+        <span id="cn-cov-badge-${i}" style="font-size:12px;font-weight:700;white-space:nowrap;color:${st.color};">${st.text}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+function updateCnCovBadge(i){
+  const it = _cnCoverageItems[i]; if(!it) return;
+  const badge = document.getElementById(`cn-cov-badge-${i}`); if(!badge) return;
+  const st = cnCovStatus(it.actual, it.recommended);
+  badge.textContent = st.text;
+  badge.style.color = st.color;
+}
+function addCnCoverageItem(){ _cnCoverageItems.push({ id: Date.now()+Math.random(), category:"", item:"", recommended:0, actual:0 }); renderCnCoverageItems(); }
+function removeCnCoverageItem(i){ _cnCoverageItems.splice(i,1); renderCnCoverageItems(); }
+// 메리츠 간편보장분석 등에서 쓰는 표준 23개 항목·권장금액을 통째로 불러옴 — 실제(보유)금액은 0으로 비워두고 직접 입력
+function loadCnCoverageTemplate(){
+  if(_cnCoverageItems.length && !confirm("현재 입력된 보장 갭 항목이 모두 표준 항목으로 대체됩니다. 계속할까요?")) return;
+  _cnCoverageItems = COVERAGE_GAP_TEMPLATE.map(t=>({ id: Date.now()+Math.random(), category:t.category, item:t.item, recommended:t.recommended, actual:0 }));
+  renderCnCoverageItems();
+}
+
 function openConsultingNoteModal(id = null){
   _cnEditId = id;
   document.getElementById("cn-modal-title").textContent = id ? "📝 컨설팅 노트 수정" : "📝 컨설팅 노트 작성";
@@ -8267,6 +8355,7 @@ function openConsultingNoteModal(id = null){
     document.getElementById("cn-final-plan").value = note.finalPlan||"";
     _cnIssues = (note.issues||[]).map(it=>({...it}));
     _cnProducts = (note.proposedProducts||[]).map(p=>({...p}));
+    _cnCoverageItems = (note.coverageItems||[]).map(it=>({...it}));
     const linked = note.customerId ? customers.find(c=>c.id===note.customerId) : null;
     document.getElementById("cn-cust-search").value = linked ? linked.name : "";
     document.getElementById("cn-cust-id").value = linked ? String(linked.id) : "";
@@ -8276,6 +8365,7 @@ function openConsultingNoteModal(id = null){
     document.getElementById("cn-date").value = new Date().toISOString().slice(0,10);
     _cnIssues = [];
     _cnProducts = [];
+    _cnCoverageItems = [];
     // 현재 보고 있는 고객이 있으면 기본 연동
     if(currentCustomerId){
       const c = customers.find(x=>x.id===currentCustomerId);
@@ -8284,6 +8374,7 @@ function openConsultingNoteModal(id = null){
   }
   renderCnIssues();
   renderCnProducts();
+  renderCnCoverageItems();
   openModal("consulting-note");
 }
 
@@ -8300,6 +8391,7 @@ function saveConsultingNote(){
     title,
     date: document.getElementById("cn-date").value,
     coverageFileUrl: document.getElementById("cn-coverage-file-url").value.trim(),
+    coverageItems: _cnCoverageItems.filter(it=>it.item&&it.item.trim()),
     issues: _cnIssues.filter(it=>it.title.trim()||it.desc.trim()),
     direction: document.getElementById("cn-direction").value.trim(),
     proposedProducts: _cnProducts.filter(p=>p.product||p.insurer||p.premium),
@@ -8412,6 +8504,43 @@ function buildConsultingReportHtml(note, c){
         ${p.note?`<div class="action-desc">${nl2br(p.note)}</div>`:""}
       </div>`).join("");
 
+  // 보장 갭 분석 — 권장금액은 표준 기준표, 실제(보유)금액은 컨설턴트가 직접 입력한 값
+  const covItems = note.coverageItems||[];
+  let coverageGapHtml = "";
+  if(covItems.length){
+    const counts = { 미가입:0, 부족:0, 충분:0 };
+    const groups = {};
+    covItems.forEach(it=>{
+      const st = cnCovStatus(it.actual, it.recommended);
+      if(st.text.startsWith("미가입")) counts.미가입++;
+      else if(st.text.startsWith("부족")) counts.부족++;
+      else if(st.text.startsWith("충분")) counts.충분++;
+      const cat = it.category||"기타";
+      (groups[cat] = groups[cat]||[]).push({ ...it, st });
+    });
+    const barColor = st => st.text.startsWith("충분") ? "var(--mint)" : st.text.startsWith("부족") ? "var(--caramel)" : "#b8b0a0";
+    coverageGapHtml = `
+      <div class="cov-summary">
+        <div class="cov-summary-item" style="color:#b8b0a0;"><b>${counts.미가입}</b>미가입</div>
+        <div class="cov-summary-item" style="color:var(--caramel-deep);"><b>${counts.부족}</b>부족</div>
+        <div class="cov-summary-item" style="color:var(--mint);"><b>${counts.충분}</b>충분</div>
+      </div>
+      ${Object.entries(groups).map(([cat,items])=>`
+        <div class="cov-group">
+          <div class="cov-group-title">${esc(cat)}</div>
+          ${items.map(it=>`
+            <div class="cov-item">
+              <div class="cov-item-top">
+                <span class="cov-item-name">${esc(it.item)}</span>
+                <span class="cov-item-status" style="color:${barColor(it.st)}">${it.st.text}</span>
+              </div>
+              <div class="cov-item-bar-wrap"><div class="cov-item-bar" style="width:${Math.min(it.st.pct,100)}%;background:${barColor(it.st)};"></div></div>
+              <div class="cov-item-amounts">보장 ${(it.actual||0).toLocaleString()}원 · 권장 ${(it.recommended||0).toLocaleString()}원</div>
+            </div>`).join("")}
+        </div>`).join("")}
+    `;
+  }
+
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8441,6 +8570,19 @@ function buildConsultingReportHtml(note, c){
   .section-title-accent{display:inline-block;position:relative;padding-bottom:4px;}
   .section-title-accent::after{content:'';position:absolute;bottom:0;left:0;width:60%;height:6px;background:var(--caramel-light);opacity:.4;z-index:-1;}
   .section-description{font-size:15px;color:var(--ink-soft);margin-bottom:32px;line-height:1.8;}
+  .cov-summary{display:flex;gap:28px;margin-bottom:28px;flex-wrap:wrap;}
+  .cov-summary-item{font-family:'Gowun Batang',serif;font-size:14px;}
+  .cov-summary-item b{font-size:22px;margin-right:5px;}
+  .cov-group{margin-bottom:26px;}
+  .cov-group-title{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.15em;color:var(--caramel-deep);text-transform:uppercase;font-weight:700;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .cov-item{padding:12px 0;border-bottom:1px dashed var(--border);}
+  .cov-item:last-child{border-bottom:none;}
+  .cov-item-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px;}
+  .cov-item-name{font-weight:700;font-size:14px;}
+  .cov-item-status{font-weight:700;font-size:13px;white-space:nowrap;}
+  .cov-item-bar-wrap{height:7px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:5px;}
+  .cov-item-bar{height:100%;border-radius:4px;}
+  .cov-item-amounts{font-size:12px;color:var(--ink-soft);}
   .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;}
   .status-card{background:var(--paper);border:1px solid var(--border);padding:22px 20px;border-radius:2px;text-align:center;}
   .status-card-label{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.15em;color:var(--caramel);text-transform:uppercase;margin-bottom:10px;font-weight:600;}
@@ -8479,11 +8621,12 @@ function buildConsultingReportHtml(note, c){
     </div>
   </div>
   <div class="container">
-    ${note.coverageFileUrl ? `<section>
+    ${(note.coverageFileUrl || covItems.length) ? `<section>
       <div class="section-number">01 · Current Status</div>
       <h2 class="section-title">${esc(c.name)}님의 <span class="section-title-accent">현재 보장 현황</span></h2>
-      <p class="section-description">보장분석 자료를 별도로 첨부해 드립니다. 아래 링크에서 자세한 내용을 확인해 주세요.</p>
-      <a href="${esc(note.coverageFileUrl)}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 30px;background:var(--ink);color:var(--caramel-light);font-family:'Gowun Batang',serif;font-weight:700;font-size:15px;border-radius:2px;text-decoration:none;">📎 보장분석 자료 보기</a>
+      ${note.coverageFileUrl ? `<p class="section-description">보장분석 자료를 별도로 첨부해 드립니다. 아래 링크에서 자세한 내용을 확인해 주세요.</p>
+      <a href="${esc(note.coverageFileUrl)}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 30px;background:var(--ink);color:var(--caramel-light);font-family:'Gowun Batang',serif;font-weight:700;font-size:15px;border-radius:2px;text-decoration:none;${covItems.length?"margin-bottom:32px;":""}">📎 보장분석 자료 보기</a>` : ""}
+      ${coverageGapHtml}
     </section>` : ""}
     ${issuesHtml ? `<section>
       <div class="section-number">02 · Issues</div>
