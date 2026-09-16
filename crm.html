@@ -1383,6 +1383,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <button class="btn btn-primary" onclick="downloadGiftShippingExcel()" style="margin-left:auto;">📥 엑셀로 다운로드</button>
     </div>
     <div class="filters" id="type-filters-gift-shipping"></div>
+    <div class="filters" id="contract-type-filters-gift-shipping"></div>
     <div style="margin-bottom:8px;">
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
     </div>
@@ -3752,7 +3753,8 @@ let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
-let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망
+let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
+let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let giftShipAddressOnly = false;
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
@@ -4604,6 +4606,7 @@ function clearAllFilters() {
   activeConsultCustFilter = "전체고객";
   activeAllCustTypeFilter = "전체";
   activeGiftShipTypeFilter = "전체";
+  activeGiftShipContractTypeFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -5450,12 +5453,17 @@ function formatPhoneInputLive(el){
 function giftShipStatus(c){
   return c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
 }
+// 살아있는(해지 안 된) 계약들의 종류를 중복 없이 모음 — 계약 종류 컬럼·필터에서 공용으로 사용
+function giftShipContractTypes(c){
+  return c.type==="가입" ? [...new Set(c.contracts.filter(isCtLive).map(ct=>ct.type).filter(Boolean))] : [];
+}
 
 function getGiftShippingList(){
   const qEl = document.getElementById("search-gift-shipping");
   const q = qEl ? qEl.value.trim() : "";
   const filtered = customers.filter(c=>{
     if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
+    if(activeGiftShipContractTypeFilter!=="전체" && !giftShipContractTypes(c).includes(activeGiftShipContractTypeFilter)) return false;
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
     if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
     return true;
@@ -5493,6 +5501,8 @@ function getGiftShippingList(){
 function renderGiftShippingList(){
   document.getElementById("type-filters-gift-shipping").innerHTML =
     ["전체","가입","가망","해지"].map(t=>`<button class="filter-btn ${t===activeGiftShipTypeFilter?"active":""}" onclick="activeGiftShipTypeFilter='${t}';renderGiftShippingList()">${t}</button>`).join("");
+  document.getElementById("contract-type-filters-gift-shipping").innerHTML =
+    ["전체",...productCategories].map(t=>`<button class="filter-btn ${t===activeGiftShipContractTypeFilter?"active":""}" onclick="activeGiftShipContractTypeFilter='${t}';renderGiftShippingList()">${t==="전체"?"전체 계약종류":t}</button>`).join("");
   const addrOnlyEl = document.getElementById("gift-ship-address-only");
   if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
 
@@ -5526,9 +5536,7 @@ function renderGiftShippingList(){
     return d ? `<span style="font-size:12px;color:var(--text2);">${d}</span>` : `<span style="color:var(--text2)">-</span>`;
   };
   // 살아있는(해지 안 된) 계약들의 종류를 중복 없이 모아서 [펫보험/태아보험] 형태로 표시
-  const contractTypesOf = c => c.type==="가입"
-    ? [...new Set(c.contracts.filter(isCtLive).map(ct=>ct.type).filter(Boolean))]
-    : [];
+  const contractTypesOf = giftShipContractTypes;
   const contractTypesCell = c => {
     const types = contractTypesOf(c);
     return types.length ? `[${types.join("/")}]` : `<span style="color:var(--text2)">-</span>`;
@@ -5601,7 +5609,7 @@ function downloadGiftShippingExcel(){
     const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
     const joinDate = c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
     const statusLabel = giftShipStatus(c);
-    const types = c.type==="가입" ? [...new Set(c.contracts.filter(isCtLive).map(ct=>ct.type).filter(Boolean))] : [];
+    const types = giftShipContractTypes(c);
     return {
       "가입여부": statusLabel,
       "고객명": c.name,
