@@ -1079,6 +1079,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="dashboard" onclick="closeMobileDrawer()"><span class="icon">📊</span> 대시보드</div>
     <div class="nav-item" data-page="funnel" onclick="closeMobileDrawer();openFunnelBoard()"><span class="icon">🎯</span> 영업 퍼널</div>
     <div class="sb-section" style="margin-top:6px">고객</div>
+    <div class="nav-item" data-page="all-customers" onclick="closeMobileDrawer()"><span class="icon">👥</span> 전체 고객</div>
     <div class="nav-item" data-page="enrolled" onclick="closeMobileDrawer()"><span class="icon">✅</span> 가입 고객</div>
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
     <div class="nav-item" data-page="contracts" onclick="closeMobileDrawer()"><span class="icon">📄</span> 보험 계약</div>
@@ -1177,6 +1178,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <span>고객</span><span class="sb-arrow">▾</span>
     </div>
     <div class="sb-group" id="sbg-customer">
+      <div class="nav-item" data-page="all-customers"><span class="icon">👥</span> 전체 고객</div>
       <div class="nav-item" data-page="enrolled"><span class="icon">✅</span> 가입 고객</div>
       <div class="nav-item" data-page="prospects"><span class="icon">🌱</span> 가망 고객</div>
       <div class="nav-item" data-page="contracts"><span class="icon">📄</span> 보험 계약</div>
@@ -1331,6 +1333,31 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="card-title" style="color:#7c3aed;">👶 출생예정일 임박</div><div id="dash-duedate"></div>
     </div>
     <div class="card"><div class="card-title">🌱 가망 고객 현황</div><div id="dash-prospects"></div></div>
+  </div>
+
+  <!-- ALL CUSTOMERS (가입+가망 통합) -->
+  <div class="page" id="page-all-customers">
+    <div class="page-header">
+      <div><h2>전체 고객</h2><p>가입 고객과 가망 고객을 한 번에 검색하고 필터로 구분해서 보세요.</p></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-all-customers" placeholder="이름 또는 전화번호 검색..." oninput="renderAllCustomers()"></div>
+    </div>
+    <div class="filters" id="type-filters-all-customers"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+      <span id="all-customers-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
+      <select id="all-customers-sort-select" onchange="allCustSort=this.value;renderAllCustomers()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="regDate_desc">등록일 최신순</option>
+        <option value="regDate_asc">등록일 오래된순</option>
+        <option value="name_asc">이름순</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;" id="all-customers-table-wrap">
+      <table><thead><tr><th>이름</th><th>구분</th><th>생년월일</th><th>연락처</th><th>출처</th><th>상태</th><th>태그</th><th>등록일</th></tr></thead>
+      <tbody id="all-customers-tbody"></tbody></table>
+    </div>
+    <div id="all-customers-list-wrap" style="display:none;"></div>
   </div>
 
   <!-- ENROLLED -->
@@ -3690,6 +3717,8 @@ let enrolledDateMonth = new Date().getMonth()+1;
 let enrolledDateFrom = '';
 let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
+let allCustSort = 'regDate_desc';
+let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
 let contractSort = "end_asc";
@@ -4525,7 +4554,7 @@ async function aiSalesReport() {
 
 function clearAllFilters() {
   // 검색창 초기화
-  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals"].forEach(id => {
+  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals","search-all-customers"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
@@ -4538,6 +4567,7 @@ function clearAllFilters() {
   activeContractStatusFilter = "전체";
   activeConsultTypeFilter = "전체";
   activeConsultCustFilter = "전체고객";
+  activeAllCustTypeFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -4556,6 +4586,7 @@ function showPage(name, pushHistory=true){
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   const ni=document.querySelector(`[data-page="${name}"]`);if(ni)ni.classList.add("active");
   if(name==="dashboard")renderDashboard();
+  if(name==="all-customers")renderAllCustomers();
   if(name==="enrolled")renderEnrolled();
   if(name==="prospects"){ prospectsViewMode="list"; renderProspects(); }
   if(name==="expiring")renderExpiring();
@@ -5280,6 +5311,91 @@ function renderEnrolledPagination(totalPages, total) {
     const el = document.getElementById(id);
     if(el) el.innerHTML = paginationHTML();
   });
+}
+
+// 가입 고객 + 가망 고객을 한 화면에서 같이 보고, 타입 필터로 구분하고, 검색도 한번에 되는 통합 목록
+function renderAllCustomers(){
+  const qEl = document.getElementById("search-all-customers");
+  const q = qEl ? qEl.value.trim() : "";
+  document.getElementById("type-filters-all-customers").innerHTML =
+    ["전체","가입","가망"].map(t=>`<button class="filter-btn ${t===activeAllCustTypeFilter?"active":""}" onclick="activeAllCustTypeFilter='${t}';renderAllCustomers()">${t}</button>`).join("");
+  const srcBadge=s=>s?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#e2e8f0;color:#475569;">${s}</span>`:`<span style="color:var(--text2)">-</span>`;
+  const typeBadge=c=>c.type==="가입"
+    ?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;">✅ 가입</span>`
+    :`<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#f0e6ff;color:var(--purple);">🌱 가망</span>`;
+  const statusCell=c=>{
+    if(c.type==="가입"){
+      const p=c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0);
+      return `${c.contracts.length}건${p?" · "+p.toLocaleString()+"원":""}`;
+    }
+    return c.isFailed ? `❌ ${c.failCategory||"실패"}` : (c.stage||"초기접촉");
+  };
+  const getRegDate=c=>c.type==="가입"
+    ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || c.regDate || "")
+    : (c.regDate || "");
+
+  let list = customers.filter(c=>{
+    if(activeAllCustTypeFilter!=="전체" && c.type!==activeAllCustTypeFilter) return false;
+    if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    switch(allCustSort){
+      case "regDate_asc": return getRegDate(a).localeCompare(getRegDate(b));
+      case "name_asc":    return a.name.localeCompare(b.name,"ko");
+      default:             return getRegDate(b).localeCompare(getRegDate(a)); // regDate_desc
+    }
+  });
+  const sortSel = document.getElementById("all-customers-sort-select");
+  if(sortSel) sortSel.value = allCustSort;
+
+  const countLabel = document.getElementById("all-customers-count-label");
+  if(countLabel){
+    const enCnt = list.filter(c=>c.type==="가입").length;
+    const prCnt = list.filter(c=>c.type==="가망").length;
+    countLabel.textContent = `총 ${list.length}명 (가입 ${enCnt} · 가망 ${prCnt})`;
+  }
+
+  const isMob = window.innerWidth <= 768;
+  const tw = document.getElementById("all-customers-table-wrap");
+  const lw = document.getElementById("all-customers-list-wrap");
+  if(tw) tw.style.display = isMob ? "none" : "";
+  if(lw) lw.style.display = isMob ? "" : "none";
+
+  if(isMob){
+    if(lw) lw.innerHTML = !list.length
+      ? `<div class="empty"><span>🔍</span>결과 없음</div>`
+      : list.map(c=>`<div class="mob-card" onclick="goToDetail(${c.id})">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div class="avatar ${c.type}" style="width:42px;height:42px;font-size:17px;flex-shrink:0;">${c.name[0]}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+                <strong style="font-size:15px;">${c.name}</strong>
+                ${typeBadge(c)}
+              </div>
+              <div style="font-size:12px;color:var(--text2);">${c.phone||""}</div>
+            </div>
+            <span style="font-size:18px;color:var(--border);">›</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text2);padding-top:8px;border-top:1px solid var(--border);">
+            <span>${statusCell(c)}</span>
+          </div>
+        </div>`).join("");
+  } else {
+    const tbody = document.getElementById("all-customers-tbody");
+    if(tbody) tbody.innerHTML = !list.length
+      ? `<tr><td colspan="8"><div class="empty"><span>🔍</span>결과 없음</div></td></tr>`
+      : list.map(c=>`<tr class="clickable" onclick="goToDetail(${c.id})">
+          <td><strong>${c.name}</strong></td>
+          <td>${typeBadge(c)}</td>
+          <td style="font-size:12px;color:var(--text2)">${formatBirth(c.birth)}</td>
+          <td>${c.phone||""}</td>
+          <td>${srcBadge(c.source)}</td>
+          <td style="font-size:12px;color:var(--text2);">${statusCell(c)}</td>
+          <td>${renderTags(c.tags)||""}</td>
+          <td style="color:var(--text2);font-size:12px;">${getRegDate(c)||"-"}</td>
+        </tr>`).join("");
+  }
 }
 
 function renderProspects(){
