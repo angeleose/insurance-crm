@@ -5446,12 +5446,16 @@ function formatKoreanPhone(raw){
 function formatPhoneInputLive(el){
   el.value = formatKoreanPhone(el.value);
 }
+// 가입 고객이라도 살아있는 계약이 하나도 없으면(전부 해지) "해지"로 분류 — 가입 필터에 섞이면 안 됨
+function giftShipStatus(c){
+  return c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
+}
 
 function getGiftShippingList(){
   const qEl = document.getElementById("search-gift-shipping");
   const q = qEl ? qEl.value.trim() : "";
   const filtered = customers.filter(c=>{
-    if(activeGiftShipTypeFilter!=="전체" && c.type!==activeGiftShipTypeFilter) return false;
+    if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
     if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
     return true;
@@ -5488,14 +5492,12 @@ function getGiftShippingList(){
 
 function renderGiftShippingList(){
   document.getElementById("type-filters-gift-shipping").innerHTML =
-    ["전체","가입","가망"].map(t=>`<button class="filter-btn ${t===activeGiftShipTypeFilter?"active":""}" onclick="activeGiftShipTypeFilter='${t}';renderGiftShippingList()">${t}</button>`).join("");
+    ["전체","가입","가망","해지"].map(t=>`<button class="filter-btn ${t===activeGiftShipTypeFilter?"active":""}" onclick="activeGiftShipTypeFilter='${t}';renderGiftShippingList()">${t}</button>`).join("");
   const addrOnlyEl = document.getElementById("gift-ship-address-only");
   if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
 
-  // 가입 고객이라도 계약이 전부 해지되면 "해지"로 표시 — 살아있는 계약이 하나도 없다는 뜻
-  const shipStatusLabel = c => c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
   const typeBadge = c => {
-    const label = shipStatusLabel(c);
+    const label = giftShipStatus(c);
     if(label==="해지") return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#fff1f2;color:var(--red);">해지</span>`;
     return label==="가입"
       ? `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;">가입</span>`
@@ -5598,7 +5600,7 @@ function downloadGiftShippingExcel(){
   const rows = list.map(c=>{
     const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
     const joinDate = c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
-    const statusLabel = c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
+    const statusLabel = giftShipStatus(c);
     const types = c.type==="가입" ? [...new Set(c.contracts.filter(isCtLive).map(ct=>ct.type).filter(Boolean))] : [];
     return {
       "가입여부": statusLabel,
