@@ -5492,9 +5492,15 @@ function renderGiftShippingList(){
   const addrOnlyEl = document.getElementById("gift-ship-address-only");
   if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
 
-  const typeBadge = c => c.type==="가입"
-    ? `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;">가입</span>`
-    : `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#f0e6ff;color:var(--purple);">가망</span>`;
+  // 가입 고객이라도 계약이 전부 해지되면 "해지"로 표시 — 살아있는 계약이 하나도 없다는 뜻
+  const shipStatusLabel = c => c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
+  const typeBadge = c => {
+    const label = shipStatusLabel(c);
+    if(label==="해지") return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#fff1f2;color:var(--red);">해지</span>`;
+    return label==="가입"
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;">가입</span>`
+      : `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#f0e6ff;color:var(--purple);">가망</span>`;
+  };
 
   const list = getGiftShippingList();
   const missingAddr = list.filter(c=>!(c.address||"").trim()).length;
@@ -5583,8 +5589,9 @@ function downloadGiftShippingExcel(){
   const rows = list.map(c=>{
     const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
     const joinDate = c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
+    const statusLabel = c.type==="가입" ? (isCancelledCustomer(c) ? "해지" : "가입") : "가망";
     return {
-      "가입여부": c.type,
+      "가입여부": statusLabel,
       "고객명": c.name,
       "연락처": c.phone||"",
       "주소": c.address||"",
