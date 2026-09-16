@@ -1387,7 +1387,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="gift-ship-table-wrap">
-      <table><thead><tr><th>가입여부</th><th>고객명</th><th style="width:130px;">연락처</th><th>주소</th><th>가입 보험료</th><th>특이사항</th></tr></thead>
+      <table><thead><tr><th>가입여부</th><th>고객명</th><th style="width:130px;">연락처</th><th>주소</th><th>가입 보험료</th><th>가입년월일</th><th>특이사항</th></tr></thead>
       <tbody id="gift-ship-tbody"></tbody></table>
     </div>
     <div id="gift-ship-list-wrap" style="display:none;"></div>
@@ -5512,6 +5512,11 @@ function renderGiftShippingList(){
     const p = premiumOf(c);
     return p===null ? `<span style="color:var(--text2)">-</span>` : `${p.toLocaleString()}원`;
   };
+  const joinDateOf = c => c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
+  const joinDateCell = c => {
+    const d = joinDateOf(c);
+    return d ? `<span style="font-size:12px;color:var(--text2);">${d}</span>` : `<span style="color:var(--text2)">-</span>`;
+  };
   const phoneInput = c => `<input type="text" inputmode="numeric" maxlength="13" class="gift-ship-input gift-ship-phone-input" value="${escAttr(formatKoreanPhone(c.phone))}" placeholder="010-0000-0000" oninput="formatPhoneInputLive(this)" onblur="giftShipField(this,${c.id},'phone')" onkeydown="if(event.key==='Enter')this.blur()">`;
   const addressInput = c => `<input type="text" class="gift-ship-input${(c.address||"").trim()?"":" gift-ship-missing"}" value="${escAttr(c.address||"")}" placeholder="주소 입력" onblur="giftShipField(this,${c.id},'address')" onkeydown="if(event.key==='Enter')this.blur()">`;
   const noteInput = c => `<input type="text" class="gift-ship-input" value="${escAttr(c.giftNote||"")}" placeholder="특이사항" onblur="giftShipField(this,${c.id},'giftNote')" onkeydown="if(event.key==='Enter')this.blur()">`;
@@ -5542,18 +5547,20 @@ function renderGiftShippingList(){
           </div>
           <div style="margin-bottom:6px;">${phoneInput(c)}</div>
           <div style="margin-bottom:6px;">${addressInput(c)}</div>
+          <div style="margin-bottom:6px;font-size:12px;color:var(--text2);">가입일: ${joinDateOf(c)||"-"}</div>
           <div>${noteInput(c)}</div>
         </div>`).join("");
   } else {
     const tbody = document.getElementById("gift-ship-tbody");
     if(tbody) tbody.innerHTML = !list.length
-      ? `<tr><td colspan="6"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
+      ? `<tr><td colspan="7"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
       : list.map(c=>`<tr style="${groupBg(c)}">
           <td>${typeBadge(c)}</td>
           <td onclick="goToDetail(${c.id})" style="cursor:pointer;" title="고객 상세로 이동"><strong>${c.name}</strong>${familyBadge(c)}</td>
           <td>${phoneInput(c)}</td>
           <td>${addressInput(c)}</td>
           <td style="white-space:nowrap;">${premiumCell(c)}</td>
+          <td style="white-space:nowrap;">${joinDateCell(c)}</td>
           <td>${noteInput(c)}</td>
         </tr>`).join("");
   }
@@ -5575,12 +5582,14 @@ function downloadGiftShippingExcel(){
   if(!list.length){ alert("다운로드할 고객이 없습니다."); return; }
   const rows = list.map(c=>{
     const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
+    const joinDate = c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
     return {
       "가입여부": c.type,
       "고객명": c.name,
       "연락처": c.phone||"",
       "주소": c.address||"",
       "가입 보험료": p,
+      "가입년월일": joinDate,
       "특이사항": c.giftNote||"",
     };
   });
