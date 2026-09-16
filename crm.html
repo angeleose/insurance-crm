@@ -1380,7 +1380,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="gift-ship-table-wrap">
-      <table><thead><tr><th>가입여부</th><th>고객명</th><th>연락처</th><th>주소</th></tr></thead>
+      <table><thead><tr><th>가입여부</th><th>고객명</th><th>연락처</th><th>주소</th><th>가입 보험료</th></tr></thead>
       <tbody id="gift-ship-tbody"></tbody></table>
     </div>
     <div id="gift-ship-list-wrap" style="display:none;"></div>
@@ -5461,43 +5461,64 @@ function renderGiftShippingList(){
   if(tw) tw.style.display = isMob ? "none" : "";
   if(lw) lw.style.display = isMob ? "" : "none";
 
-  const addrCell = c => (c.address||"").trim()
-    ? `<span>${escAttr(c.address)}</span>`
-    : `<span style="color:var(--red);font-size:12px;">주소 없음</span>`;
+  const premiumOf = c => c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : null;
+  const premiumCell = c => {
+    const p = premiumOf(c);
+    return p===null ? `<span style="color:var(--text2)">-</span>` : `${p.toLocaleString()}원`;
+  };
+  const editInputStyle = "width:100%;min-width:110px;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;";
+  const phoneInput = c => `<input type="text" value="${escAttr(c.phone||"")}" placeholder="연락처" style="${editInputStyle}" onblur="giftShipField(this,${c.id},'phone')" onkeydown="if(event.key==='Enter')this.blur()">`;
+  const addressInput = c => `<input type="text" value="${escAttr(c.address||"")}" placeholder="주소 입력" style="${editInputStyle}${(c.address||"").trim()?"":"border-color:#fca5a5;"}" onblur="giftShipField(this,${c.id},'address')" onkeydown="if(event.key==='Enter')this.blur()">`;
 
   if(isMob){
     if(lw) lw.innerHTML = !list.length
       ? `<div class="empty"><span>🎁</span>결과 없음</div>`
-      : list.map(c=>`<div class="mob-card" onclick="goToDetail(${c.id})">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+      : list.map(c=>`<div class="mob-card">
+          <div onclick="goToDetail(${c.id})" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer;">
             <strong style="font-size:15px;">${c.name}</strong>
             ${typeBadge(c)}
+            <span style="margin-left:auto;font-size:12px;color:var(--text2);">${premiumCell(c)}</span>
           </div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">${c.phone||""}</div>
-          <div style="font-size:13px;">${addrCell(c)}</div>
+          <div style="margin-bottom:6px;">${phoneInput(c)}</div>
+          <div>${addressInput(c)}</div>
         </div>`).join("");
   } else {
     const tbody = document.getElementById("gift-ship-tbody");
     if(tbody) tbody.innerHTML = !list.length
-      ? `<tr><td colspan="4"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
-      : list.map(c=>`<tr class="clickable" onclick="goToDetail(${c.id})">
+      ? `<tr><td colspan="5"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
+      : list.map(c=>`<tr>
           <td>${typeBadge(c)}</td>
-          <td><strong>${c.name}</strong></td>
-          <td>${c.phone||""}</td>
-          <td>${addrCell(c)}</td>
+          <td onclick="goToDetail(${c.id})" style="cursor:pointer;" title="고객 상세로 이동"><strong>${c.name}</strong></td>
+          <td>${phoneInput(c)}</td>
+          <td>${addressInput(c)}</td>
+          <td style="white-space:nowrap;">${premiumCell(c)}</td>
         </tr>`).join("");
   }
+}
+
+// 배송 리스트에서 연락처·주소를 수정하면 실제 고객 데이터(customers 배열)에 바로 반영 — 고객 상세와 항상 같은 값을 본다
+function giftShipField(el, id, field){
+  const c = customers.find(x=>String(x.id)===String(id)); if(!c) return;
+  const value = el.value.trim();
+  if((c[field]||"") === value) return;
+  c[field] = value;
+  autoSave();
+  renderGiftShippingList();
 }
 
 function downloadGiftShippingExcel(){
   const list = getGiftShippingList();
   if(!list.length){ alert("다운로드할 고객이 없습니다."); return; }
-  const rows = list.map(c=>({
-    "가입여부": c.type,
-    "고객명": c.name,
-    "연락처": c.phone||"",
-    "주소": c.address||"",
-  }));
+  const rows = list.map(c=>{
+    const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
+    return {
+      "가입여부": c.type,
+      "고객명": c.name,
+      "연락처": c.phone||"",
+      "주소": c.address||"",
+      "가입 보험료": p,
+    };
+  });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "배송리스트");
   const today = new Date().toISOString().slice(0,10);
