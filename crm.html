@@ -4021,7 +4021,7 @@ function saveScanCustomer() {
   const birthVal = document.getElementById("scan-birth")?.value || "";
   const dup = customers.find(c => {
     const cPhone = (c.phone||"").replace(/-/g,"");
-    const nameMatch = c.name === name;
+    const nameMatch = (c.name||"").replace(/\s+/g,"") === name.replace(/\s+/g,"");
     const phoneMatch = cPhone === phoneClean;
     const birthMatch = birthVal && c.birth && formatBirth(c.birth) === formatBirth(birthVal);
     const ssnMatch = ssn && c.ssn && c.ssn === ssn;
@@ -6785,7 +6785,19 @@ function addCustomer(){
     obj.toxemia = document.getElementById("nc-toxemia").value;
     obj.pregweek = document.getElementById("nc-pregweek").value;
   }
-  customers.push(obj);
+  // 이름에 공백 차이가 있어도(예: "홍 길동" vs "홍길동") 같은 사람으로 보고 중복 여부를 확인
+  const normalizeName = s => String(s||"").replace(/\s+/g,"");
+  const dup = customers.find(c => normalizeName(c.name) === normalizeName(name));
+  let savedId;
+  if(dup && confirm(`⚠️ "${dup.name}" 고객이 이미 있어요 (${dup.type}, ${dup.phone||"연락처 없음"}).\n\n기존 고객 정보를 덮어쓸까요?\n(취소하면 새 고객으로 별도 추가돼요)`)){
+    // id·계약·상담·task·가족연동 등 기존 데이터는 유지하고 나머지 입력값만 덮어씀
+    Object.assign(dup, obj, { id: dup.id, contracts: dup.contracts, consultations: dup.consultations, tasks: dup.tasks, family: dup.family });
+    savedId = dup.id;
+    showToast(`✅ ${dup.name} 고객 정보를 덮어썼습니다.`);
+  } else {
+    customers.push(obj);
+    savedId = obj.id;
+  }
   ["nc-name","nc-phone","nc-birth","nc-email","nc-address","nc-job","nc-interest","nc-memo","nc-duedate","nc-contract-start","nc-source-venue"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   const nsvw=document.getElementById("nc-source-venue-wrap");if(nsvw)nsvw.style.display="none";;
   document.getElementById("nc-ssn").value="";
@@ -6798,9 +6810,9 @@ function addCustomer(){
   renderDashboard();
   autoSave();
   // 영업 퍼널 게시물의 "고객 연동"에서 검색해도 안 나와 빠른 추가로 만든 고객이면,
-  // 작성 중이던 게시물 초안을 복원하면서 방금 만든 고객을 자동으로 연동해 이어서 쓰게 함
+  // 작성 중이던 게시물 초안을 복원하면서 방금 만든(또는 덮어쓴) 고객을 자동으로 연동해 이어서 쓰게 함
   if(_fpDraftSnapshot){
-    reopenFunnelPostModalWithLinkedCustomer(obj.id);
+    reopenFunnelPostModalWithLinkedCustomer(savedId);
   }
 }
 
@@ -7600,10 +7612,12 @@ function toggleAllEnrolled(el) {
   updateEnrolledSelCount();
 }
 function deleteSelectedEnrolled() {
-  const ids = [...document.querySelectorAll(".enroll-check:checked")].map(cb => parseInt(cb.dataset.id));
+  // 주의: 고객 id는 Date.now()+Math.random() 같은 소수 값일 수 있어서 parseInt로 자르면
+  // 실제 id와 달라져 아무도 삭제되지 않는 버그가 있었음 — 문자열 비교로 고침
+  const ids = [...document.querySelectorAll(".enroll-check:checked")].map(cb => cb.dataset.id);
   if(!ids.length) return;
   if(!confirm(`선택한 가입 고객 ${ids.length}명을 삭제하시겠습니까?`)) return;
-  customers = customers.filter(c => !ids.includes(c.id));
+  customers = customers.filter(c => !ids.includes(String(c.id)));
   renderEnrolled();
   renderDashboard();
   autoSave();
@@ -7626,10 +7640,10 @@ function toggleAllProspects(el) {
   updateProspectSelCount();
 }
 function deleteSelectedProspects() {
-  const ids = [...document.querySelectorAll(".prospect-check:checked")].map(cb => parseInt(cb.dataset.id));
+  const ids = [...document.querySelectorAll(".prospect-check:checked")].map(cb => cb.dataset.id);
   if(!ids.length) return;
   if(!confirm(`선택한 가망 고객 ${ids.length}명을 삭제하시겠습니까?`)) return;
-  customers = customers.filter(c => !ids.includes(c.id));
+  customers = customers.filter(c => !ids.includes(String(c.id)));
   renderProspects();
   renderDashboard();
   autoSave();
