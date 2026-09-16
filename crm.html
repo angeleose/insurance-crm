@@ -628,6 +628,12 @@
   .cn-cov-table th input{padding-right:20px;}
   .cn-cov-col-del{position:absolute;top:3px;right:3px;background:none;border:none;color:var(--red);cursor:pointer;font-size:10px;padding:2px;line-height:1;}
   .cn-cov-td-del .cn-row-del{width:100%;height:100%;border:none;border-radius:0;font-size:11px;}
+  #gift-ship-table-wrap td{padding:6px 10px;}
+  .gift-ship-input{width:100%;font-size:13px;padding:4px 2px;border:none;border-bottom:1.5px solid var(--border);border-radius:0;background:transparent;box-sizing:border-box;transition:border-color .15s;}
+  .gift-ship-input:focus{outline:none;border-bottom-color:var(--primary);}
+  .gift-ship-input.gift-ship-missing{border-bottom-color:#fca5a5;}
+  .gift-ship-phone-input{width:118px;}
+  .gift-ship-family-badge{font-size:11px;margin-left:4px;cursor:default;}
   .kb-card .kb-sub{font-size:12px;color:var(--text2);margin-top:2px;}
   .kb-card .kb-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:6px;flex-wrap:wrap;}
   .kb-card .kb-followup{font-size:11px;font-weight:700;color:var(--blue);}
@@ -1380,7 +1386,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="gift-ship-table-wrap">
-      <table><thead><tr><th>가입여부</th><th>고객명</th><th style="width:130px;">연락처</th><th>주소</th><th>가입 보험료</th></tr></thead>
+      <table><thead><tr><th>가입여부</th><th>고객명</th><th style="width:130px;">연락처</th><th>주소</th><th>가입 보험료</th><th>특이사항</th></tr></thead>
       <tbody id="gift-ship-tbody"></tbody></table>
     </div>
     <div id="gift-ship-list-wrap" style="display:none;"></div>
@@ -5443,12 +5449,40 @@ function formatPhoneInputLive(el){
 function getGiftShippingList(){
   const qEl = document.getElementById("search-gift-shipping");
   const q = qEl ? qEl.value.trim() : "";
-  return customers.filter(c=>{
+  const filtered = customers.filter(c=>{
     if(activeGiftShipTypeFilter!=="전체" && c.type!==activeGiftShipTypeFilter) return false;
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
     if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
     return true;
-  }).sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+  });
+  filtered.sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+
+  // 가족(family)으로 연결된 고객끼리 리스트에서 서로 인접하게 묶어줌 — 지금 이 필터·검색 결과 안에서만
+  const byId = new Map(filtered.map(c=>[c.id,c]));
+  const visited = new Set();
+  const groups = [];
+  filtered.forEach(start=>{
+    if(visited.has(start.id)) return;
+    const group = [];
+    const stack = [start.id];
+    while(stack.length){
+      const id = stack.pop();
+      if(visited.has(id)) continue;
+      visited.add(id);
+      const cust = byId.get(id);
+      if(!cust) continue;
+      group.push(cust);
+      (cust.family||[]).forEach(f=>{ if(byId.has(f.relId) && !visited.has(f.relId)) stack.push(f.relId); });
+    }
+    group.sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+    groups.push(group);
+  });
+
+  const result = groups.flat();
+  const groupInfoById = new Map();
+  groups.forEach((g,gi)=>g.forEach(c=>groupInfoById.set(c.id, { groupIndex: gi, groupSize: g.length })));
+  result.groupInfoById = groupInfoById; // 렌더링에서만 쓰는 부가정보 — length/순회에는 영향 없음
+  return result;
 }
 
 function renderGiftShippingList(){
@@ -5477,33 +5511,49 @@ function renderGiftShippingList(){
     const p = premiumOf(c);
     return p===null ? `<span style="color:var(--text2)">-</span>` : `${p.toLocaleString()}원`;
   };
-  const editInputStyle = "width:100%;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;";
-  const phoneInputStyle = "width:118px;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;";
-  const phoneInput = c => `<input type="text" inputmode="numeric" maxlength="13" value="${escAttr(formatKoreanPhone(c.phone))}" placeholder="010-0000-0000" style="${phoneInputStyle}" oninput="formatPhoneInputLive(this)" onblur="giftShipField(this,${c.id},'phone')" onkeydown="if(event.key==='Enter')this.blur()">`;
-  const addressInput = c => `<input type="text" value="${escAttr(c.address||"")}" placeholder="주소 입력" style="${editInputStyle}${(c.address||"").trim()?"":"border-color:#fca5a5;"}" onblur="giftShipField(this,${c.id},'address')" onkeydown="if(event.key==='Enter')this.blur()">`;
+  const phoneInput = c => `<input type="text" inputmode="numeric" maxlength="13" class="gift-ship-input gift-ship-phone-input" value="${escAttr(formatKoreanPhone(c.phone))}" placeholder="010-0000-0000" oninput="formatPhoneInputLive(this)" onblur="giftShipField(this,${c.id},'phone')" onkeydown="if(event.key==='Enter')this.blur()">`;
+  const addressInput = c => `<input type="text" class="gift-ship-input${(c.address||"").trim()?"":" gift-ship-missing"}" value="${escAttr(c.address||"")}" placeholder="주소 입력" onblur="giftShipField(this,${c.id},'address')" onkeydown="if(event.key==='Enter')this.blur()">`;
+  const noteInput = c => `<input type="text" class="gift-ship-input" value="${escAttr(c.giftNote||"")}" placeholder="특이사항" onblur="giftShipField(this,${c.id},'giftNote')" onkeydown="if(event.key==='Enter')this.blur()">`;
+
+  // 가족으로 연결된 고객이 지금 이 목록 안에 같이 있으면 이름 옆에 배지로 표시
+  const idsInList = new Set(list.map(c=>c.id));
+  const familyBadge = c => {
+    const linked = (c.family||[]).filter(f=>idsInList.has(f.relId));
+    if(!linked.length) return "";
+    const names = linked.map(f=>{ const rc=customers.find(x=>x.id===f.relId); return rc?`${rc.name}(${f.rel})`:""; }).filter(Boolean).join(", ");
+    return `<span class="gift-ship-family-badge" title="가족: ${escAttr(names)}">👪</span>`;
+  };
+  const groupBg = c => {
+    const info = list.groupInfoById && list.groupInfoById.get(c.id);
+    if(!info || info.groupSize<2) return "";
+    return info.groupIndex%2===0 ? "background:#eff6ff;" : "background:#f5f3ff;";
+  };
 
   if(isMob){
     if(lw) lw.innerHTML = !list.length
       ? `<div class="empty"><span>🎁</span>결과 없음</div>`
-      : list.map(c=>`<div class="mob-card">
+      : list.map(c=>`<div class="mob-card" style="${groupBg(c)}">
           <div onclick="goToDetail(${c.id})" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer;">
             <strong style="font-size:15px;">${c.name}</strong>
+            ${familyBadge(c)}
             ${typeBadge(c)}
             <span style="margin-left:auto;font-size:12px;color:var(--text2);">${premiumCell(c)}</span>
           </div>
           <div style="margin-bottom:6px;">${phoneInput(c)}</div>
-          <div>${addressInput(c)}</div>
+          <div style="margin-bottom:6px;">${addressInput(c)}</div>
+          <div>${noteInput(c)}</div>
         </div>`).join("");
   } else {
     const tbody = document.getElementById("gift-ship-tbody");
     if(tbody) tbody.innerHTML = !list.length
-      ? `<tr><td colspan="5"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
-      : list.map(c=>`<tr>
+      ? `<tr><td colspan="6"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
+      : list.map(c=>`<tr style="${groupBg(c)}">
           <td>${typeBadge(c)}</td>
-          <td onclick="goToDetail(${c.id})" style="cursor:pointer;" title="고객 상세로 이동"><strong>${c.name}</strong></td>
+          <td onclick="goToDetail(${c.id})" style="cursor:pointer;" title="고객 상세로 이동"><strong>${c.name}</strong>${familyBadge(c)}</td>
           <td>${phoneInput(c)}</td>
           <td>${addressInput(c)}</td>
           <td style="white-space:nowrap;">${premiumCell(c)}</td>
+          <td>${noteInput(c)}</td>
         </tr>`).join("");
   }
 }
@@ -5530,6 +5580,7 @@ function downloadGiftShippingExcel(){
       "연락처": c.phone||"",
       "주소": c.address||"",
       "가입 보험료": p,
+      "특이사항": c.giftNote||"",
     };
   });
   const wb = XLSX.utils.book_new();
