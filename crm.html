@@ -1082,6 +1082,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="all-customers" onclick="closeMobileDrawer()"><span class="icon">👥</span> 전체 고객</div>
     <div class="nav-item" data-page="enrolled" onclick="closeMobileDrawer()"><span class="icon">✅</span> 가입 고객</div>
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
+    <div class="nav-item" data-page="gift-shipping" onclick="closeMobileDrawer()"><span class="icon">🎁</span> 고객 배송 리스트</div>
     <div class="nav-item" data-page="contracts" onclick="closeMobileDrawer()"><span class="icon">📄</span> 보험 계약</div>
     <div class="nav-item" data-page="proposals" onclick="closeMobileDrawer()"><span class="icon">📋</span> 가입제안서</div>
     <div class="nav-item" data-page="consulting-notes" onclick="closeMobileDrawer()"><span class="icon">📝</span> 컨설팅 노트</div>
@@ -1181,6 +1182,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="nav-item" data-page="all-customers"><span class="icon">👥</span> 전체 고객</div>
       <div class="nav-item" data-page="enrolled"><span class="icon">✅</span> 가입 고객</div>
       <div class="nav-item" data-page="prospects"><span class="icon">🌱</span> 가망 고객</div>
+      <div class="nav-item" data-page="gift-shipping"><span class="icon">🎁</span> 고객 배송 리스트</div>
       <div class="nav-item" data-page="contracts"><span class="icon">📄</span> 보험 계약</div>
       <div class="nav-item" data-page="proposals"><span class="icon">📋</span> 가입제안서</div>
       <div class="nav-item" data-page="consulting-notes"><span class="icon">📝</span> 컨설팅 노트</div>
@@ -1358,6 +1360,30 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <tbody id="all-customers-tbody"></tbody></table>
     </div>
     <div id="all-customers-list-wrap" style="display:none;"></div>
+  </div>
+
+  <!-- 고객 배송 리스트 (명절 선물 발송용) -->
+  <div class="page" id="page-gift-shipping">
+    <div class="page-header">
+      <div><h2>🎁 고객 배송 리스트</h2><p>명절 선물 등 우편 발송을 위한 주소록이에요. 목록을 엑셀로 내려받아 사용하세요.</p></div>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-gift-shipping" placeholder="이름 또는 전화번호 검색..." oninput="renderGiftShippingList()"></div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;">
+        <input type="checkbox" id="gift-ship-address-only" onchange="giftShipAddressOnly=this.checked;renderGiftShippingList()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);">
+        주소 있는 고객만
+      </label>
+      <button class="btn btn-primary" onclick="downloadGiftShippingExcel()" style="margin-left:auto;">📥 엑셀로 다운로드</button>
+    </div>
+    <div class="filters" id="type-filters-gift-shipping"></div>
+    <div style="margin-bottom:8px;">
+      <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;" id="gift-ship-table-wrap">
+      <table><thead><tr><th>가입여부</th><th>고객명</th><th>연락처</th><th>주소</th></tr></thead>
+      <tbody id="gift-ship-tbody"></tbody></table>
+    </div>
+    <div id="gift-ship-list-wrap" style="display:none;"></div>
   </div>
 
   <!-- ENROLLED -->
@@ -3719,6 +3745,8 @@ let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
+let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망
+let giftShipAddressOnly = false;
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
 let contractSort = "end_asc";
@@ -4554,7 +4582,7 @@ async function aiSalesReport() {
 
 function clearAllFilters() {
   // 검색창 초기화
-  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals","search-all-customers"].forEach(id => {
+  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals","search-all-customers","search-gift-shipping"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
@@ -4568,6 +4596,7 @@ function clearAllFilters() {
   activeConsultTypeFilter = "전체";
   activeConsultCustFilter = "전체고객";
   activeAllCustTypeFilter = "전체";
+  activeGiftShipTypeFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -4587,6 +4616,7 @@ function showPage(name, pushHistory=true){
   const ni=document.querySelector(`[data-page="${name}"]`);if(ni)ni.classList.add("active");
   if(name==="dashboard")renderDashboard();
   if(name==="all-customers")renderAllCustomers();
+  if(name==="gift-shipping")renderGiftShippingList();
   if(name==="enrolled")renderEnrolled();
   if(name==="prospects"){ prospectsViewMode="list"; renderProspects(); }
   if(name==="expiring")renderExpiring();
@@ -5396,6 +5426,82 @@ function renderAllCustomers(){
           <td style="color:var(--text2);font-size:12px;">${getRegDate(c)||"-"}</td>
         </tr>`).join("");
   }
+}
+
+// 명절 선물 등 우편 발송용 배송 리스트 — 가입여부/이름/연락처/주소만 간단히 보여주고 엑셀로 내려받음
+function getGiftShippingList(){
+  const qEl = document.getElementById("search-gift-shipping");
+  const q = qEl ? qEl.value.trim() : "";
+  return customers.filter(c=>{
+    if(activeGiftShipTypeFilter!=="전체" && c.type!==activeGiftShipTypeFilter) return false;
+    if(giftShipAddressOnly && !(c.address||"").trim()) return false;
+    if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
+    return true;
+  }).sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+}
+
+function renderGiftShippingList(){
+  document.getElementById("type-filters-gift-shipping").innerHTML =
+    ["전체","가입","가망"].map(t=>`<button class="filter-btn ${t===activeGiftShipTypeFilter?"active":""}" onclick="activeGiftShipTypeFilter='${t}';renderGiftShippingList()">${t}</button>`).join("");
+  const addrOnlyEl = document.getElementById("gift-ship-address-only");
+  if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
+
+  const typeBadge = c => c.type==="가입"
+    ? `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;">가입</span>`
+    : `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#f0e6ff;color:var(--purple);">가망</span>`;
+
+  const list = getGiftShippingList();
+  const missingAddr = list.filter(c=>!(c.address||"").trim()).length;
+  const countLabel = document.getElementById("gift-ship-count-label");
+  if(countLabel) countLabel.textContent = `총 ${list.length}명${missingAddr?` · 주소 없음 ${missingAddr}명`:""}`;
+
+  const isMob = window.innerWidth <= 768;
+  const tw = document.getElementById("gift-ship-table-wrap");
+  const lw = document.getElementById("gift-ship-list-wrap");
+  if(tw) tw.style.display = isMob ? "none" : "";
+  if(lw) lw.style.display = isMob ? "" : "none";
+
+  const addrCell = c => (c.address||"").trim()
+    ? `<span>${escAttr(c.address)}</span>`
+    : `<span style="color:var(--red);font-size:12px;">주소 없음</span>`;
+
+  if(isMob){
+    if(lw) lw.innerHTML = !list.length
+      ? `<div class="empty"><span>🎁</span>결과 없음</div>`
+      : list.map(c=>`<div class="mob-card" onclick="goToDetail(${c.id})">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <strong style="font-size:15px;">${c.name}</strong>
+            ${typeBadge(c)}
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px;">${c.phone||""}</div>
+          <div style="font-size:13px;">${addrCell(c)}</div>
+        </div>`).join("");
+  } else {
+    const tbody = document.getElementById("gift-ship-tbody");
+    if(tbody) tbody.innerHTML = !list.length
+      ? `<tr><td colspan="4"><div class="empty"><span>🎁</span>결과 없음</div></td></tr>`
+      : list.map(c=>`<tr class="clickable" onclick="goToDetail(${c.id})">
+          <td>${typeBadge(c)}</td>
+          <td><strong>${c.name}</strong></td>
+          <td>${c.phone||""}</td>
+          <td>${addrCell(c)}</td>
+        </tr>`).join("");
+  }
+}
+
+function downloadGiftShippingExcel(){
+  const list = getGiftShippingList();
+  if(!list.length){ alert("다운로드할 고객이 없습니다."); return; }
+  const rows = list.map(c=>({
+    "가입여부": c.type,
+    "고객명": c.name,
+    "연락처": c.phone||"",
+    "주소": c.address||"",
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "배송리스트");
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `고객배송리스트_${today}.xlsx`);
 }
 
 function renderProspects(){
