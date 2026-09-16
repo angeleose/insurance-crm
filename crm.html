@@ -3697,7 +3697,7 @@ let funnelPosts = [];
 // 계약을 보고 새로 만든 게시물까지 "완료"로 잘못 표시해버림.
 let funnelCompletionSyncDone = false;
 // 관심상품 카테고리 — 게시물의 "관심 상품"을 자유 입력이 아닌 고정 목록에서 선택하게 함
-let productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+let productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험","자동차보험"];
 // 영업 퍼널 게시물 태그 — 제목에 "[재가입]"처럼 끼워넣는 대신 별도 태그로 관리
 let funnelPostTags = ["재가입"];
 // 컨설팅 노트 — 고객별 보장분석·제안 기록. 반드시 고객과 연동되며(customerId 필수),
@@ -6898,8 +6898,23 @@ function addContract(){
   autoSave();
 }
 
+// ct-type/ec-type 드롭다운을 설정의 관심상품 카테고리(productCategories) 기준으로 항상 최신으로 채움.
+// 예전엔 <select>에 11개 항목이 하드코딩돼 있어서, 설정에서 새 카테고리(예: 자동차보험)를
+// 추가해도 이 드롭다운엔 안 나타나고, 그런 종류의 계약을 수정하려고 열면 선택값이 비어 보이던 버그.
+function populateCtTypeSelects(currentValue){
+  // currentValue가 카테고리 목록에 없는 값(예전에 저장된 값이 나중에 삭제/변경된 경우)이면
+  // 목록에 없다고 선택값이 그냥 사라지지 않도록 임시로 옵션에 추가해준다.
+  const opts = (currentValue && !productCategories.includes(currentValue)) ? [...productCategories, currentValue] : productCategories;
+  const optionsHtml = opts.map(p=>`<option value="${escAttr(p)}">${p}</option>`).join("");
+  ["ct-type","ec-type"].forEach(id=>{
+    const sel = document.getElementById(id);
+    if(sel) sel.innerHTML = optionsHtml;
+  });
+}
+
 function openAddContractFromDetail(){
   _fpPendingContractPostId = null; // registerContractFromFunnelPost가 아닌 다른 경로로 열렸다면 초기화
+  populateCtTypeSelects();
   document.getElementById("ct-customer-wrap").style.display = "none";
   ["ct-product","ct-insurer","ct-premium","ct-start","ct-end","ct-duedate","ct-insured"].forEach(id=>document.getElementById(id).value="");
   ["ct-pay-period","ct-end-type"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
@@ -6911,6 +6926,7 @@ function openAddContractFromDetail(){
 
 function openAddContractFromList(){
   _fpPendingContractPostId = null; // 영업 퍼널 흐름이 아닌 일반 계약 추가이므로 초기화
+  populateCtTypeSelects();
   if(!customers.length){ alert("고객이 없습니다."); return; }
   document.getElementById("ct-cust-search").value = "";
   document.getElementById("ct-customer-id").value = "";
@@ -7606,7 +7622,7 @@ async function resetAllData() {
   customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = []; consultingNotes = [];
   funnelCompletionSyncDone = false;
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
-  productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험"];
+  productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험","자동차보험"];
   funnelPostTags = ["재가입"];
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
@@ -9097,6 +9113,7 @@ function deleteMedical(mId) {
 function openEditContract(ctId) {
   const c = customers.find(x=>x.id===currentCustomerId); if(!c) return;
   const ct = c.contracts.find(x=>String(x.id)===String(ctId)); if(!ct) return;
+  populateCtTypeSelects(ct.type);
   document.getElementById("ec-type").value = ct.type;
   const ecDdWrap = document.getElementById("ec-duedate-wrap");
   ecDdWrap.style.display = ct.type==="태아보험" ? "" : "none";
@@ -10364,6 +10381,9 @@ async function loadFromFirestore() {
       if (typeof p.funnelCompletionSyncDone === "boolean") funnelCompletionSyncDone = p.funnelCompletionSyncDone;
       if (p.consultingNotes) consultingNotes = p.consultingNotes;
       if (p.productCategories && p.productCategories.length) productCategories = p.productCategories;
+      // "자동차보험" 카테고리가 나중에 추가됐는데, 기존에 저장해둔 카테고리 목록에는 없어서
+      // 계약 종류를 자동차보험으로 골라 저장한 뒤 수정하려고 열면 드롭다운이 비어 보이던 문제 — 1회만 채워줌
+      if (!productCategories.includes("자동차보험")) { productCategories.push("자동차보험"); }
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
