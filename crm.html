@@ -614,6 +614,12 @@
   .kb-subtabs{display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content;}
   .kb-subtab-btn{padding:7px 16px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;}
   .kb-subtab-btn.active{background:#fff;color:var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .kb-funnel-chart{display:flex;flex-direction:column;gap:9px;}
+  .kb-funnel-bar-row{display:flex;align-items:center;gap:10px;}
+  .kb-funnel-bar-label{flex:0 0 96px;font-size:12px;font-weight:700;color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .kb-funnel-bar-track{flex:1;height:24px;background:#f1f5f9;border-radius:6px;overflow:hidden;}
+  .kb-funnel-bar-fill{height:100%;background:linear-gradient(90deg,var(--purple-light),var(--purple));border-radius:6px;transition:width .3s;min-width:2px;}
+  .kb-funnel-bar-stat{flex:0 0 96px;font-size:12px;font-weight:700;color:var(--text);}
   .cn-repeat-row{border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--bg1,var(--bg));}
   .cn-repeat-row-head{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
   .cn-repeat-row-head input{flex:1;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;}
@@ -5881,6 +5887,34 @@ function renderFunnelOutcomeSummaryHtml(kbList){
   </div>`;
 }
 
+// 설정된 진행 단계(customStages) 순서를 그대로 반영한 퍼널 차트 — 각 단계에 "도달한"(그 단계이거나
+// 그보다 앞선 단계인) 게시물 비율을 막대로 보여줌. 맨 위 단계는 항상 전체의 100%.
+function computeFunnelStageProgress(kbList){
+  const total = kbList.length;
+  const stageIndexOf = p => { const idx = customStages.indexOf(p.stage||customStages[0]); return idx>=0 ? idx : 0; };
+  return customStages.map((stage,i)=>{
+    const count = kbList.filter(p=>stageIndexOf(p)>=i).length;
+    const pct = total ? Math.round(count/total*100) : 0;
+    return { stage, count, pct };
+  });
+}
+function renderFunnelStageChartHtml(kbList){
+  if(!customStages.length) return "";
+  const rows = computeFunnelStageProgress(kbList);
+  const total = kbList.length;
+  const bar = r => `<div class="kb-funnel-bar-row">
+      <div class="kb-funnel-bar-label">${escAttr(r.stage)}</div>
+      <div class="kb-funnel-bar-track"><div class="kb-funnel-bar-fill" style="width:${r.pct}%;"></div></div>
+      <div class="kb-funnel-bar-stat">${r.count}건 · ${r.pct}%</div>
+    </div>`;
+  return `<div class="kb-month-summary">
+    <div class="kb-month-summary-title">📉 단계별 진행 퍼널 <span style="font-weight:400;color:var(--text2);">(전체 ${total}건 중 각 단계에 도달한 비율)</span></div>
+    <div class="kb-funnel-chart">
+      ${rows.map(bar).join("")}
+    </div>
+  </div>`;
+}
+
 function renderFunnelTagPerfHtml(kbList){
   const byTag = computeFunnelTagPerformance(kbList);
   // 설정에 등록된 태그는 게시물이 0건이어도 항상 표시(기능이 어디 있는지 알 수 있게) —
@@ -5999,6 +6033,7 @@ function renderFunnelSourceCostHtml(kbList){
 // 영업 퍼널 "성과" 탭 — 칸반 보드와 별개로, 퍼널 전체 성과 요약을 한 곳에 모아 보여줌
 function renderFunnelPerformanceTabHtml(kbList){
   return renderFunnelOutcomeSummaryHtml(kbList)
+    + renderFunnelStageChartHtml(kbList)
     + renderFunnelSourceCostHtml(kbList)
     + renderFunnelMonthlySummaryHtml(kbList)
     + renderFunnelTagPerfHtml(kbList);
