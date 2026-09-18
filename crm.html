@@ -655,6 +655,7 @@
   .kb-month-chip-total{background:var(--purple-light);border-color:#d8c4fb;}
   .kb-month-chip-total .kb-month-label,.kb-month-chip-total .kb-month-count{color:var(--purple);}
   .kb-month-chip-total .kb-month-total{color:var(--purple);}
+  .kb-tag-perf-rate{font-size:11px;color:#16a34a;font-weight:700;}
 
 /* ── 타임라인 ── */
 .tl-wrap { position:relative; padding-left:24px; margin-top:4px; }
@@ -5788,6 +5789,52 @@ function renderFunnelMonthlySummaryHtml(kbList){
   </div>`;
 }
 
+// 태그별 성과 — 게시물 수·계약등록 완료 수·전환율·완료된 계약의 보험료 합계를 태그별로 집계
+function computeFunnelTagPerformance(kbList){
+  const byTag = {}; // 태그명 -> {total, done, premium}
+  kbList.forEach(p=>{
+    const tags = (p.tags && p.tags.length) ? p.tags : ["(태그 없음)"];
+    let premium = 0;
+    if(p.contractRegistered && p.customerId && p.registeredContractId){
+      const c = customers.find(x=>x.id===p.customerId);
+      const ct = c && c.contracts.find(x=>String(x.id)===String(p.registeredContractId));
+      premium = ct ? (ct.premium||0) : 0;
+    }
+    tags.forEach(t=>{
+      if(!byTag[t]) byTag[t] = { total:0, done:0, premium:0 };
+      byTag[t].total++;
+      if(p.contractRegistered){ byTag[t].done++; byTag[t].premium += premium; }
+    });
+  });
+  return byTag;
+}
+function renderFunnelTagPerfHtml(kbList){
+  const byTag = computeFunnelTagPerformance(kbList);
+  // 설정에 등록된 태그는 게시물이 0건이어도 항상 표시(기능이 어디 있는지 알 수 있게) —
+  // "계약검토 예상매출" 패널이 숨겨져서 헷갈렸던 것과 같은 실수를 반복하지 않기 위함.
+  // 게시물에만 쓰이고 설정 목록엔 없는 태그·무태그는 뒤에 붙임.
+  const known = funnelPostTags;
+  const extra = Object.keys(byTag).filter(t=>!funnelPostTags.includes(t) && t!=="(태그 없음)");
+  const order = [...known, ...extra, ...(byTag["(태그 없음)"] ? ["(태그 없음)"] : [])];
+  if(!order.length) return "";
+  const chip = t => {
+    const s = byTag[t] || { total:0, done:0, premium:0 };
+    const rate = s.total ? Math.round(s.done/s.total*100) : 0;
+    return `<div class="kb-month-chip">
+      <span class="kb-month-label">${escAttr(t)}</span>
+      <span class="kb-month-count">${s.total}건 · 완료 ${s.done}건</span>
+      <span class="kb-tag-perf-rate">전환율 ${rate}%</span>
+      <span class="kb-month-total">${s.premium.toLocaleString()}원</span>
+    </div>`;
+  };
+  return `<div class="kb-month-summary">
+    <div class="kb-month-summary-title">🏷️ 태그별 성과</div>
+    <div class="kb-month-chips">
+      ${order.map(chip).join("")}
+    </div>
+  </div>`;
+}
+
 function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
@@ -5828,6 +5875,7 @@ function renderProspectsKanban(kbList){
   };
 
   wrap.innerHTML = renderFunnelMonthlySummaryHtml(kbList)
+    + renderFunnelTagPerfHtml(kbList)
     + `<div class="kb-board">${customStages.map(stageCol).join("")}</div>
     <div style="margin-top:10px;display:flex;gap:14px;align-items:center;">
       <button class="btn btn-purple btn-sm" onclick="openFunnelPostModal(null, customStages[0])">+ 새 게시물 추가</button>
