@@ -611,6 +611,9 @@
   .fp-tag-chip.selected-fail{border-color:#ef4444;background:#fee2e2;color:#ef4444;}
   .kb-card.kb-card-failed{opacity:.65;}
   .kb-fail-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#fee2e2;color:#ef4444;margin-bottom:4px;}
+  .kb-subtabs{display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content;}
+  .kb-subtab-btn{padding:7px 16px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;}
+  .kb-subtab-btn.active{background:#fff;color:var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.08);}
   .cn-repeat-row{border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--bg1,var(--bg));}
   .cn-repeat-row-head{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
   .cn-repeat-row-head input{flex:1;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;}
@@ -3776,6 +3779,9 @@ let enrolledDateTo = '';
 let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
+let funnelSubTab = 'board'; // 영업 퍼널 하위 탭: board(칸반 보드) | performance(성과)
+// 출처(마케팅 채널)별 비용 — {"메타광고": 500000, ...} 형태. 성과 탭에서 비용 대비 전환을 보기 위해 씀
+let sourceCosts = {};
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let giftShipAddressOnly = false;
@@ -5755,6 +5761,7 @@ function setProspectsView(mode){
 function openFunnelBoard(){
   showPage("prospects");
   setProspectsView("kanban");
+  funnelSubTab = "board";
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   document.querySelectorAll('.nav-item[data-page="funnel"]').forEach(n=>n.classList.add("active"));
 }
@@ -5899,11 +5906,93 @@ function renderFunnelTagPerfHtml(kbList){
   </div>`;
 }
 
+// 출처(마케팅 채널)별 비용 대비 성과 — 게시물은 연동된 고객의 출처를 기준으로 집계.
+// 비용은 각 채널 옆에 직접 입력(설정이 아니라 성과 탭에서 바로) — sourceCosts에 저장.
+function computeFunnelSourceCost(kbList){
+  const bySrc = {}; // 출처명 -> {total, done, premium}
+  kbList.forEach(p=>{
+    const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
+    const src = (linked && linked.source) ? linked.source : "(출처 없음)";
+    if(!bySrc[src]) bySrc[src] = { total:0, done:0, premium:0 };
+    bySrc[src].total++;
+    if(p.contractRegistered){
+      bySrc[src].done++;
+      if(linked && p.registeredContractId){
+        const ct = linked.contracts.find(x=>String(x.id)===String(p.registeredContractId));
+        if(ct) bySrc[src].premium += (ct.premium||0);
+      }
+    }
+  });
+  return bySrc;
+}
+function updateFunnelSourceCost(el, source){
+  const value = parseInt(el.value)||0;
+  if((sourceCosts[source]||0) === value) return;
+  sourceCosts[source] = value;
+  autoSave();
+  renderProspects();
+}
+function renderFunnelSourceCostHtml(kbList){
+  const bySrc = computeFunnelSourceCost(kbList);
+  const names = getSourceNames();
+  const order = [...names, ...(bySrc["(출처 없음)"] ? ["(출처 없음)"] : [])];
+  if(!order.length) return "";
+  const rows = order.map(src=>{
+    const s = bySrc[src] || { total:0, done:0, premium:0 };
+    const cost = sourceCosts[src] || 0;
+    const rate = s.total ? Math.round(s.done/s.total*100) : 0;
+    const perLead = (cost && s.total) ? Math.round(cost/s.total) : null;
+    const perDeal = (cost && s.done) ? Math.round(cost/s.done) : null;
+    const multiple = (cost && s.premium) ? (s.premium/cost).toFixed(1) : null;
+    const isNoSrc = src==="(출처 없음)";
+    return `<tr>
+      <td><strong>${escAttr(src)}</strong></td>
+      <td>${s.total}건</td>
+      <td>${s.done}건</td>
+      <td>${rate}%</td>
+      <td>${s.premium.toLocaleString()}원</td>
+      <td>${isNoSrc ? "-" : `<input type="number" value="${cost||""}" placeholder="0" style="width:100px;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;" onblur="updateFunnelSourceCost(this,'${escAttr(src)}')" onkeydown="if(event.key==='Enter')this.blur()">`}</td>
+      <td>${perLead!==null ? perLead.toLocaleString()+"원" : "-"}</td>
+      <td>${perDeal!==null ? perDeal.toLocaleString()+"원" : "-"}</td>
+      <td>${multiple!==null ? multiple+"배" : "-"}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="kb-month-summary">
+    <div class="kb-month-summary-title">💰 출처별 비용 대비 성과 <span style="font-weight:400;color:var(--text2);">(마케팅 비용을 입력하면 자동 계산돼요)</span></div>
+    <div style="overflow-x:auto;">
+      <table class="cn-cov-table" style="min-width:720px;">
+        <thead><tr><th>출처</th><th>게시물</th><th>계약</th><th>전환율</th><th>보험료 합계</th><th>마케팅 비용</th><th>건당 비용</th><th>계약당 비용</th><th>비용 대비</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// 영업 퍼널 "성과" 탭 — 칸반 보드와 별개로, 퍼널 전체 성과 요약을 한 곳에 모아 보여줌
+function renderFunnelPerformanceTabHtml(kbList){
+  return renderFunnelOutcomeSummaryHtml(kbList)
+    + renderFunnelSourceCostHtml(kbList)
+    + renderFunnelMonthlySummaryHtml(kbList)
+    + renderFunnelTagPerfHtml(kbList);
+}
+
+function setFunnelSubTab(tab){
+  funnelSubTab = tab;
+  renderProspects();
+}
 function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
   if(!wrap) return;
+  const subtabsHtml = `<div class="kb-subtabs">
+    <button class="kb-subtab-btn ${funnelSubTab==='board'?'active':''}" onclick="setFunnelSubTab('board')">🗂 칸반 보드</button>
+    <button class="kb-subtab-btn ${funnelSubTab==='performance'?'active':''}" onclick="setFunnelSubTab('performance')">📊 성과</button>
+  </div>`;
+  if(funnelSubTab==='performance'){
+    wrap.innerHTML = subtabsHtml + renderFunnelPerformanceTabHtml(kbList);
+    return;
+  }
   if(!customStages.length){
-    wrap.innerHTML = `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
+    wrap.innerHTML = subtabsHtml + `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
     return;
   }
   const stageCol = (stage) => {
@@ -5940,9 +6029,7 @@ function renderProspectsKanban(kbList){
     </div>`;
   };
 
-  wrap.innerHTML = renderFunnelOutcomeSummaryHtml(kbList)
-    + renderFunnelMonthlySummaryHtml(kbList)
-    + renderFunnelTagPerfHtml(kbList)
+  wrap.innerHTML = subtabsHtml
     + `<div class="kb-board">${customStages.map(stageCol).join("")}</div>
     <div style="margin-top:10px;display:flex;gap:14px;align-items:center;">
       <button class="btn btn-purple btn-sm" onclick="openFunnelPostModal(null, customStages[0])">+ 새 게시물 추가</button>
@@ -7820,6 +7907,7 @@ async function resetAllData() {
   productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험","자동차보험"];
   funnelPostTags = ["재가입"];
   funnelFailReasons = ["부재","거절","상담 후 무산","기타"];
+  sourceCosts = {};
   customSources = [{name:"펫박람회",needsVenue:true},{name:"태아박람회",needsVenue:true},{name:"DB",needsVenue:false},{name:"SNS",needsVenue:false},{name:"광고",needsVenue:false},{name:"산모교실",needsVenue:true},{name:"지인소개",needsVenue:false}];
   await saveToFirestore();
   renderDashboard(); renderEnrolled(); renderProspects();
@@ -10522,6 +10610,7 @@ async function saveToFirestore() {
     productCategories,
     funnelPostTags,
     funnelFailReasons,
+    sourceCosts,
     customSources,
     cardPayRecords,
     cardInfoRecords,
@@ -10583,6 +10672,7 @@ async function loadFromFirestore() {
       if (!productCategories.includes("자동차보험")) { productCategories.push("자동차보험"); }
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.funnelFailReasons && p.funnelFailReasons.length) funnelFailReasons = p.funnelFailReasons;
+      if (p.sourceCosts) sourceCosts = p.sourceCosts;
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
