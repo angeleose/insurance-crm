@@ -3780,8 +3780,10 @@ let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
 let funnelSubTab = 'board'; // 영업 퍼널 하위 탭: board(칸반 보드) | performance(성과)
-// 출처(마케팅 채널)별 비용 — {"메타광고": 500000, ...} 형태. 성과 탭에서 비용 대비 전환을 보기 위해 씀
+// 출처(마케팅 채널)별 월별 비용 — {"메타광고": {"2026-09": 500000, ...}, ...} 형태.
+// 성과 탭에서 월별 리드 수·비용 대비 전환을 보기 위해 씀
 let sourceCosts = {};
+let funnelCostMonth = ''; // 성과 탭에서 선택 중인 비용 조회 월("전체" 또는 "YYYY-MM"). 빈 값이면 최신 월로 기본 선택
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let giftShipAddressOnly = false;
@@ -5906,11 +5908,19 @@ function renderFunnelTagPerfHtml(kbList){
   </div>`;
 }
 
-// 출처(마케팅 채널)별 비용 대비 성과 — 게시물은 연동된 고객의 출처를 기준으로 집계.
-// 비용은 각 채널 옆에 직접 입력(설정이 아니라 성과 탭에서 바로) — sourceCosts에 저장.
-function computeFunnelSourceCost(kbList){
+// 출처(마케팅 채널)별 월별 비용 대비 성과 — 게시물(=리드)은 연동된 고객의 출처와, 게시물의
+// 시작일(월)을 기준으로 집계. 비용도 월별로 따로 입력·저장(sourceCosts[출처][월]).
+function getFunnelCostMonths(kbList){
+  const set = new Set();
+  const now = new Date();
+  set.add(now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")); // 이번 달은 리드가 아직 없어도 항상 후보에 넣음
+  kbList.forEach(p=>{ if(p.date) set.add(p.date.slice(0,7)); });
+  return [...set].sort().reverse();
+}
+function computeFunnelSourceCost(kbList, month){
+  const filtered = month==="전체" ? kbList : kbList.filter(p=>p.date && p.date.slice(0,7)===month);
   const bySrc = {}; // 출처명 -> {total, done, premium}
-  kbList.forEach(p=>{
+  filtered.forEach(p=>{
     const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
     const src = (linked && linked.source) ? linked.source : "(출처 없음)";
     if(!bySrc[src]) bySrc[src] = { total:0, done:0, premium:0 };
@@ -5925,43 +5935,61 @@ function computeFunnelSourceCost(kbList){
   });
   return bySrc;
 }
-function updateFunnelSourceCost(el, source){
+function getFunnelSourceCost(source, month){
+  if(!sourceCosts[source]) return 0;
+  if(month==="전체") return Object.values(sourceCosts[source]).reduce((s,v)=>s+(v||0),0);
+  return sourceCosts[source][month] || 0;
+}
+function updateFunnelSourceCost(el, source, month){
   const value = parseInt(el.value)||0;
-  if((sourceCosts[source]||0) === value) return;
-  sourceCosts[source] = value;
+  if(!sourceCosts[source]) sourceCosts[source] = {};
+  if((sourceCosts[source][month]||0) === value) return;
+  sourceCosts[source][month] = value;
   autoSave();
   renderProspects();
 }
 function renderFunnelSourceCostHtml(kbList){
-  const bySrc = computeFunnelSourceCost(kbList);
+  const months = getFunnelCostMonths(kbList);
+  const month = (funnelCostMonth==="전체" || months.includes(funnelCostMonth)) ? funnelCostMonth : (months[0]||"전체");
+  const bySrc = computeFunnelSourceCost(kbList, month);
   const names = getSourceNames();
   const order = [...names, ...(bySrc["(출처 없음)"] ? ["(출처 없음)"] : [])];
   if(!order.length) return "";
+  const monthOptions = ["전체", ...months];
   const rows = order.map(src=>{
     const s = bySrc[src] || { total:0, done:0, premium:0 };
-    const cost = sourceCosts[src] || 0;
+    const cost = getFunnelSourceCost(src, month);
     const rate = s.total ? Math.round(s.done/s.total*100) : 0;
     const perLead = (cost && s.total) ? Math.round(cost/s.total) : null;
     const perDeal = (cost && s.done) ? Math.round(cost/s.done) : null;
     const multiple = (cost && s.premium) ? (s.premium/cost).toFixed(1) : null;
     const isNoSrc = src==="(출처 없음)";
+    // "전체 기간"은 월별 합산만 보여줌(특정 월에 입력한 값을 여기서 직접 고치면 헷갈리므로 입력은 월별로만)
+    const costCell = (isNoSrc || month==="전체")
+      ? `${cost.toLocaleString()}원`
+      : `<input type="number" value="${cost||""}" placeholder="0" style="width:100px;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;" onblur="updateFunnelSourceCost(this,'${escAttr(src)}','${month}')" onkeydown="if(event.key==='Enter')this.blur()">`;
     return `<tr>
       <td><strong>${escAttr(src)}</strong></td>
       <td>${s.total}건</td>
       <td>${s.done}건</td>
       <td>${rate}%</td>
       <td>${s.premium.toLocaleString()}원</td>
-      <td>${isNoSrc ? "-" : `<input type="number" value="${cost||""}" placeholder="0" style="width:100px;font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;box-sizing:border-box;" onblur="updateFunnelSourceCost(this,'${escAttr(src)}')" onkeydown="if(event.key==='Enter')this.blur()">`}</td>
+      <td>${costCell}</td>
       <td>${perLead!==null ? perLead.toLocaleString()+"원" : "-"}</td>
       <td>${perDeal!==null ? perDeal.toLocaleString()+"원" : "-"}</td>
       <td>${multiple!==null ? multiple+"배" : "-"}</td>
     </tr>`;
   }).join("");
   return `<div class="kb-month-summary">
-    <div class="kb-month-summary-title">💰 출처별 비용 대비 성과 <span style="font-weight:400;color:var(--text2);">(마케팅 비용을 입력하면 자동 계산돼요)</span></div>
+    <div class="kb-month-summary-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>💰 출처별 비용 대비 성과 <span style="font-weight:400;color:var(--text2);">(리드=게시물 수, 월별로 마케팅 비용을 입력하면 자동 계산돼요)</span></span>
+      <select onchange="funnelCostMonth=this.value;renderProspects()" style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:700;color:var(--text);">
+        ${monthOptions.map(m=>`<option value="${m}" ${m===month?"selected":""}>${m==="전체"?"전체 기간":m}</option>`).join("")}
+      </select>
+    </div>
     <div style="overflow-x:auto;">
-      <table class="cn-cov-table" style="min-width:720px;">
-        <thead><tr><th>출처</th><th>게시물</th><th>계약</th><th>전환율</th><th>보험료 합계</th><th>마케팅 비용</th><th>건당 비용</th><th>계약당 비용</th><th>비용 대비</th></tr></thead>
+      <table class="cn-cov-table" style="min-width:760px;">
+        <thead><tr><th>출처</th><th>리드(게시물)</th><th>계약</th><th>전환율</th><th>보험료 합계</th><th>마케팅 비용</th><th>건당 비용</th><th>계약당 비용</th><th>비용 대비</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -10673,6 +10701,14 @@ async function loadFromFirestore() {
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.funnelFailReasons && p.funnelFailReasons.length) funnelFailReasons = p.funnelFailReasons;
       if (p.sourceCosts) sourceCosts = p.sourceCosts;
+      // sourceCosts를 출처당 단일 총액에서 출처×월별 비용으로 바꾸면서, 예전 방식(숫자 하나)으로
+      // 저장돼 있던 값은 이번 달 비용으로 1회 이전 — 안 그러면 이미 입력해둔 비용이 사라져 보임
+      Object.keys(sourceCosts).forEach(src=>{
+        if (typeof sourceCosts[src] === "number") {
+          const thisMonth = new Date().toISOString().slice(0,7);
+          sourceCosts[src] = { [thisMonth]: sourceCosts[src] };
+        }
+      });
       if (p.customSources && p.customSources.length) customSources = p.customSources;
       if (p.cardPayRecords)  cardPayRecords  = p.cardPayRecords;
       if (p.cardInfoRecords) cardInfoRecords = p.cardInfoRecords;
