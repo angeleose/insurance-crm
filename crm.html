@@ -3786,7 +3786,7 @@ let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
 let funnelSubTab = 'board'; // 영업 퍼널 하위 탭: board(칸반 보드) | performance(성과)
-let funnelHideNoShowRejected = false; // 칸반 보드에서 부재·거절로 끝난 게시물 숨기기(성과 탭 집계에는 영향 없음)
+let funnelHideNoShowRejected = true; // 칸반 보드에서 부재·거절로 끝난 게시물 숨기기(성과 탭 집계에는 영향 없음) — 기본값 켜짐
 // 출처(마케팅 채널)별 월별 비용 — {"메타광고": {"2026-09": 500000, ...}, ...} 형태.
 // 성과 탭에서 월별 리드 수·비용 대비 전환을 보기 위해 씀
 let sourceCosts = {};
