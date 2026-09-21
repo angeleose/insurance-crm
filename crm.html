@@ -1399,6 +1399,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="filters" id="type-filters-gift-shipping"></div>
     <div class="filters" id="contract-type-filters-gift-shipping"></div>
     <div class="filters" id="year-filters-gift-shipping"></div>
+    <div class="filters" id="premium-filters-gift-shipping"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
       <select id="gift-ship-sort-select" onchange="giftShipSort=this.value;renderGiftShippingList()"
@@ -3803,6 +3804,12 @@ let funnelCostMonth = ''; // 성과 탭에서 선택 중인 비용 조회 월("�
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let activeGiftShipYearFilter = '전체'; // 전체 or 가입년도(YYYY)
+let activeGiftShipPremiumFilter = '전체'; // 전체 or GIFT_SHIP_PREMIUM_BUCKETS의 id 중 하나
+const GIFT_SHIP_PREMIUM_BUCKETS = [
+  { id: 'under10', label: '10만원 미만', test: p => p < 100000 },
+  { id: '10to30', label: '10만원~30만원 미만', test: p => p >= 100000 && p < 300000 },
+  { id: 'over30', label: '30만원 이상', test: p => p >= 300000 },
+];
 let giftShipSort = 'name_asc'; // name_asc | premium_desc | premium_asc | joinDate_desc | joinDate_asc
 let giftShipAddressOnly = false;
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
@@ -4657,6 +4664,7 @@ function clearAllFilters() {
   activeGiftShipTypeFilter = "전체";
   activeGiftShipContractTypeFilter = "전체";
   activeGiftShipYearFilter = "전체";
+  activeGiftShipPremiumFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -5547,6 +5555,10 @@ function getGiftShippingList(){
     if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
     if(activeGiftShipContractTypeFilter!=="전체" && !giftShipContractTypes(c).includes(activeGiftShipContractTypeFilter)) return false;
     if(activeGiftShipYearFilter!=="전체" && giftShipJoinDateOf(c).slice(0,4)!==activeGiftShipYearFilter) return false;
+    if(activeGiftShipPremiumFilter!=="전체"){
+      const bucket = GIFT_SHIP_PREMIUM_BUCKETS.find(b=>b.id===activeGiftShipPremiumFilter);
+      if(bucket && !bucket.test(giftShipPremiumOf(c))) return false;
+    }
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
     if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
     return true;
@@ -5590,6 +5602,9 @@ function renderGiftShippingList(){
   document.getElementById("year-filters-gift-shipping").innerHTML = years.length
     ? ["전체",...years].map(t=>`<button class="filter-btn ${t===activeGiftShipYearFilter?"active":""}" onclick="activeGiftShipYearFilter='${t}';renderGiftShippingList()">${t==="전체"?"전체 연도":t+"년"}</button>`).join("")
     : "";
+  document.getElementById("premium-filters-gift-shipping").innerHTML =
+    `<button class="filter-btn ${activeGiftShipPremiumFilter==="전체"?"active":""}" onclick="activeGiftShipPremiumFilter='전체';renderGiftShippingList()">전체 금액</button>`
+    + GIFT_SHIP_PREMIUM_BUCKETS.map(b=>`<button class="filter-btn ${activeGiftShipPremiumFilter===b.id?"active":""}" onclick="activeGiftShipPremiumFilter='${b.id}';renderGiftShippingList()">${b.label}</button>`).join("");
   const addrOnlyEl = document.getElementById("gift-ship-address-only");
   if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
   const sortSel = document.getElementById("gift-ship-sort-select");
