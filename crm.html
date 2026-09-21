@@ -4686,6 +4686,12 @@ function showPage(name, pushHistory=true){
   }
 }
 window.addEventListener("popstate", e=>{
+  if(e.state?.page==="detail" && e.state.id!=null){ goToDetail(e.state.id, false); return; }
+  const detailMatch = location.hash.match(/^#detail\/(.+)$/);
+  if(detailMatch){
+    const c = customers.find(x=>String(x.id)===detailMatch[1]);
+    if(c){ goToDetail(c.id, false); return; }
+  }
   const page = e.state?.page || (location.hash.slice(1)) || "dashboard";
   const el = document.getElementById("page-"+page);
   if(el) showPage(page, false);
@@ -4694,7 +4700,7 @@ document.querySelectorAll(".nav-item").forEach(n=>{
   if(!n.getAttribute("onclick")) n.addEventListener("click",()=>showPage(n.dataset.page));
 });
 
-function goToDetail(id){
+function goToDetail(id, pushHistory=true){
   currentCustomerId=id;
   const c=customers.find(x=>x.id===id);
   prevPage=c?.type==="가망"?"prospects":"enrolled";
@@ -4703,6 +4709,10 @@ function goToDetail(id){
   document.getElementById("page-detail").classList.add("active");
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   document.querySelector(`[data-page="${prevPage}"]`).classList.add("active");
+  // 고객 상세도 주소(#detail/아이디)에 남겨서, 새로고침해도 이 고객 상세 화면 그대로 돌아오게 함
+  if(pushHistory && !(history.state?.page==="detail" && history.state?.id===id)){
+    history.pushState({page:"detail", id}, "", "#detail/"+id);
+  }
 }
 function goBack(){showPage(prevPage);}
 
@@ -5757,6 +5767,11 @@ function renderProspects(){
 
 // ─── 가망고객 퍼널 칸반보드 (고객접촉 → 계약) ──────────────────────
 let prospectsViewMode = "list";
+// 가망 고객 페이지를 목록/칸반 중 뭘로, 칸반이면 보드/성과 중 뭘 보고 있었는지 세션에 기억해뒀다가
+// 새로고침해도 같은 화면으로 돌아오게 함(새로고침하면 대시보드로 튕기던 문제)
+function saveFunnelViewState(){
+  try { sessionStorage.setItem("funnelViewState", JSON.stringify({ mode: prospectsViewMode, subTab: funnelSubTab })); } catch(e){}
+}
 function setProspectsView(mode){
   prospectsViewMode = mode;
   const lb = document.getElementById("pv-btn-list");
@@ -5764,13 +5779,14 @@ function setProspectsView(mode){
   if(lb) lb.classList.toggle("active", mode==="list");
   if(kb) kb.classList.toggle("active", mode==="kanban");
   renderProspects();
+  saveFunnelViewState();
 }
 
 // 사이드바 "영업 퍼널" 진입점 — 가망고객 페이지를 칸반 뷰로 바로 연다
 function openFunnelBoard(){
   showPage("prospects");
-  setProspectsView("kanban");
   funnelSubTab = "board";
+  setProspectsView("kanban");
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   document.querySelectorAll('.nav-item[data-page="funnel"]').forEach(n=>n.classList.add("active"));
 }
@@ -6043,6 +6059,7 @@ function renderFunnelPerformanceTabHtml(kbList){
 function setFunnelSubTab(tab){
   funnelSubTab = tab;
   renderProspects();
+  saveFunnelViewState();
 }
 function renderProspectsKanban(kbList){
   const wrap = document.getElementById("prospect-kanban-wrap");
@@ -10784,10 +10801,27 @@ async function loadFromFirestore() {
     _dataLoaded = false;
     showSyncToast("❌ 불러오기 실패: " + e.message, true);
   } finally {
-    const initPage = location.hash.slice(1) || "dashboard";
     populateStageSelects();
     populateSourceSelects();
-    showPage(document.getElementById("page-"+initPage) ? initPage : "dashboard");
+    // 새로고침해도 보고 있던 화면 그대로 복원(예전엔 항상 대시보드로 돌아갔음)
+    const rawHash = location.hash.slice(1);
+    const detailMatch = rawHash.match(/^detail\/(.+)$/);
+    const detailCustomer = detailMatch ? customers.find(x=>String(x.id)===detailMatch[1]) : null;
+    if(detailCustomer){
+      goToDetail(detailCustomer.id, false);
+    } else {
+      const initPage = rawHash || "dashboard";
+      showPage(document.getElementById("page-"+initPage) ? initPage : "dashboard");
+      // 가망 고객 페이지였다면 칸반 보드/성과 탭까지 보던 그대로 복원
+      if(initPage==="prospects"){
+        let saved = null;
+        try { saved = JSON.parse(sessionStorage.getItem("funnelViewState")||"null"); } catch(e){}
+        if(saved && saved.mode==="kanban"){
+          if(saved.subTab) funnelSubTab = saved.subTab;
+          setProspectsView("kanban");
+        }
+      }
+    }
     updateSidebar();
   }
 }
