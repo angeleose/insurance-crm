@@ -3786,7 +3786,7 @@ let prospectSort = 'regDate_desc'; // 기본: 최근 가입일순
 let allCustSort = 'regDate_desc';
 let activeAllCustTypeFilter = '전체'; // 전체/가입/가망
 let funnelSubTab = 'board'; // 영업 퍼널 하위 탭: board(칸반 보드) | performance(성과)
-let funnelHideNoShowRejected = true; // 칸반 보드에서 부재·거절로 끝난 게시물 숨기기(성과 탭 집계에는 영향 없음) — 기본값 켜짐
+let funnelHideFailed = true; // 칸반 보드에서 실패 처리된(사유 무관) 게시물 숨기기(성과 탭 집계에는 영향 없음) — 기본값 켜짐
 // 출처(마케팅 채널)별 월별 비용 — {"메타광고": {"2026-09": 500000, ...}, ...} 형태.
 // 성과 탭에서 월별 리드 수·비용 대비 전환을 보기 위해 씀
 let sourceCosts = {};
@@ -6076,14 +6076,14 @@ function renderProspectsKanban(kbList){
     wrap.innerHTML = subtabsHtml + `<div class="empty"><span>🗂</span>진행 단계가 없어요. <button class="kb-manage-link" onclick="showPage('settings')">설정에서 먼저 추가해 주세요 →</button></div>`;
     return;
   }
-  // 부재·거절로 끝난 게시물은 보드에서만 숨김(성과 탭 집계는 항상 전체 기준 그대로 유지)
-  const hiddenCount = kbList.filter(p=>p.failed && (p.failReason==="부재"||p.failReason==="거절")).length;
-  const boardList = funnelHideNoShowRejected
-    ? kbList.filter(p=>!(p.failed && (p.failReason==="부재"||p.failReason==="거절")))
+  // 실패 처리(사유 무관 — 부재/거절/상담 후 무산/기타 등)된 게시물은 보드에서만 숨김(성과 탭 집계는 항상 전체 기준 그대로 유지)
+  const hiddenCount = kbList.filter(p=>p.failed).length;
+  const boardList = funnelHideFailed
+    ? kbList.filter(p=>!p.failed)
     : kbList;
   const hideToggleHtml = `<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;margin-bottom:12px;">
-    <input type="checkbox" ${funnelHideNoShowRejected?"checked":""} onchange="funnelHideNoShowRejected=this.checked;renderProspects()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);">
-    부재·거절 숨기기${hiddenCount?` (${hiddenCount}건)`:``}
+    <input type="checkbox" ${funnelHideFailed?"checked":""} onchange="funnelHideFailed=this.checked;renderProspects()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);">
+    실패 처리된 게시물 숨기기${hiddenCount?` (${hiddenCount}건)`:``}
   </label>`;
   const stageCol = (stage) => {
     const items = boardList.filter(p=>(p.stage||customStages[0])===stage);
