@@ -1389,7 +1389,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div><h2>🎁 고객 배송 리스트</h2><p>명절 선물 등 우편 발송을 위한 주소록이에요. 목록을 엑셀로 내려받아 사용하세요.</p></div>
     </div>
     <div class="toolbar">
-      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-gift-shipping" placeholder="이름 또는 전화번호 검색..." oninput="renderGiftShippingList()"></div>
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-gift-shipping" placeholder="이름, 전화번호, 주소 검색..." oninput="renderGiftShippingList()"></div>
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;">
         <input type="checkbox" id="gift-ship-address-only" onchange="giftShipAddressOnly=this.checked;renderGiftShippingList()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--primary);">
         주소 있는 고객만
@@ -5560,7 +5560,7 @@ function getGiftShippingList(){
       if(bucket && !bucket.test(giftShipPremiumOf(c))) return false;
     }
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
-    if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
+    if(q && !c.name.includes(q) && !(c.phone||"").includes(q) && !(c.address||"").includes(q)) return false;
     return true;
   });
   filtered.sort(giftShipComparator);
