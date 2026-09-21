@@ -2663,6 +2663,16 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         </div>
       </div>
       <div id="fp-consult-preview-wrap" style="margin-top:10px;"></div>
+      <div id="fp-consult-add-wrap" style="margin-top:8px;">
+        <div class="form-row" style="margin-bottom:6px;">
+          <select id="fp-consult-type" style="font-size:12.5px;">
+            <option>전화</option><option>방문</option><option>문자</option><option>이메일</option><option>화상</option><option>박람회현장상담</option>
+          </select>
+          <input type="date" id="fp-consult-date" style="font-size:12.5px;">
+        </div>
+        <textarea id="fp-consult-note" rows="2" placeholder="상담·연락 내용을 적어보세요... (예: 전화 연결됨, 다음주 재통화 약속)" style="font-size:12.5px;width:100%;"></textarea>
+        <button type="button" class="btn btn-purple btn-sm" style="margin-top:6px;" onclick="addFpConsultRecord()">+ 상담·연락 기록 남기기</button>
+      </div>
     </div>
     <div class="form-group">
       <label>진행 결과 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(부재·거절 등으로 끝났으면 표시해 두세요)</span></label>
@@ -6341,6 +6351,10 @@ function openFunnelPostModal(id = null, presetStage = null){
   const quickAddToggle = document.getElementById("fp-quick-add-toggle");
   if(quickAddToggle) quickAddToggle.checked = false;
   toggleFpQuickAdd(false);
+  // 상담·연락 기록 입력칸도 매번 새로 시작
+  document.getElementById("fp-consult-type").value = "전화";
+  document.getElementById("fp-consult-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("fp-consult-note").value = "";
   renderFpTagChips();
   renderFpFailChips();
   renderFpConsultPreview();
@@ -6385,9 +6399,15 @@ function unlinkFpCustomer(){
 function renderFpConsultPreview(){
   const wrap = document.getElementById("fp-consult-preview-wrap");
   if(!wrap) return;
+  const addWrap = document.getElementById("fp-consult-add-wrap");
   const cid = document.getElementById("fp-cust-id").value;
   const c = cid ? customers.find(x=>String(x.id)===String(cid)) : null;
-  if(!c){ wrap.innerHTML = ""; return; }
+  if(!c){
+    wrap.innerHTML = "";
+    if(addWrap) addWrap.style.display = "none";
+    return;
+  }
+  if(addWrap) addWrap.style.display = "";
   const sorted = [...(c.consultations||[])].sort((a,b)=>b.date.localeCompare(a.date));
   const preview = sorted.slice(0,5);
   wrap.innerHTML = `
@@ -6402,6 +6422,23 @@ function renderFpConsultPreview(){
           <div class="consult-note" style="font-size:12.5px;">${escAttr(cs.note||"")}</div>
         </div>`).join("") : `<div class="empty" style="padding:14px 0;"><span>💬</span>상담 기록 없음</div>`}
     </div>`;
+}
+// 게시물 수정 모달에서 상담/연락 기록을 바로 남김 — 연동된 고객의 consultations에 그대로 저장되므로
+// 상담 기록 탭·고객 상세 페이지에서도 동일하게 보인다(별도 데이터로 분리하지 않음)
+function addFpConsultRecord(){
+  const cid = document.getElementById("fp-cust-id").value;
+  const c = cid ? customers.find(x=>String(x.id)===String(cid)) : null;
+  if(!c){ alert("먼저 고객을 연동해 주세요."); return; }
+  const note = document.getElementById("fp-consult-note").value.trim();
+  if(!note){ alert("상담·연락 내용을 입력하세요."); return; }
+  const date = document.getElementById("fp-consult-date").value || new Date().toISOString().slice(0,10);
+  const type = document.getElementById("fp-consult-type").value;
+  if(!c.consultations) c.consultations = [];
+  c.consultations.unshift({ id: Date.now()+Math.random(), date, type, note, followUp: null });
+  document.getElementById("fp-consult-note").value = "";
+  renderFpConsultPreview();
+  autoSave();
+  showToast(`✅ ${c.name}님 ${type} 기록을 남겼어요.`);
 }
 
 // 연동된 고객의 상세 페이지로 바로 이동
