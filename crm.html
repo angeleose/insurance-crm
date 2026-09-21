@@ -2648,6 +2648,20 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <button type="button" class="btn btn-ghost btn-sm" title="연동 해제" onclick="document.getElementById('fp-cust-search').value='';document.getElementById('fp-cust-id').value='';">✕</button>
         <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:88px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:8px;">
+        <input type="checkbox" id="fp-quick-add-toggle" onchange="toggleFpQuickAdd(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);">
+        고객 간편 등록 <span style="font-weight:400;">(검색해도 안 나올 때 — 이름·연락처만으로 가망고객을 바로 만들어요)</span>
+      </label>
+      <div id="fp-quick-add-fields" style="display:none;margin-top:8px;">
+        <div class="form-row">
+          <div class="form-group" style="margin:0;">
+            <input type="text" id="fp-quick-name" placeholder="고객 이름" style="font-size:13px;">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <input type="text" id="fp-quick-phone" placeholder="010-0000-0000" inputmode="numeric" maxlength="13" oninput="formatPhoneInputLive(this)" style="font-size:13px;">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label>진행 결과 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(부재·거절 등으로 끝났으면 표시해 두세요)</span></label>
@@ -6267,6 +6281,20 @@ function toggleFpTag(tag){
   if(i>=0) _fpSelectedTags.splice(i,1); else _fpSelectedTags.push(tag);
   renderFpTagChips();
 }
+// "고객 간편 등록" 체크 — 검색 대신 이름·연락처만 입력해서 저장 시 가망고객을 바로 만들도록 전환
+function toggleFpQuickAdd(checked){
+  const fields = document.getElementById("fp-quick-add-fields");
+  if(fields) fields.style.display = checked ? "" : "none";
+  const searchEl = document.getElementById("fp-cust-search");
+  if(searchEl){ searchEl.disabled = checked; searchEl.style.opacity = checked ? "0.5" : ""; }
+  if(checked){
+    if(searchEl) searchEl.value = "";
+    document.getElementById("fp-cust-id").value = "";
+  } else {
+    document.getElementById("fp-quick-name").value = "";
+    document.getElementById("fp-quick-phone").value = "";
+  }
+}
 function openFunnelPostModal(id = null, presetStage = null){
   _fpEditId = id;
   document.getElementById("fp-modal-title").textContent = id ? "🗂️ 게시물 수정" : "🗂️ 영업 퍼널 게시물 추가";
@@ -6308,6 +6336,10 @@ function openFunnelPostModal(id = null, presetStage = null){
       if(c){ document.getElementById("fp-cust-search").value = c.name; document.getElementById("fp-cust-id").value = String(c.id); }
     }
   }
+  // 고객 간편 등록 체크 상태는 게시물마다 새로 시작(이전에 열었을 때 값이 남아있지 않게)
+  const quickAddToggle = document.getElementById("fp-quick-add-toggle");
+  if(quickAddToggle) quickAddToggle.checked = false;
+  toggleFpQuickAdd(false);
   renderFpTagChips();
   renderFpFailChips();
   openModal("funnel-post");
@@ -6395,7 +6427,35 @@ function reopenFunnelPostModalWithLinkedCustomer(newCustomerId){
 function saveFunnelPost(){
   const title = document.getElementById("fp-title").value.trim();
   if(!title){ alert("제목을 입력하세요."); return; }
-  const custIdRaw = document.getElementById("fp-cust-id").value;
+
+  let custIdRaw = document.getElementById("fp-cust-id").value;
+  let quickAddMsg = "";
+  // "고객 간편 등록" 체크 시 — 검색으로 못 찾은 고객을 이름·연락처만으로 가망고객으로 바로 만들어 연동
+  if(document.getElementById("fp-quick-add-toggle")?.checked){
+    const qName = document.getElementById("fp-quick-name").value.trim();
+    const qPhone = formatKoreanPhone(document.getElementById("fp-quick-phone").value.trim());
+    if(!qName || !qPhone){ alert("간편 등록할 고객의 이름과 연락처를 입력하세요."); return; }
+    const normalizedPhone = qPhone.replace(/\D/g,"");
+    let matched = normalizedPhone ? customers.find(c=>(c.phone||"").replace(/\D/g,"")===normalizedPhone) : null;
+    if(!matched){
+      matched = {
+        id: Date.now()+Math.random(),
+        type: "가망",
+        name: qName,
+        phone: qPhone,
+        birth: "", email: "", address: "", source: "",
+        contracts: [], consultations: [],
+        tags: ["신규"],
+        regDate: new Date().toISOString().slice(0,10),
+      };
+      customers.push(matched);
+      quickAddMsg = ` · ${qName} 고객을 가망고객으로 등록했어요.`;
+    } else {
+      quickAddMsg = ` · 이미 있는 연락처라 기존 고객(${matched.name})에 연동했어요.`;
+    }
+    custIdRaw = String(matched.id);
+  }
+
   const existing = _fpEditId ? funnelPosts.find(x=>x.id===_fpEditId) : null;
   const data = {
     id: _fpEditId || (Date.now()+Math.random()),
@@ -6425,7 +6485,7 @@ function saveFunnelPost(){
   closeModal("funnel-post");
   renderProspects();
   autoSave();
-  showToast("✅ 저장되었습니다.");
+  showToast(`✅ 저장되었습니다.${quickAddMsg}`);
 }
 
 function deleteFunnelPost(){
