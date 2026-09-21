@@ -5547,29 +5547,13 @@ function giftShipComparator(a,b){
     default: return a.name.localeCompare(b.name,"ko"); // name_asc
   }
 }
-
-function getGiftShippingList(){
-  const qEl = document.getElementById("search-gift-shipping");
-  const q = qEl ? qEl.value.trim() : "";
-  const filtered = customers.filter(c=>{
-    if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
-    if(activeGiftShipContractTypeFilter!=="전체" && !giftShipContractTypes(c).includes(activeGiftShipContractTypeFilter)) return false;
-    if(activeGiftShipYearFilter!=="전체" && giftShipJoinDateOf(c).slice(0,4)!==activeGiftShipYearFilter) return false;
-    if(activeGiftShipPremiumFilter!=="전체"){
-      const bucket = GIFT_SHIP_PREMIUM_BUCKETS.find(b=>b.id===activeGiftShipPremiumFilter);
-      if(bucket && !bucket.test(giftShipPremiumOf(c))) return false;
-    }
-    if(giftShipAddressOnly && !(c.address||"").trim()) return false;
-    if(q && !c.name.includes(q) && !(c.phone||"").includes(q) && !(c.address||"").includes(q)) return false;
-    return true;
-  });
-  filtered.sort(giftShipComparator);
-
-  // 가족(family)으로 연결된 고객끼리 리스트에서 서로 인접하게 묶어줌 — 지금 이 필터·검색 결과 안에서만
-  const byId = new Map(filtered.map(c=>[c.id,c]));
+// family(가족 연동)로 서로 이어진 고객들을 묶음 단위로 나눔 — 배송 리스트의 "가족끼리 묶어보기"와
+// 가족 합산 보험료 계산에서 공용으로 씀
+function clusterByFamily(list){
+  const byId = new Map(list.map(c=>[c.id,c]));
   const visited = new Set();
   const groups = [];
-  filtered.forEach(start=>{
+  list.forEach(start=>{
     if(visited.has(start.id)) return;
     const group = [];
     const stack = [start.id];
@@ -5582,14 +5566,50 @@ function getGiftShippingList(){
       group.push(cust);
       (cust.family||[]).forEach(f=>{ if(byId.has(f.relId) && !visited.has(f.relId)) stack.push(f.relId); });
     }
-    group.sort(giftShipComparator);
     groups.push(group);
   });
+  return groups;
+}
+// 가족으로 묶인 고객들의 가입 보험료 합계 — 고객 id -> 그 가족그룹의 합산 보험료.
+// 가입금액 필터를 가족 단위로 적용하기 위해(개인이 아니라 가족 합산 기준으로 구간 판정) 씀.
+// 현재 화면 필터와 무관하게 항상 전체 고객 기준으로 계산(가족 관계는 필터로 바뀌지 않는 사실이므로).
+function computeFamilyGroupPremium(){
+  const premiumById = new Map();
+  clusterByFamily(customers).forEach(group=>{
+    const total = group.reduce((s,c)=>s+giftShipPremiumOf(c),0);
+    group.forEach(c=>premiumById.set(c.id, total));
+  });
+  return premiumById;
+}
+
+function getGiftShippingList(){
+  const qEl = document.getElementById("search-gift-shipping");
+  const q = qEl ? qEl.value.trim() : "";
+  const familyPremiumById = computeFamilyGroupPremium();
+  const filtered = customers.filter(c=>{
+    if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
+    if(activeGiftShipContractTypeFilter!=="전체" && !giftShipContractTypes(c).includes(activeGiftShipContractTypeFilter)) return false;
+    if(activeGiftShipYearFilter!=="전체" && giftShipJoinDateOf(c).slice(0,4)!==activeGiftShipYearFilter) return false;
+    if(activeGiftShipPremiumFilter!=="전체"){
+      const bucket = GIFT_SHIP_PREMIUM_BUCKETS.find(b=>b.id===activeGiftShipPremiumFilter);
+      const p = familyPremiumById.get(c.id) ?? giftShipPremiumOf(c);
+      if(bucket && !bucket.test(p)) return false;
+    }
+    if(giftShipAddressOnly && !(c.address||"").trim()) return false;
+    if(q && !c.name.includes(q) && !(c.phone||"").includes(q) && !(c.address||"").includes(q)) return false;
+    return true;
+  });
+  filtered.sort(giftShipComparator);
+
+  // 가족(family)으로 연결된 고객끼리 리스트에서 서로 인접하게 묶어줌 — 지금 이 필터·검색 결과 안에서만
+  const groups = clusterByFamily(filtered);
+  groups.forEach(group=>group.sort(giftShipComparator));
 
   const result = groups.flat();
   const groupInfoById = new Map();
   groups.forEach((g,gi)=>g.forEach(c=>groupInfoById.set(c.id, { groupIndex: gi, groupSize: g.length })));
   result.groupInfoById = groupInfoById; // 렌더링에서만 쓰는 부가정보 — length/순회에는 영향 없음
+  result.familyPremiumById = familyPremiumById;
   return result;
 }
 
@@ -5629,7 +5649,14 @@ function renderGiftShippingList(){
   if(tw) tw.style.display = isMob ? "none" : "";
   if(lw) lw.style.display = isMob ? "" : "none";
 
-  const premiumCell = c => c.type==="가입" ? `${giftShipPremiumOf(c).toLocaleString()}원` : `<span style="color:var(--text2)">-</span>`;
+  const premiumCell = c => {
+    if(c.type!=="가입") return `<span style="color:var(--text2)">-</span>`;
+    const own = giftShipPremiumOf(c);
+    const info = list.groupInfoById && list.groupInfoById.get(c.id);
+    const famTotal = list.familyPremiumById ? list.familyPremiumById.get(c.id) : own;
+    const showFamTotal = info && info.groupSize>1 && famTotal!==own;
+    return `${own.toLocaleString()}원${showFamTotal?`<div style="font-size:11px;color:var(--purple);font-weight:700;white-space:nowrap;">👪 가족합산 ${famTotal.toLocaleString()}원</div>`:""}`;
+  };
   const joinDateCell = c => {
     const d = giftShipJoinDateOf(c);
     return d ? `<span style="font-size:12px;color:var(--text2);">${d}</span>` : `<span style="color:var(--text2)">-</span>`;
@@ -5704,11 +5731,15 @@ function giftShipField(el, id, field){
 function downloadGiftShippingExcel(){
   const list = getGiftShippingList();
   if(!list.length){ alert("다운로드할 고객이 없습니다."); return; }
+  const groupInfoById = list.groupInfoById;
+  const familyPremiumById = list.familyPremiumById;
   const rows = list.map(c=>{
     const p = c.type==="가입" ? giftShipPremiumOf(c) : "";
     const joinDate = giftShipJoinDateOf(c);
     const statusLabel = giftShipStatus(c);
     const types = giftShipContractTypes(c);
+    const info = groupInfoById && groupInfoById.get(c.id);
+    const famTotal = (info && info.groupSize>1 && familyPremiumById) ? familyPremiumById.get(c.id) : "";
     return {
       "가입여부": statusLabel,
       "고객명": c.name,
@@ -5716,6 +5747,7 @@ function downloadGiftShippingExcel(){
       "주소": c.address||"",
       "계약 종류": types.length ? `[${types.join("/")}]` : "",
       "가입 보험료": p,
+      "가족합산 보험료": famTotal,
       "가입년월일": joinDate,
       "특이사항": c.giftNote||"",
     };
