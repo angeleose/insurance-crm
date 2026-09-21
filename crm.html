@@ -1398,8 +1398,17 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="filters" id="type-filters-gift-shipping"></div>
     <div class="filters" id="contract-type-filters-gift-shipping"></div>
-    <div style="margin-bottom:8px;">
+    <div class="filters" id="year-filters-gift-shipping"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
       <span id="gift-ship-count-label" style="font-size:13px;color:var(--text2);font-weight:500;"></span>
+      <select id="gift-ship-sort-select" onchange="giftShipSort=this.value;renderGiftShippingList()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="name_asc">이름순</option>
+        <option value="premium_desc">가입금액 높은순</option>
+        <option value="premium_asc">가입금액 낮은순</option>
+        <option value="joinDate_desc">가입일 최신순</option>
+        <option value="joinDate_asc">가입일 오래된순</option>
+      </select>
     </div>
     <div class="card" style="padding:0;overflow:hidden;" id="gift-ship-table-wrap">
       <table><thead><tr><th>가입여부</th><th>고객명</th><th style="width:130px;">연락처</th><th>주소</th><th>계약 종류</th><th>가입 보험료</th><th>가입년월일</th><th>특이사항</th></tr></thead>
@@ -3793,6 +3802,8 @@ let sourceCosts = {};
 let funnelCostMonth = ''; // 성과 탭에서 선택 중인 비용 조회 월("전체" 또는 "YYYY-MM"). 빈 값이면 최신 월로 기본 선택
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
+let activeGiftShipYearFilter = '전체'; // 전체 or 가입년도(YYYY)
+let giftShipSort = 'name_asc'; // name_asc | premium_desc | premium_asc | joinDate_desc | joinDate_asc
 let giftShipAddressOnly = false;
 let currentCustomerId=null, activeTagFilter="전체", activeStageFilter="전체", activeSourceFilter="전체", activeEnrolledSourceFilter="전체", prevPage="enrolled";
 let activeContractTypeFilter="전체", activeContractStatusFilter="전체", activeConsultTypeFilter="전체", activeConsultCustFilter="전체고객";
@@ -4645,6 +4656,7 @@ function clearAllFilters() {
   activeAllCustTypeFilter = "전체";
   activeGiftShipTypeFilter = "전체";
   activeGiftShipContractTypeFilter = "전체";
+  activeGiftShipYearFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -5506,6 +5518,27 @@ function giftShipStatus(c){
 function giftShipContractTypes(c){
   return c.type==="가입" ? [...new Set(c.contracts.filter(isCtLive).map(ct=>ct.type).filter(Boolean))] : [];
 }
+// 가입 보험료·가입년월일 — 컬럼 표시와 정렬·연도 필터에서 공용으로 사용
+function giftShipPremiumOf(c){
+  return c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : 0;
+}
+function giftShipJoinDateOf(c){
+  return c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
+}
+function getGiftShipYears(){
+  const years = new Set();
+  customers.forEach(c=>{ const d=giftShipJoinDateOf(c); if(d) years.add(d.slice(0,4)); });
+  return [...years].sort().reverse();
+}
+function giftShipComparator(a,b){
+  switch(giftShipSort){
+    case "premium_desc": return giftShipPremiumOf(b)-giftShipPremiumOf(a);
+    case "premium_asc":  return giftShipPremiumOf(a)-giftShipPremiumOf(b);
+    case "joinDate_desc": return giftShipJoinDateOf(b).localeCompare(giftShipJoinDateOf(a));
+    case "joinDate_asc":  return giftShipJoinDateOf(a).localeCompare(giftShipJoinDateOf(b));
+    default: return a.name.localeCompare(b.name,"ko"); // name_asc
+  }
+}
 
 function getGiftShippingList(){
   const qEl = document.getElementById("search-gift-shipping");
@@ -5513,11 +5546,12 @@ function getGiftShippingList(){
   const filtered = customers.filter(c=>{
     if(activeGiftShipTypeFilter!=="전체" && giftShipStatus(c)!==activeGiftShipTypeFilter) return false;
     if(activeGiftShipContractTypeFilter!=="전체" && !giftShipContractTypes(c).includes(activeGiftShipContractTypeFilter)) return false;
+    if(activeGiftShipYearFilter!=="전체" && giftShipJoinDateOf(c).slice(0,4)!==activeGiftShipYearFilter) return false;
     if(giftShipAddressOnly && !(c.address||"").trim()) return false;
     if(q && !c.name.includes(q) && !(c.phone||"").includes(q)) return false;
     return true;
   });
-  filtered.sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+  filtered.sort(giftShipComparator);
 
   // 가족(family)으로 연결된 고객끼리 리스트에서 서로 인접하게 묶어줌 — 지금 이 필터·검색 결과 안에서만
   const byId = new Map(filtered.map(c=>[c.id,c]));
@@ -5536,7 +5570,7 @@ function getGiftShippingList(){
       group.push(cust);
       (cust.family||[]).forEach(f=>{ if(byId.has(f.relId) && !visited.has(f.relId)) stack.push(f.relId); });
     }
-    group.sort((a,b)=>a.name.localeCompare(b.name,"ko"));
+    group.sort(giftShipComparator);
     groups.push(group);
   });
 
@@ -5552,8 +5586,14 @@ function renderGiftShippingList(){
     ["전체","가입","가망","해지"].map(t=>`<button class="filter-btn ${t===activeGiftShipTypeFilter?"active":""}" onclick="activeGiftShipTypeFilter='${t}';renderGiftShippingList()">${t}</button>`).join("");
   document.getElementById("contract-type-filters-gift-shipping").innerHTML =
     ["전체",...productCategories].map(t=>`<button class="filter-btn ${t===activeGiftShipContractTypeFilter?"active":""}" onclick="activeGiftShipContractTypeFilter='${t}';renderGiftShippingList()">${t==="전체"?"전체 계약종류":t}</button>`).join("");
+  const years = getGiftShipYears();
+  document.getElementById("year-filters-gift-shipping").innerHTML = years.length
+    ? ["전체",...years].map(t=>`<button class="filter-btn ${t===activeGiftShipYearFilter?"active":""}" onclick="activeGiftShipYearFilter='${t}';renderGiftShippingList()">${t==="전체"?"전체 연도":t+"년"}</button>`).join("")
+    : "";
   const addrOnlyEl = document.getElementById("gift-ship-address-only");
   if(addrOnlyEl) addrOnlyEl.checked = giftShipAddressOnly;
+  const sortSel = document.getElementById("gift-ship-sort-select");
+  if(sortSel) sortSel.value = giftShipSort;
 
   const typeBadge = c => {
     const label = giftShipStatus(c);
@@ -5574,14 +5614,9 @@ function renderGiftShippingList(){
   if(tw) tw.style.display = isMob ? "none" : "";
   if(lw) lw.style.display = isMob ? "" : "none";
 
-  const premiumOf = c => c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : null;
-  const premiumCell = c => {
-    const p = premiumOf(c);
-    return p===null ? `<span style="color:var(--text2)">-</span>` : `${p.toLocaleString()}원`;
-  };
-  const joinDateOf = c => c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
+  const premiumCell = c => c.type==="가입" ? `${giftShipPremiumOf(c).toLocaleString()}원` : `<span style="color:var(--text2)">-</span>`;
   const joinDateCell = c => {
-    const d = joinDateOf(c);
+    const d = giftShipJoinDateOf(c);
     return d ? `<span style="font-size:12px;color:var(--text2);">${d}</span>` : `<span style="color:var(--text2)">-</span>`;
   };
   // 살아있는(해지 안 된) 계약들의 종류를 중복 없이 모아서 [펫보험/태아보험] 형태로 표시
@@ -5620,7 +5655,7 @@ function renderGiftShippingList(){
           </div>
           <div style="margin-bottom:6px;">${phoneInput(c)}</div>
           <div style="margin-bottom:6px;">${addressInput(c)}</div>
-          <div style="margin-bottom:6px;font-size:12px;color:var(--text2);">${contractTypesCell(c)} · 가입일: ${joinDateOf(c)||"-"}</div>
+          <div style="margin-bottom:6px;font-size:12px;color:var(--text2);">${contractTypesCell(c)} · 가입일: ${giftShipJoinDateOf(c)||"-"}</div>
           <div>${noteInput(c)}</div>
         </div>`).join("");
   } else {
@@ -5655,8 +5690,8 @@ function downloadGiftShippingExcel(){
   const list = getGiftShippingList();
   if(!list.length){ alert("다운로드할 고객이 없습니다."); return; }
   const rows = list.map(c=>{
-    const p = c.type==="가입" ? c.contracts.filter(isCtLive).reduce((s,ct)=>s+(ct.premium||0),0) : "";
-    const joinDate = c.type==="가입" ? (c.joinDate || c.contracts.map(ct=>ct.start).filter(Boolean).sort()[0] || "") : "";
+    const p = c.type==="가입" ? giftShipPremiumOf(c) : "";
+    const joinDate = giftShipJoinDateOf(c);
     const statusLabel = giftShipStatus(c);
     const types = giftShipContractTypes(c);
     return {
