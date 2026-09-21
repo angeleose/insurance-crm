@@ -6024,11 +6024,14 @@ function computeFunnelStageProgress(kbList, sourceFilter){
     : kbList;
   const total = list.length;
   const stageIndexOf = p => { const idx = customStages.indexOf(p.stage||customStages[0]); return idx>=0 ? idx : 0; };
-  return customStages.map((stage,i)=>{
-    const count = list.filter(p=>stageIndexOf(p)>=i).length;
-    const pct = total ? Math.round(count/total*100) : 0;
-    return { stage, count, pct };
-  });
+  return customStages
+    .map((stage,i)=>{
+      const count = list.filter(p=>stageIndexOf(p)>=i).length;
+      const pct = total ? Math.round(count/total*100) : 0;
+      return { stage, count, pct };
+    })
+    // "상담종료(아카이브)" 같은 보관용 종료 단계는 퍼널 흐름에는 안 보여줌(다른 단계 누적 집계에는 그대로 반영됨)
+    .filter(r=>!r.stage.includes("아카이브"));
 }
 function setFunnelStageSourceFilter(s){
   funnelStageSourceFilter = s;
