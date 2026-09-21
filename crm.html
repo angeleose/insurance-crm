@@ -614,12 +614,12 @@
   .kb-subtabs{display:flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content;}
   .kb-subtab-btn{padding:7px 16px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;}
   .kb-subtab-btn.active{background:#fff;color:var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.08);}
-  .kb-funnel-chart{display:flex;flex-direction:column;gap:9px;}
-  .kb-funnel-bar-row{display:flex;align-items:center;gap:10px;}
-  .kb-funnel-bar-label{flex:0 0 96px;font-size:12px;font-weight:700;color:var(--text2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .kb-funnel-bar-track{flex:1;height:24px;background:#f1f5f9;border-radius:6px;overflow:hidden;}
-  .kb-funnel-bar-fill{height:100%;background:linear-gradient(90deg,var(--purple-light),var(--purple));border-radius:6px;transition:width .3s;min-width:2px;}
-  .kb-funnel-bar-stat{flex:0 0 96px;font-size:12px;font-weight:700;color:var(--text);}
+  .kb-funnel-flow{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:4px 2px 10px;}
+  .kb-funnel-step{flex:0 0 auto;min-width:100px;background:var(--purple-light);border-radius:10px;padding:10px 16px;text-align:center;}
+  .kb-funnel-step-name{font-size:11px;font-weight:700;color:var(--purple);margin-bottom:4px;white-space:nowrap;}
+  .kb-funnel-step-count{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;}
+  .kb-funnel-step-pct{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;}
+  .kb-funnel-step-arrow{flex:0 0 auto;font-size:18px;color:var(--purple);font-weight:700;}
   .cn-repeat-row{border:1px solid var(--border);border-radius:9px;padding:10px;margin-bottom:8px;background:var(--bg1,var(--bg));}
   .cn-repeat-row-head{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
   .cn-repeat-row-head input{flex:1;font-size:13px;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;}
@@ -3826,6 +3826,7 @@ let funnelHideFailed = true; // 칸반 보드에서 실패 처리된(사유 무�
 // 성과 탭에서 월별 리드 수·비용 대비 전환을 보기 위해 씀
 let sourceCosts = {};
 let funnelCostMonth = ''; // 성과 탭에서 선택 중인 비용 조회 월("전체" 또는 "YYYY-MM"). 빈 값이면 최신 월로 기본 선택
+let funnelStageSourceFilter = '전체'; // 단계별 진행 퍼널에서 선택 중인 출처 필터
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let activeGiftShipYearFilter = '전체'; // 전체 or 가입년도(YYYY)
@@ -6011,30 +6012,47 @@ function renderFunnelOutcomeSummaryHtml(kbList){
   </div>`;
 }
 
-// 설정된 진행 단계(customStages) 순서를 그대로 반영한 퍼널 차트 — 각 단계에 "도달한"(그 단계이거나
-// 그보다 앞선 단계인) 게시물 비율을 막대로 보여줌. 맨 위 단계는 항상 전체의 100%.
-function computeFunnelStageProgress(kbList){
-  const total = kbList.length;
+// 설정된 진행 단계(customStages) 순서를 그대로 반영한 퍼널 — 각 단계에 "도달한"(그 단계이거나
+// 그보다 앞선 단계인) 게시물 수/비율을 계산. 첫 단계는 항상 전체의 100%.
+// sourceFilter가 "전체"가 아니면, 연동된 고객의 출처가 그 값과 같은 게시물만 대상으로 함.
+function computeFunnelStageProgress(kbList, sourceFilter){
+  const list = (sourceFilter && sourceFilter!=="전체")
+    ? kbList.filter(p=>{
+        const linked = p.customerId ? customers.find(c=>c.id===p.customerId) : null;
+        return linked && (linked.source||"")===sourceFilter;
+      })
+    : kbList;
+  const total = list.length;
   const stageIndexOf = p => { const idx = customStages.indexOf(p.stage||customStages[0]); return idx>=0 ? idx : 0; };
   return customStages.map((stage,i)=>{
-    const count = kbList.filter(p=>stageIndexOf(p)>=i).length;
+    const count = list.filter(p=>stageIndexOf(p)>=i).length;
     const pct = total ? Math.round(count/total*100) : 0;
     return { stage, count, pct };
   });
 }
+function setFunnelStageSourceFilter(s){
+  funnelStageSourceFilter = s;
+  renderProspects();
+}
 function renderFunnelStageChartHtml(kbList){
   if(!customStages.length) return "";
-  const rows = computeFunnelStageProgress(kbList);
-  const total = kbList.length;
-  const bar = r => `<div class="kb-funnel-bar-row">
-      <div class="kb-funnel-bar-label">${escAttr(r.stage)}</div>
-      <div class="kb-funnel-bar-track"><div class="kb-funnel-bar-fill" style="width:${r.pct}%;"></div></div>
-      <div class="kb-funnel-bar-stat">${r.count}건 · ${r.pct}%</div>
-    </div>`;
+  const rows = computeFunnelStageProgress(kbList, funnelStageSourceFilter);
+  const total = rows.length ? rows[0].count : 0;
+  const sourceNames = getSourceNames();
+  const filterHtml = `<div class="filters" style="margin-bottom:6px;">
+    <button class="filter-btn ${funnelStageSourceFilter==="전체"?"active":""}" onclick="setFunnelStageSourceFilter('전체')">전체 출처</button>
+    ${sourceNames.map(s=>`<button class="filter-btn ${funnelStageSourceFilter===s?"active":""}" onclick="setFunnelStageSourceFilter('${escAttr(s)}')">${escAttr(s)}</button>`).join("")}
+  </div>`;
+  const step = (r,i) => `<div class="kb-funnel-step">
+      <div class="kb-funnel-step-name">${escAttr(r.stage)}</div>
+      <div class="kb-funnel-step-count">${r.count}건</div>
+      ${i>0?`<div class="kb-funnel-step-pct">(${r.pct}%)</div>`:``}
+    </div>${i<rows.length-1?`<div class="kb-funnel-step-arrow">›</div>`:``}`;
   return `<div class="kb-month-summary">
     <div class="kb-month-summary-title">📉 단계별 진행 퍼널 <span style="font-weight:400;color:var(--text2);">(전체 ${total}건 중 각 단계에 도달한 비율)</span></div>
-    <div class="kb-funnel-chart">
-      ${rows.map(bar).join("")}
+    ${filterHtml}
+    <div class="kb-funnel-flow">
+      ${rows.map(step).join("")}
     </div>
   </div>`;
 }
