@@ -2648,6 +2648,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
         <button type="button" class="btn btn-ghost btn-sm" title="연동 해제" onclick="unlinkFpCustomer()">✕</button>
         <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:88px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
       </div>
+      <div id="fp-cust-phone" style="display:none;font-size:12.5px;color:var(--text2);margin-top:6px;align-items:center;"></div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:8px;">
         <input type="checkbox" id="fp-quick-add-toggle" onchange="toggleFpQuickAdd(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);">
         고객 간편 등록 <span style="font-weight:400;">(검색해도 안 나올 때 — 이름·연락처만으로 가망고객을 바로 만들어요)</span>
@@ -6322,6 +6323,7 @@ function toggleFpQuickAdd(checked){
   if(checked){
     if(searchEl) searchEl.value = "";
     document.getElementById("fp-cust-id").value = "";
+    renderFpConsultPreview();
   } else {
     document.getElementById("fp-quick-name").value = "";
     document.getElementById("fp-quick-phone").value = "";
@@ -6423,6 +6425,16 @@ function renderFpConsultPreview(){
   const addWrap = document.getElementById("fp-consult-add-wrap");
   const cid = document.getElementById("fp-cust-id").value;
   const c = cid ? customers.find(x=>String(x.id)===String(cid)) : null;
+  const phoneEl = document.getElementById("fp-cust-phone");
+  if(phoneEl){
+    if(c && c.phone){
+      phoneEl.innerHTML = `📞 ${escAttr(c.phone)} <button type="button" onclick="copyPhone('${c.phone}')" title="복사" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);padding:0 2px;line-height:1;vertical-align:middle;">📋</button>`;
+      phoneEl.style.display = "flex";
+    } else {
+      phoneEl.innerHTML = "";
+      phoneEl.style.display = "none";
+    }
+  }
   if(!c){
     wrap.innerHTML = "";
     if(addWrap) addWrap.style.display = "none";
