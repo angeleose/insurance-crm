@@ -2638,17 +2638,19 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     </div>
     <div class="form-group">
       <label>고객 연동 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택 — 나중에 연결해도 돼요)</span></label>
-      <div style="position:relative;display:flex;gap:6px;">
-        <input type="text" id="fp-cust-search" placeholder="이름 검색..." style="flex:1;font-size:13px;"
-          oninput="filterFunnelPostCustomers(this.value)"
-          onblur="setTimeout(()=>{const d=document.getElementById('fp-cust-dd');if(d)d.style.display='none';},200)"
-          onfocus="filterFunnelPostCustomers(this.value)">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <div style="position:relative;flex:0 1 110px;min-width:70px;">
+          <input type="text" id="fp-cust-search" placeholder="이름 검색..." style="width:100%;font-size:13px;"
+            oninput="filterFunnelPostCustomers(this.value)"
+            onblur="setTimeout(()=>{const d=document.getElementById('fp-cust-dd');if(d)d.style.display='none';},200)"
+            onfocus="filterFunnelPostCustomers(this.value)">
+          <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;width:220px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+        </div>
         <input type="hidden" id="fp-cust-id">
-        <button type="button" class="btn btn-ghost btn-sm" title="연동된 고객 상세보기" onclick="goToLinkedFpCustomer()">👤 보기</button>
-        <button type="button" class="btn btn-ghost btn-sm" title="연동 해제" onclick="unlinkFpCustomer()">✕</button>
-        <div id="fp-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:88px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+        <span id="fp-cust-phone" style="display:none;align-items:center;gap:2px;font-size:12.5px;color:var(--text2);white-space:nowrap;flex-shrink:0;"></span>
+        <button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;" title="연동된 고객 상세보기" onclick="goToLinkedFpCustomer()">👤 보기</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;" title="연동 해제" onclick="unlinkFpCustomer()">✕</button>
       </div>
-      <div id="fp-cust-phone" style="display:none;font-size:12.5px;color:var(--text2);margin-top:6px;align-items:center;"></div>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;margin-top:8px;">
         <input type="checkbox" id="fp-quick-add-toggle" onchange="toggleFpQuickAdd(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--purple);">
         고객 간편 등록 <span style="font-weight:400;">(검색해도 안 나올 때 — 이름·연락처만으로 가망고객을 바로 만들어요)</span>
