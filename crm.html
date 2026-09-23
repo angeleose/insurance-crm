@@ -1105,6 +1105,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
     <div class="nav-item" data-page="prospects" onclick="closeMobileDrawer()"><span class="icon">🌱</span> 가망 고객</div>
     <div class="nav-item" data-page="gift-shipping" onclick="closeMobileDrawer()"><span class="icon">🎁</span> 고객 배송 리스트</div>
     <div class="nav-item" data-page="contracts" onclick="closeMobileDrawer()"><span class="icon">📄</span> 보험 계약</div>
+    <div class="nav-item" data-page="claims" onclick="closeMobileDrawer()"><span class="icon">🧾</span> 보험 청구</div>
     <div class="nav-item" data-page="proposals" onclick="closeMobileDrawer()"><span class="icon">📋</span> 가입제안서</div>
     <div class="nav-item" data-page="consulting-notes" onclick="closeMobileDrawer()"><span class="icon">📝</span> 컨설팅 노트</div>
     <div class="nav-item" data-page="consultations" onclick="closeMobileDrawer()"><span class="icon">💬</span> 상담 기록</div>
@@ -1205,6 +1206,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div class="nav-item" data-page="prospects"><span class="icon">🌱</span> 가망 고객</div>
       <div class="nav-item" data-page="gift-shipping"><span class="icon">🎁</span> 고객 배송 리스트</div>
       <div class="nav-item" data-page="contracts"><span class="icon">📄</span> 보험 계약</div>
+      <div class="nav-item" data-page="claims"><span class="icon">🧾</span> 보험 청구</div>
       <div class="nav-item" data-page="proposals"><span class="icon">📋</span> 가입제안서</div>
       <div class="nav-item" data-page="consulting-notes"><span class="icon">📝</span> 컨설팅 노트</div>
       <div class="nav-item" data-page="consultations"><span class="icon">💬</span> 상담 기록</div>
@@ -1910,6 +1912,33 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <tbody id="contracts-tbody"></tbody></table>
     </div>
     <div id="contracts-list-wrap" style="display:none;"></div>
+  </div>
+
+  <!-- CLAIMS -->
+  <div class="page" id="page-claims">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div><h2>🧾 보험 청구</h2><p>고객별 보험금 청구 건을 관리하세요.</p></div>
+      <button class="btn btn-primary" onclick="openClaimModal()" style="margin-top:4px;">+ 청구 등록</button>
+    </div>
+    <div class="toolbar">
+      <div class="search-wrap"><span class="si">🔍</span><input type="text" id="search-claims" placeholder="고객명 또는 청구사유 검색..." oninput="renderClaimsPage()"></div>
+    </div>
+    <div class="filters" id="claim-status-filters"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <select id="claim-sort-select" onchange="claimSort=this.value;renderClaimsPage()"
+        style="font-size:12px;padding:4px 8px;border:1.5px solid var(--border);border-radius:8px;background:#fff;font-weight:600;color:var(--text);">
+        <option value="date_desc">청구일 최신순</option>
+        <option value="date_asc">청구일 오래된순</option>
+        <option value="amount_desc">청구금액 높은순</option>
+        <option value="name_asc">고객명순</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>고객명</th><th>계약</th><th>청구일</th><th>청구사유</th><th>청구금액</th><th>상태</th><th>지급일</th><th>메모</th></tr></thead>
+        <tbody id="claims-tbody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- PROPOSALS -->
@@ -2756,6 +2785,56 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
       <div style="display:flex;gap:8px;margin-left:auto;">
         <button class="btn btn-ghost" onclick="closeModal('consulting-note')">취소</button>
         <button class="btn btn-primary" onclick="saveConsultingNote()">저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 보험 청구 -->
+<div class="modal-overlay" id="modal-claim" onclick="if(event.target===this)closeModal('claim')">
+  <div class="modal-box" style="width:480px;">
+    <h3 id="claim-modal-title">🧾 청구 등록</h3>
+    <div class="form-group">
+      <label>고객 선택 *</label>
+      <div style="position:relative;">
+        <input type="text" id="claim-cust-search" placeholder="이름 검색..." style="font-size:13px;width:100%;"
+          oninput="filterClaimCustomers(this.value)"
+          onblur="setTimeout(()=>{const d=document.getElementById('claim-cust-dd');if(d)d.style.display='none';},200)"
+          onfocus="filterClaimCustomers(this.value)">
+        <input type="hidden" id="claim-cust-id">
+        <div id="claim-cust-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>관련 계약 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택)</span></label>
+      <select id="claim-contract-id"><option value="">(선택 안 함)</option></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>청구일</label><input type="date" id="claim-date"></div>
+      <div class="form-group"><label>청구금액 (원)</label><input type="number" id="claim-amount" placeholder="1000000"></div>
+    </div>
+    <div class="form-group">
+      <label>청구사유 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(질병·상해명 등)</span></label>
+      <input type="text" id="claim-reason" placeholder="예: 급성 충수염 수술">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>처리상태</label>
+        <select id="claim-status">
+          <option>접수</option><option>심사중</option><option>승인</option><option>거절</option><option>지급완료</option>
+        </select>
+      </div>
+      <div class="form-group"><label>지급일 <span style="font-size:11px;font-weight:400;color:#94a3b8;">(선택)</span></label><input type="date" id="claim-paid-date"></div>
+    </div>
+    <div class="form-group">
+      <label>메모</label>
+      <textarea id="claim-memo" rows="2" placeholder="메모..."></textarea>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-ghost" id="claim-delete-btn" style="display:none;color:var(--red);" onclick="deleteClaim()">🗑️ 삭제</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('claim')">취소</button>
+        <button class="btn btn-primary" onclick="saveClaim()">저장</button>
       </div>
     </div>
   </div>
@@ -3830,6 +3909,13 @@ let funnelHideFailed = true; // 칸반 보드에서 실패 처리된(사유 무�
 let sourceCosts = {};
 let funnelCostMonth = ''; // 성과 탭에서 선택 중인 비용 조회 월("전체" 또는 "YYYY-MM"). 빈 값이면 최신 월로 기본 선택
 let funnelStageSourceFilter = '전체'; // 단계별 진행 퍼널에서 선택 중인 출처 필터
+
+// ─── 보험 청구 ─────────────────────────────────────────────
+let insuranceClaims = [];
+const CLAIM_STATUSES = ["접수","심사중","승인","거절","지급완료"];
+let activeClaimStatusFilter = '전체';
+let claimSort = 'date_desc';
+let _claimEditId = null;
 let activeGiftShipTypeFilter = '전체'; // 전체/가입/가망/해지
 let activeGiftShipContractTypeFilter = '전체'; // 전체 or productCategories 중 하나
 let activeGiftShipYearFilter = '전체'; // 전체 or 가입년도(YYYY)
@@ -4676,7 +4762,7 @@ async function aiSalesReport() {
 
 function clearAllFilters() {
   // 검색창 초기화
-  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals","search-all-customers","search-gift-shipping"].forEach(id => {
+  ["search-enrolled","search-prospect","search-contracts","search-consultations","search-proposals","search-all-customers","search-gift-shipping","search-claims"].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.value = "";
   });
@@ -4694,6 +4780,7 @@ function clearAllFilters() {
   activeGiftShipContractTypeFilter = "전체";
   activeGiftShipYearFilter = "전체";
   activeGiftShipPremiumFilter = "전체";
+  activeClaimStatusFilter = "전체";
 }
 
 function showPage(name, pushHistory=true){
@@ -4729,6 +4816,7 @@ function showPage(name, pushHistory=true){
   if(name==="tasks")renderTasksPage();
   if(name==="msgcenter")renderMsgCenter();
   if(name==="proposals")renderProposalsPage();
+  if(name==="claims")renderClaimsPage();
   if(name==="consulting-notes")renderConsultingNotesPage();
   if(pushHistory && history.state?.page !== name) {
     history.pushState({page:name}, "", "#"+name);
@@ -8239,7 +8327,7 @@ function deduplicateContracts() {
 async function resetAllData() {
   if(!confirm("정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
   if(!confirm("마지막 확인입니다.\n전체 데이터(고객, 수익, 게시글)가 영구 삭제됩니다.")) return;
-  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = []; consultingNotes = [];
+  customers = []; incomeRecords = []; boardPosts = []; calEvents = []; standaloneTasks = []; backlogItems = []; experienceItems = []; funnelPosts = []; consultingNotes = []; insuranceClaims = [];
   funnelCompletionSyncDone = false;
   customStages = ["DB수령","상담","설계중","계약검토","계약완료","종료"];
   productCategories = ["실손보험","종신보험","암보험","태아보험","치아보험","정기보험","연금보험","건강보험","펫보험","간병보험","화재보험","자동차보험"];
@@ -9194,6 +9282,160 @@ function renderProposalsPage() {
         <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 7px;color:var(--red);" onclick="deleteProposal(${p.cid},${p.id})">🗑️</button>
       </td>
     </tr>`).join("");
+}
+// ──────────────────────────────────────────────────────────
+
+// ─── 보험 청구 ──────────────────────────────────────────────
+function claimStatusBadge(status){
+  const map = {
+    "접수":     {bg:"#dbeafe", color:"#1d4ed8"},
+    "심사중":   {bg:"#fef3c7", color:"#b45309"},
+    "승인":     {bg:"#e0f2fe", color:"#0369a1"},
+    "거절":     {bg:"#fee2e2", color:"#dc2626"},
+    "지급완료": {bg:"#dcfce7", color:"#15803d"},
+  };
+  const s = map[status] || {bg:"#f1f5f9", color:"#64748b"};
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:${s.bg};color:${s.color};">${escAttr(status||"")}</span>`;
+}
+
+function renderClaimsPage(){
+  const filterEl = document.getElementById("claim-status-filters");
+  if(filterEl) filterEl.innerHTML =
+    ["전체",...CLAIM_STATUSES].map(s=>`<button class="filter-btn ${s===activeClaimStatusFilter?"active":""}" onclick="activeClaimStatusFilter='${s}';renderClaimsPage()">${s}</button>`).join("");
+  const tbody = document.getElementById("claims-tbody"); if(!tbody) return;
+  const q = (document.getElementById("search-claims")?.value||"").trim();
+  let rows = insuranceClaims.map(cl=>{
+    const c = customers.find(x=>x.id===cl.customerId);
+    return { ...cl, cname: c?c.name:"(삭제된 고객)", cid: c?c.id:null, ccontracts: c?c.contracts:[] };
+  });
+  if(activeClaimStatusFilter!=="전체") rows = rows.filter(r=>r.status===activeClaimStatusFilter);
+  if(q) rows = rows.filter(r=>r.cname.includes(q) || (r.reason||"").includes(q));
+  rows.sort((a,b)=>{
+    switch(claimSort){
+      case "date_asc":     return (a.claimDate||"").localeCompare(b.claimDate||"");
+      case "amount_desc":  return (b.amount||0)-(a.amount||0);
+      case "name_asc":     return a.cname.localeCompare(b.cname,"ko");
+      default:              return (b.claimDate||"").localeCompare(a.claimDate||""); // date_desc
+    }
+  });
+  const sortSel = document.getElementById("claim-sort-select");
+  if(sortSel) sortSel.value = claimSort;
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><span>🧾</span>청구 내역 없음</div></td></tr>`; return; }
+  tbody.innerHTML = rows.map(cl=>{
+    const ct = cl.contractId ? cl.ccontracts.find(x=>String(x.id)===String(cl.contractId)) : null;
+    return `<tr class="clickable" onclick="openClaimModal(${cl.id})">
+      <td><strong>${escAttr(cl.cname)}</strong></td>
+      <td style="font-size:12px;color:var(--text2);">${ct?escAttr(`${ct.insurer||""} ${ct.product||""}`.trim()):"-"}</td>
+      <td style="color:var(--text2);font-size:12px;">${cl.claimDate||"-"}</td>
+      <td>${escAttr(cl.reason||"-")}</td>
+      <td>${(cl.amount||0).toLocaleString()}원</td>
+      <td>${claimStatusBadge(cl.status)}</td>
+      <td style="color:var(--text2);font-size:12px;">${cl.paidDate||"-"}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escAttr(cl.memo||"")}</td>
+    </tr>`;
+  }).join("");
+}
+
+function filterClaimCustomers(q){
+  const dd = document.getElementById("claim-cust-dd");
+  const trimmed = q.trim();
+  const list = trimmed ? customers.filter(c=>c.name.includes(trimmed)||(c.phone||"").includes(trimmed)) : customers;
+  dd.innerHTML = list.slice(0,20).map(c=>`
+    <div data-cid="${c.id}" data-cname="${c.name}"
+      style="padding:8px 14px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border);"
+      onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <span style="font-weight:600;">${c.name}</span>
+      <span style="color:var(--text2);font-size:12px;margin-left:6px;">${c.phone||""}</span>
+    </div>`).join("");
+  dd.style.display = "";
+  dd.onclick = e => {
+    const item = e.target.closest("[data-cid]"); if(!item) return;
+    document.getElementById("claim-cust-search").value = item.dataset.cname;
+    document.getElementById("claim-cust-id").value = item.dataset.cid;
+    dd.style.display = "none";
+    populateClaimContractSelect(item.dataset.cid);
+  };
+}
+
+function populateClaimContractSelect(cid, selectedContractId){
+  const sel = document.getElementById("claim-contract-id"); if(!sel) return;
+  const c = cid ? customers.find(x=>String(x.id)===String(cid)) : null;
+  const contracts = c ? (c.contracts||[]) : [];
+  sel.innerHTML = `<option value="">(선택 안 함)</option>` + contracts.map(ct=>`<option value="${ct.id}">${escAttr(`${ct.insurer||""} ${ct.product||""}`.trim())}</option>`).join("");
+  if(selectedContractId) sel.value = String(selectedContractId);
+}
+
+function openClaimModal(id = null){
+  _claimEditId = id;
+  document.getElementById("claim-modal-title").textContent = id ? "🧾 청구 수정" : "🧾 청구 등록";
+  document.getElementById("claim-delete-btn").style.display = id ? "" : "none";
+  if(id){
+    const cl = insuranceClaims.find(x=>x.id===id);
+    if(!cl){ return; }
+    const c = cl.customerId ? customers.find(x=>x.id===cl.customerId) : null;
+    document.getElementById("claim-cust-search").value = c ? c.name : "";
+    document.getElementById("claim-cust-id").value = c ? String(c.id) : "";
+    populateClaimContractSelect(c ? c.id : null, cl.contractId);
+    document.getElementById("claim-date").value = cl.claimDate || "";
+    document.getElementById("claim-amount").value = cl.amount || "";
+    document.getElementById("claim-reason").value = cl.reason || "";
+    document.getElementById("claim-status").value = cl.status || "접수";
+    document.getElementById("claim-paid-date").value = cl.paidDate || "";
+    document.getElementById("claim-memo").value = cl.memo || "";
+  } else {
+    ["claim-cust-search","claim-reason","claim-memo","claim-paid-date","claim-amount"].forEach(fid=>document.getElementById(fid).value="");
+    document.getElementById("claim-cust-id").value = "";
+    document.getElementById("claim-date").value = new Date().toISOString().slice(0,10);
+    document.getElementById("claim-status").value = "접수";
+    populateClaimContractSelect(null);
+    if(currentCustomerId){
+      const c = customers.find(x=>x.id===currentCustomerId);
+      if(c){
+        document.getElementById("claim-cust-search").value = c.name;
+        document.getElementById("claim-cust-id").value = String(c.id);
+        populateClaimContractSelect(c.id);
+      }
+    }
+  }
+  openModal("claim");
+}
+
+function saveClaim(){
+  const custIdRaw = document.getElementById("claim-cust-id").value;
+  if(!custIdRaw){ alert("고객을 선택하세요."); return; }
+  const c = customers.find(x=>String(x.id)===String(custIdRaw));
+  if(!c){ alert("고객을 찾을 수 없습니다."); return; }
+  const data = {
+    id: _claimEditId || (Date.now()+Math.random()),
+    customerId: c.id,
+    contractId: document.getElementById("claim-contract-id").value || null,
+    claimDate: document.getElementById("claim-date").value,
+    amount: parseInt(document.getElementById("claim-amount").value)||0,
+    reason: document.getElementById("claim-reason").value.trim(),
+    status: document.getElementById("claim-status").value,
+    paidDate: document.getElementById("claim-paid-date").value,
+    memo: document.getElementById("claim-memo").value.trim(),
+    createdAt: _claimEditId ? (insuranceClaims.find(x=>x.id===_claimEditId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+  };
+  if(_claimEditId){
+    const idx = insuranceClaims.findIndex(x=>x.id===_claimEditId);
+    if(idx>=0) insuranceClaims[idx] = data;
+  } else {
+    insuranceClaims.push(data);
+  }
+  closeModal("claim");
+  renderClaimsPage();
+  autoSave();
+  showToast("✅ 저장되었습니다.");
+}
+
+function deleteClaim(){
+  if(!_claimEditId) return;
+  if(!confirm("이 청구 기록을 삭제할까요?")) return;
+  insuranceClaims = insuranceClaims.filter(x=>x.id!==_claimEditId);
+  closeModal("claim");
+  renderClaimsPage();
+  autoSave();
 }
 // ──────────────────────────────────────────────────────────
 
@@ -10949,6 +11191,7 @@ async function saveToFirestore() {
     funnelPostTags,
     funnelFailReasons,
     sourceCosts,
+    insuranceClaims,
     customSources,
     cardPayRecords,
     cardInfoRecords,
@@ -11011,6 +11254,7 @@ async function loadFromFirestore() {
       if (p.funnelPostTags && p.funnelPostTags.length) funnelPostTags = p.funnelPostTags;
       if (p.funnelFailReasons && p.funnelFailReasons.length) funnelFailReasons = p.funnelFailReasons;
       if (p.sourceCosts) sourceCosts = p.sourceCosts;
+      if (p.insuranceClaims) insuranceClaims = p.insuranceClaims;
       // sourceCosts를 출처당 단일 총액에서 출처×월별 비용으로 바꾸면서, 예전 방식(숫자 하나)으로
       // 저장돼 있던 값은 이번 달 비용으로 1회 이전 — 안 그러면 이미 입력해둔 비용이 사라져 보임
       Object.keys(sourceCosts).forEach(src=>{
