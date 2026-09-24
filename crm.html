@@ -1625,6 +1625,7 @@ body.dark .ai-quick-btn{background:#0f172a;border-color:#374151;color:#94a3b8;}
           <button onclick="setTlFilter('all')"         id="tlf-all"          class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;background:#1d4ed8;color:#fff;">전체</button>
           <button onclick="setTlFilter('consult')"     id="tlf-consult"      class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">💬 상담</button>
           <button onclick="setTlFilter('contract')"    id="tlf-contract"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">📄 계약</button>
+          <button onclick="setTlFilter('claim')"       id="tlf-claim"        class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">🧾 청구</button>
           <button onclick="setTlFilter('followup')"    id="tlf-followup"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">📞 팔로업</button>
           <button onclick="setTlFilter('message')"     id="tlf-message"      class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">💌 메시지</button>
           <button onclick="setTlFilter('calendar')"    id="tlf-calendar"     class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;">🗓️ 캘린더</button>
@@ -8829,7 +8830,7 @@ function checkCardOverflow(key) {
 
 function setTlFilter(f) {
   tlFilter = f;
-  ["all","consult","contract","followup","message","calendar","task","register"].forEach(k=>{
+  ["all","consult","contract","claim","followup","message","calendar","task","register"].forEach(k=>{
     const btn = document.getElementById("tlf-"+k);
     if(!btn) return;
     const on = k===f;
@@ -8908,6 +8909,19 @@ function renderTimeline(c) {
         sub: cs.followUp ? `📞 팔로업 ${cs.followUp}${cs.followUpDone?" ✅":""}` : null
       });
     }
+  });
+
+  // 0-3) 보험금 청구 이력
+  insuranceClaims.filter(cl=>cl.customerId===c.id).forEach(cl=>{
+    if(!cl.claimDate) return;
+    items.push({
+      type:"claim", date:cl.claimDate, sortKey:cl.claimDate+"T00:03",
+      dot:"#f97316",
+      tag:"🧾 보험금 청구",
+      tagBg:"#fff7ed", tagColor:"#c2410c",
+      text: cl.reason || "보험금 청구",
+      sub: `${cl.status||"접수"}${cl.amount?" · "+cl.amount.toLocaleString()+"원":""}${cl.status==="지급완료"&&cl.paidDate?` (지급일 ${cl.paidDate})`:""}`
+    });
   });
 
   // 1) 팔로업
