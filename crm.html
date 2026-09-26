@@ -6364,7 +6364,13 @@ function prKbDrop(e, target){
   if(!p) return;
   if((p.stage||customStages[0])===target) return;
   p.stage = target;
+  // 계약완료로 이동하면, 연동된 고객이 아직 가망이면 가입 고객으로 자동 전환
+  if(target==="계약완료" && p.customerId){
+    const linked = customers.find(x=>x.id===p.customerId);
+    if(linked && convertCustomerToEnrolled(linked)) showToast(`🎉 ${linked.name} 고객이 가입 고객으로 전환됐어요.`);
+  }
   renderProspects();
+  renderDashboard();
   autoSave();
 }
 
@@ -6676,10 +6682,17 @@ function saveFunnelPost(){
   } else {
     funnelPosts.push(data);
   }
+  // 계약완료로 저장되면, 연동된 고객이 아직 가망이면 가입 고객으로 자동 전환
+  let convertMsg = "";
+  if(data.stage==="계약완료" && data.customerId){
+    const linked = customers.find(x=>x.id===data.customerId);
+    if(linked && convertCustomerToEnrolled(linked)) convertMsg = ` · ${linked.name} 고객을 가입 고객으로 전환했어요.`;
+  }
   closeModal("funnel-post");
   renderProspects();
+  renderDashboard();
   autoSave();
-  showToast(`✅ 저장되었습니다.${quickAddMsg}`);
+  showToast(`✅ 저장되었습니다.${quickAddMsg}${convertMsg}`);
 }
 
 function deleteFunnelPost(){
@@ -10255,9 +10268,16 @@ function saveDetName(el){
   c.type === "가망" ? renderProspects() : renderEnrolled();
 }
 
+// 가망 고객 → 가입 고객 전환의 핵심 로직만 분리 — 수동 전환(convertToEnrolled)과
+// 영업 퍼널에서 계약완료로 이동했을 때의 자동 전환이 공유해서 씀
+function convertCustomerToEnrolled(c){
+  if(!c || c.type==="가입") return false;
+  c.type="가입"; delete c.interest; delete c.stage; delete c.memo;
+  return true;
+}
 function convertToEnrolled(){
   const c=customers.find(x=>x.id===currentCustomerId);if(!c)return;
-  c.type="가입";delete c.interest;delete c.stage;delete c.memo;
+  convertCustomerToEnrolled(c);
   closeModal("convert");prevPage="enrolled";
   renderDetail(currentCustomerId);renderDashboard();renderProspects();
   autoSave();
